@@ -1,12 +1,241 @@
 <!DOCTYPE html>
-<html>
-<head>
-	<link rel="stylesheet" type="text/css" href="styles.css"></link>
-</head>
-<body>
-	<div class="container">
-		<h1>Portfolio Coming Soon</h1>
-		<p>This portfolio website is currently under development. Stay tuned for updates!</p>
-	</div>
-</body>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Portfolio" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <script
+      src="https://kit.fontawesome.com/fa62c117c7.js"
+      crossorigin="anonymous"
+    ></script>
+    <link rel="stylesheet" href="styles.css" />
+    <title>auamai</title>
+  </head>
+  <body class="light" id="top">
+    <header class="header center">
+      <h3>
+        <a href="https://auamai.github.io" class="link"
+          >@auamai</a
+        >
+      </h3>
+
+      <nav class="nav center">
+        <ul class="nav__list center">
+          <li class="nav__list-item">
+            <a class="link link--nav" href="#projects">Projects</a>
+          </li>
+          <li class="nav__list-item">
+            <a class="link link--nav" href="#skills">Skills</a>
+          </li>
+          <li class="nav__list-item">
+            <a class="link link--nav" href="#contact">Contact</a>
+          </li>
+        </ul>
+
+        <button type="button" aria-label="toggle theme" class="btn btn--icon">
+          <i aria-hidden="true" id="btn-theme" class="fas fa-moon"></i>
+        </button>
+
+        <button
+          type="button"
+          aria-label="toggle navigation"
+          class="btn btn--icon nav__hamburger"
+        >
+          <i aria-hidden="true" class="fas fa-bars"></i>
+        </button>
+      </nav>
+    </header>
+
+    <main>
+      <!-- About -->
+      <div class="about center">
+        <h1>Hi, I'm <span class="about__name">Alex.</span></h1>
+        <h2 class="about__role">A Mechatronic Systems Engineer.</h2>
+        <p class="about__desc">
+            Welcome to my corner of the digital realm! I'm a recent Mechatronic Systems Engineering graduate from Simon Fraser University and  I'm deeply fascinated by the world of embedded software, where hardware and software converge. My academic journey at Simon Fraser University equipped me with a robust foundation in applying mathematics to engineering and crafting intelligent systems.
+    
+            Throughout my education, I've honed a diverse skill set, spanning CAD design, System Modeling and Simulation, Thermodynamics, Embedded Software Design, Robotics, and Control Systems. These experiences have instilled in me the confidence to tackle complex challenges head-on.
+    
+            Explore my portfolio, and let's discuss the exciting possibilities at the intersection of innovation and transformation. Together, we can shape the future.
+        </p>
+  
+    
+
+        <div class="about__contact center">
+          <a target="_blank" href="pdf-files/Resume - Alexander Uamai.pdf">
+            <span class="btn btn--outline">Resume</span>
+          </a>
+
+          <a
+            href="https://github.com/auamai"
+            aria-label="github"
+            class="link link--icon"
+          >
+            <i aria-hidden="true" class="fab fa-github"></i>
+          </a>
+
+          <a
+            href="https://linkedin.com/in/alexander-uamai-ighodaro"
+            aria-label="linkedin"
+            class="link link--icon"
+          >
+            <i aria-hidden="true" class="fab fa-linkedin"></i>
+          </a>
+        </div>
+      </div>
+
+      <!-- Projects -->
+      <section id="projects" class="section projects">
+        <h2 class="section__title">Projects</h2>
+
+        <div class="projects__grid">
+          <div class="project">
+            <h3>Dynamic Motion Interface for Game Control</h3>
+            <img src="Images/STM32F407VG.jpg" alt="Game Controller Image" width="150" height="200">
+            <p class="project__description">
+              Engineered firmware for an STM32 microcontroller to use the onboard accelerometer to control a python-based 2D desktop game involving shooting at balls. Developed SPI drivers for communication between the microcontroller and the accelerometer. Used timers and interrupts to stream sensor data to the game through USB.
+            </p>
+            <ul class="project__stack">
+              <li class="project__stack-item">STM32F407VG</li>
+              <li class="project__stack-item">C</li>
+              <li class="project__stack-item">SPI</li>
+              <li class="project__stack-item">GPIO</li>
+            </ul>
+
+            <a
+              href="https://github.com/auamai/Game-Controller"
+              aria-label="source code"
+              class="link link--icon"
+            >
+              <i aria-hidden="true" class="fab fa-github"></i>
+            </a>
+            <a
+              href="https://youtube.com/shorts/vIUqMxIppMc?feature=share"
+              aria-label="live preview"
+              class="link link--icon"
+            >
+              <i aria-hidden="true" class="fas fa-external-link-alt"></i>
+            </a>
+          </div>
+
+          <div class="project">
+            <h3>Design and Control of a Two-wheel Self-Balancing Robot</h3>
+            <img src="Images/Two-wheel Robot Simscape Model.jpg" alt="Simscape Model" width="250" height="200">
+            <p class="project__description">
+              Designed and modeled a feedback control system for a two-wheel self-balancing robot using MATLAB, and Simulink. Analyzed the system dynamics, controllability, and observability using state-space methods resulting in stable balancing. Created a visual simulation of the robot using Simscape.
+            </p>
+            <ul class="project__stack">
+              <li class="project__stack-item">MATLAB</li>
+              <li class="project__stack-item">Simulink</li>
+              <li class="project__stack-item">Simscape</li>
+              <li class="project__stack-item">Feedback Control</li>
+              <li class="project__stack-item">State-Space Modeling</li>
+            </ul>
+
+            <a
+              href="https://github.com/auamai/Modern-Control/tree/main/Final%20Project"
+              aria-label="Simulink Model"
+              class="link link--icon"
+            >
+              <i aria-hidden="true" class="fab fa-github"></i>
+            </a>
+            <!-- <a
+              href="https://example.com"
+              aria-label="live preview"
+              class="link link--icon"
+            >
+              <i aria-hidden="true" class="fas fa-external-link-alt"></i>
+            </a> -->
+          </div>
+
+          <div class="project">
+            <h3>Foot Wearable for Dystonia Pain Management - Capstone Project</h3>
+            <img src="Images/Foot Wearable.jpg" alt="Foot Wearable" width="250" height="200">
+            <p class="project__description">
+              Led the controls development of Lief - a novel device alleviating the pain and discomfort experienced by people with foot dystonia. Developed ﬁrmware responsible to control two coin-type vibration motors integrated into a foot wrap. Implemented vibration intensity control using pulse-width modulation (PWM), enhancing user comfort. Soldered vibration system on a protoboard, seamlessly integrating it with the overall device. Developed a simple graphical user interface to allow users track their device usage data.
+            </p>
+            <ul class="project__stack">
+              <li class="project__stack-item">C</li>
+              <li class="project__stack-item">Arduino</li>
+              <li class="project__stack-item">Soldering</li>
+              <li class="project__stack-item">Python</li>
+              <li class="project__stack-item">PySide</li>
+            </ul>
+
+            <!-- <a
+              href="https://github.com"
+              aria-label="source code"
+              class="link link--icon"
+            >
+              <i aria-hidden="true" class="fab fa-github"></i>
+            </a>
+            <a
+              href="https://example.com"
+              aria-label="live preview"
+              class="link link--icon"
+            >
+              <i aria-hidden="true" class="fas fa-external-link-alt"></i>
+            </a> -->
+          </div>
+        </div>
+      </section>
+
+      <!-- Skills -->
+      <section class="section skills" id="skills">
+        <h2 class="section__title">Skills</h2>
+        <ul class="skills__list">
+          <li class="skills__list-item btn btn--plain">C</li>
+          <li class="skills__list-item btn btn--plain">C++</li>
+          <li class="skills__list-item btn btn--plain">Python</li>
+          <li class="skills__list-item btn btn--plain">Linux</li>
+          <li class="skills__list-item btn btn--plain">Solidworks</li>
+          <li class="skills__list-item btn btn--plain">Git</li>
+          <li class="skills__list-item btn btn--plain">ARM</li>
+          <li class="skills__list-item btn btn--plain">STM32</li>
+          <li class="skills__list-item btn btn--plain">I2C</li>
+          <li class="skills__list-item btn btn--plain">SPI</li>
+          <li class="skills__list-item btn btn--plain">UART</li>
+          <li class="skills__list-item btn btn--plain">GPIO</li>
+          <li class="skills__list-item btn btn--plain">Jira</li>
+          <li class="skills__list-item btn btn--plain">MATLAB</li>
+          <li class="skills__list-item btn btn--plain">Simulink</li>
+          <li class="skills__list-item btn btn--plain">Oscilloscope</li>
+          <li class="skills__list-item btn btn--plain">OOP</li>
+        </ul>
+      </section>
+
+      <!-- Contact -->
+      <section class="section contact center" id="contact">
+        <h2 class="section__title">Contact</h2>
+        <a href="mailto:ighodarouamai@gmail.com">
+          <span class="btn btn--outline">Email me: ighodarouamai@gmail.com</span>
+        </a>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <a
+        href="https://github.com/auamai"
+        class="link footer__link"
+      >
+        Alex Uamai
+      </a>
+    </footer>
+
+    <div class="scroll-container">
+    <div class="scroll-top">
+      <a aria-label="Scroll up" href="#top">
+        <i aria-hidden="true" class="fas fa-arrow-up"></i>
+      </a>
+    </div>
+    </div>
+
+    <script src="./script.js"></script>
+  </body>
 </html>
