@@ -3,7 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="Portfolio" />
+    <title>Alex Uamai | Mechatronics Engineer</title>
+    <meta name="description" content="Alex Uamai is a mechatronics engineer in R&amp;D at Unifiller, working across mechanical design, embedded systems and controls, with a focus on robotics." />
+    <meta name="author" content="Alex Uamai" />
+    <link rel="canonical" href="https://auamai.github.io/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://auamai.github.io/" />
+    <meta property="og:title" content="Alex Uamai | Mechatronics Engineer" />
+    <meta property="og:description" content="Mechatronics engineer in R&amp;D at Unifiller. Mechanical design, embedded systems, controls and robots." />
+    <meta property="og:image" content="https://auamai.github.io/Images/Two-wheel%20Robot%20Simscape%20Model.jpg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="theme-color" content="#2978b5" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -13,9 +23,21 @@
     <script
       src="https://kit.fontawesome.com/fa62c117c7.js"
       crossorigin="anonymous"
+      defer
     ></script>
     <link rel="stylesheet" href="styles.css" />
-    <title>auamai</title>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "name": "Alex Uamai",
+        "jobTitle": "Mechatronics Engineer",
+        "worksFor": { "@type": "Organization", "name": "Unifiller" },
+        "alumniOf": { "@type": "CollegeOrUniversity", "name": "Simon Fraser University" },
+        "url": "https://auamai.github.io/",
+        "sameAs": ["https://github.com/auamai", "https://linkedin.com/in/alex-uamai"]
+      }
+    </script>
   </head>
   <body class="light" id="top">
     <header class="header center">
@@ -56,24 +78,26 @@
       <!-- About -->
       <div class="about center">
         <h1>Hi, I'm <span class="about__name">Alex.</span></h1>
-        <h2 class="about__role">A Mechatronic Systems Engineer.</h2>
+        <h2 class="about__role">Mechatronics Engineer, R&amp;D at Unifiller.</h2>
         <p class="about__desc">
-            Welcome to my corner of the digital realm! I'm a recent Mechatronic Systems Engineering graduate from Simon Fraser University and  I'm deeply fascinated by the world of embedded software, where hardware and software converge. My academic journey at Simon Fraser University equipped me with a robust foundation in applying mathematics to engineering and crafting intelligent systems.
-    
-            Throughout my education, I've honed a diverse skill set, spanning CAD design, System Modeling and Simulation, Thermodynamics, Embedded Software Design, Robotics, and Control Systems. These experiences have instilled in me the confidence to tackle complex challenges head-on.
-    
-            Explore my portfolio, and let's discuss the exciting possibilities at the intersection of innovation and transformation. Together, we can shape the future.
+          I design and develop food-production equipment in R&amp;D at Unifiller, where a single machine pulls in mechanical design, electronics, firmware and controls. That mix is what I enjoy most. I like working across disciplines, and I keep pushing deeper into mechanical design.
+        </p>
+        <p class="about__desc">
+          Robots are the thread through all of it. I studied Mechatronic Systems Engineering at Simon Fraser University, and these projects span embedded firmware, control systems and product development.
+        </p>
+        <p class="about__desc">
+          Mechanical design has my attention right now: CAD in SolidWorks, mechanisms, and sizing parts for real loads. I'm also fascinated by robots and build them on my own time. I studied Mechatronic Systems Engineering at Simon Fraser University.
         </p>
   
     
 
         <div class="about__contact center">
-          <a target="_blank" href="pdf-files/Alex Uamai Resume.pdf">
+          <a target="_blank" rel="noopener" href="pdf-files/Alex%20Uamai%20Resume.pdf">
             <span class="btn btn--outline">Resume</span>
           </a>
 
           <a
-            href="https://github.com/auamai"
+            href="https://github.com/auamai" rel="noopener"
             aria-label="github"
             class="link link--icon"
           >
@@ -81,7 +105,7 @@
           </a>
 
           <a
-            href="https://linkedin.com/in/alex-uamai"
+            href="https://linkedin.com/in/alex-uamai" rel="noopener"
             aria-label="linkedin"
             class="link link--icon"
           >
@@ -97,9 +121,9 @@
         <div class="projects__grid">
           <div class="project">
             <h3>Dynamic Motion Interface for Game Control</h3>
-            <img src="Images/STM32F407VG.jpg" alt="Game Controller Image" width="150" height="200">
+            <img src="Images/STM32F407VG.jpg" alt="STM32F407 Discovery board used as a motion game controller" loading="lazy" decoding="async" width="150" height="200">
             <p class="project__description">
-              Engineered firmware for an STM32 microcontroller to use the onboard accelerometer to control a python-based 2D desktop game involving shooting at balls. Developed SPI drivers for communication between the microcontroller and the accelerometer. Used timers and interrupts to stream sensor data to the game through USB.
+              Turned an STM32 board into a tilt controller for a Python 2D shooter. Wrote the SPI driver for the onboard accelerometer and used timers and interrupts to stream motion data to the game over USB.
             </p>
             <ul class="project__stack">
               <li class="project__stack-item">STM32F407VG</li>
@@ -110,14 +134,16 @@
 
             <a
               href="https://github.com/auamai/Game-Controller"
-              aria-label="source code"
+              target="_blank" rel="noopener"
+              aria-label="Game controller source code"
               class="link link--icon"
             >
               <i aria-hidden="true" class="fab fa-github"></i>
             </a>
             <a
               href="https://youtube.com/shorts/vIUqMxIppMc?feature=share"
-              aria-label="live preview"
+              target="_blank" rel="noopener"
+              aria-label="Game controller demo video"
               class="link link--icon"
             >
               <i aria-hidden="true" class="fas fa-external-link-alt"></i>
@@ -126,9 +152,9 @@
 
           <div class="project">
             <h3>Design and Control of a Two-wheel Self-Balancing Robot</h3>
-            <img src="Images/Two-wheel Robot Simscape Model.jpg" alt="Simscape Model" width="250" height="200">
+            <img src="Images/Two-wheel%20Robot%20Simscape%20Model.jpg" alt="Simscape model of a two-wheel self-balancing robot" loading="lazy" decoding="async" width="250" height="200">
             <p class="project__description">
-              Designed and modeled a feedback control system for a two-wheel self-balancing robot using MATLAB, and Simulink. Analyzed the system dynamics, controllability, and observability using state-space methods resulting in stable balancing. Created a visual simulation of the robot using Simscape.
+              Modeled the dynamics of a two-wheel self-balancing robot and designed its feedback controller in MATLAB and Simulink. Used state-space analysis of controllability and observability to reach stable balancing, then built a 3D Simscape simulation of the robot.
             </p>
             <ul class="project__stack">
               <li class="project__stack-item">MATLAB</li>
@@ -140,7 +166,8 @@
 
             <a
               href="https://github.com/auamai/Modern-Control/tree/main/Final%20Project"
-              aria-label="Simulink Model"
+              target="_blank" rel="noopener"
+              aria-label="Self-balancing robot Simulink model"
               class="link link--icon"
             >
               <i aria-hidden="true" class="fab fa-github"></i>
@@ -155,10 +182,10 @@
           </div>
 
           <div class="project">
-            <h3>Foot Wearable for Dystonia Pain Management - Capstone Project</h3>
-            <img src="Images/Foot Wearable.jpg" alt="Foot Wearable" width="250" height="200">
+            <h3>Foot Wearable for Dystonia Pain Management (Capstone)</h3>
+            <img src="Images/Foot%20Wearable.jpg" alt="Lief foot wearable prototype for dystonia" loading="lazy" decoding="async" width="250" height="200">
             <p class="project__description">
-              Led the controls development of Lief - a novel device alleviating the pain and discomfort experienced by people with foot dystonia. Developed ﬁrmware to control two coin-type vibration motors integrated into a foot wrap. Implemented vibration intensity control using pulse-width modulation (PWM), enhancing user comfort. Soldered vibration system on a protoboard, seamlessly integrating it with the overall device. Developed a simple graphical user interface to allow users track their device usage data.
+              Led controls for Lief, a wearable that eases pain from foot dystonia. Wrote firmware driving two coin vibration motors in a foot wrap with PWM intensity control, built the circuit on protoboard, and made a desktop GUI so users can track their sessions.
             </p>
             <ul class="project__stack">
               <li class="project__stack-item">C</li>
@@ -190,23 +217,25 @@
       <section class="section skills" id="skills">
         <h2 class="section__title">Skills</h2>
         <ul class="skills__list">
+          <li class="skills__list-item btn btn--plain">Mechanical Design</li>
+          <li class="skills__list-item btn btn--plain">SolidWorks</li>
+          <li class="skills__list-item btn btn--plain">Control Systems</li>
+          <li class="skills__list-item btn btn--plain">MATLAB</li>
+          <li class="skills__list-item btn btn--plain">Simulink</li>
           <li class="skills__list-item btn btn--plain">C</li>
           <li class="skills__list-item btn btn--plain">C++</li>
           <li class="skills__list-item btn btn--plain">Python</li>
-          <li class="skills__list-item btn btn--plain">Linux</li>
-          <li class="skills__list-item btn btn--plain">Solidworks</li>
-          <li class="skills__list-item btn btn--plain">Git</li>
+          <li class="skills__list-item btn btn--plain">Embedded Systems</li>
           <li class="skills__list-item btn btn--plain">ARM</li>
           <li class="skills__list-item btn btn--plain">STM32</li>
           <li class="skills__list-item btn btn--plain">I2C</li>
           <li class="skills__list-item btn btn--plain">SPI</li>
           <li class="skills__list-item btn btn--plain">UART</li>
           <li class="skills__list-item btn btn--plain">GPIO</li>
-          <li class="skills__list-item btn btn--plain">Jira</li>
-          <li class="skills__list-item btn btn--plain">MATLAB</li>
-          <li class="skills__list-item btn btn--plain">Simulink</li>
+          <li class="skills__list-item btn btn--plain">Linux</li>
+          <li class="skills__list-item btn btn--plain">Git</li>
           <li class="skills__list-item btn btn--plain">Oscilloscope</li>
-          <li class="skills__list-item btn btn--plain">OOP</li>
+          <li class="skills__list-item btn btn--plain">Jira</li>
         </ul>
       </section>
 
@@ -214,7 +243,7 @@
       <section class="section contact center" id="contact">
         <h2 class="section__title">Contact</h2>
         <a href="mailto:ighodarouamai@gmail.com">
-          <span class="btn btn--outline">Email me: ighodarouamai@gmail.com</span>
+          <span class="btn btn--outline">ighodarouamai@gmail.com</span>
         </a>
       </section>
     </main>
@@ -236,6 +265,6 @@
     </div>
     </div>
 
-    <script src="./script.js"></script>
+    <script src="./script.js" defer></script>
   </body>
 </html>
