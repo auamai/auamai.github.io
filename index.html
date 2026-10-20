@@ -36,13 +36,16 @@
 
   <header class="bar">
     <a class="mark" href="#top" aria-label="Back to top">AU</a>
-    <nav class="tabs" aria-label="Sections">
-      <a href="#work" class="tab">Work</a>
-      <a href="#projects" class="tab">Projects</a>
-      <a href="#skills" class="tab">Skills</a>
-      <a href="#contact" class="tab">Contact</a>
+    <nav class="nav" aria-label="Sections">
+      <div class="tabs">
+        <a href="#experience" class="tab">Experience</a>
+        <a href="#education" class="tab">Education</a>
+        <a href="#projects" class="tab">Projects</a>
+        <a href="#skills" class="tab">Skills</a>
+        <a href="#contact" class="tab">Contact</a>
+      </div>
+      <a class="pill pill--ghost nav__cta" href="pdf-files/Alex%20Uamai%20Resume.pdf" target="_blank" rel="noopener">Resume</a>
     </nav>
-    <a class="pill pill--ghost bar__cta" href="pdf-files/Alex%20Uamai%20Resume.pdf" target="_blank" rel="noopener">Resume</a>
   </header>
 
   <main id="top">
@@ -69,70 +72,97 @@
           </a>
         </div>
       </div>
-
-      <ul class="facts" aria-label="At a glance">
-        <li class="fact"><span class="fact__k">Now</span><span class="fact__v">Project Leader, R&amp;D · Unifiller</span></li>
-        <li class="fact"><span class="fact__k">Next</span><span class="fact__v">M.S. Robotics &amp; Autonomous Systems · Johns Hopkins, starting spring</span></li>
-        <li class="fact"><span class="fact__k">Degree</span><span class="fact__v">B.A.Sc. Mechatronic Systems Engineering · SFU</span></li>
-      </ul>
     </section>
 
-    <!-- Work -->
-    <section class="section" id="work">
-      <header class="section__head">
-        <span class="kicker">01</span>
-        <h2>Work</h2>
-      </header>
 
-      <article class="card role role--lead">
-        <div class="role__meta">
-          <span class="role__when">Dec 2025 — Present</span>
-          <span class="role__where">Richmond, BC</span>
-        </div>
-        <div class="role__main">
-          <h3>Mechatronics Engineering Project Leader, R&amp;D</h3>
-          <p class="role__org">Unifiller Systems</p>
-          <ul class="role__points">
-            <li>Own the mechanical design and delivery of an industrial robotic food-automation platform, concept through prototype validation and production support.</li>
-            <li>Design precision assemblies, end-effectors, tooling and fixtures in SolidWorks, with GD&amp;T and tolerance analysis keeping them manufacturable.</li>
-            <li>Validate with FEA and first-principles checks before build, then prototype, test and iterate on hardware results.</li>
-            <li>Integrate motion systems, sensors, actuators, pneumatics and embedded electronics into one platform; drive DFM/DFA, sourcing, drawings, BOMs and change control.</li>
+    <!-- Experience -->
+    <section class="section" id="experience">
+      <details class="fold" open>
+        <summary class="section__head">
+          <span class="kicker">01</span>
+          <h2>Experience</h2>
+          <svg class="fold__chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </summary>
+        <ol class="entries">
+        <li class="entry entry--now">
+          <div class="entry__top"><h3>Unifiller Systems</h3><span class="entry__when">Dec 2025 — Present</span></div>
+          <p class="entry__role">Mechatronics Engineering Project Leader, R&amp;D</p>
+          <ul class="entry__points">
+            <li>Lead mechanical design of an industrial robotic food-automation platform, concept to production</li>
+            <li>Design end-effectors, precision assemblies and fixtures in SolidWorks with GD&amp;T and tolerance analysis</li>
+            <li>Validate every design with FEA and first-principles checks before it's built</li>
+            <li>Integrate motion systems, sensors, pneumatics and embedded electronics into one platform</li>
+            <li>Drive DFM/DFA, sourcing, drawings, BOMs and change control to manufacturing readiness</li>
           </ul>
-        </div>
-      </article>
+        </li>
+        <li class="entry">
+          <div class="entry__top"><h3>Bethel Systems</h3><span class="entry__when">Dec 2024 — Dec 2025</span></div>
+          <p class="entry__role">Technical &amp; Business Analyst</p>
+          <ul class="entry__points">
+            <li>Turned early-stage client product ideas into engineering development plans</li>
+            <li>Supported patent applications with technical concept work</li>
+          </ul>
+        </li>
+        <li class="entry">
+          <div class="entry__top"><h3>VMAC Air</h3><span class="entry__when">Sep — Dec 2021</span></div>
+          <p class="entry__role">Mechanical Engineering Intern</p>
+          <ul class="entry__points">
+            <li>Designed manufacturing fixtures and production test equipment in SolidWorks</li>
+            <li>Supported engineering and manufacturing improvement projects</li>
+          </ul>
+        </li>
+        <li class="entry">
+          <div class="entry__top"><h3>Ziva Dynamics</h3><span class="entry__when">May — Aug 2021</span></div>
+          <p class="entry__role">Software Developer Intern</p>
+          <ul class="entry__points">
+            <li>Shipped production C++ and Python tools with a Qt/PySide2 interface</li>
+            <li>Contributed to Git-based automated testing workflows</li>
+          </ul>
+        </li>
+        <li class="entry">
+          <div class="entry__top"><h3>Mulgrave School</h3><span class="entry__when">Jan — May 2021</span></div>
+          <p class="entry__role">IT Intern</p>
+          <ul class="entry__points">
+            <li>Built a Raspberry Pi remote 3D-printing system</li>
+            <li>Administered Windows Active Directory</li>
+          </ul>
+        </li>
+        </ol>
+      </details>
+    </section>
 
-      <div class="roles">
-        <article class="card role">
-          <span class="role__when">Dec 2024 — Dec 2025</span>
-          <h3>Technical &amp; Business Analyst</h3>
-          <p class="role__org">Bethel Systems</p>
-          <p class="role__blurb">Took clients' early product ideas to development plans, including support for patent applications.</p>
-        </article>
-        <article class="card role">
-          <span class="role__when">Sep — Dec 2021</span>
-          <h3>Mechanical Engineering Intern</h3>
-          <p class="role__org">VMAC Air</p>
-          <p class="role__blurb">Designed manufacturing fixtures and production test equipment in SolidWorks.</p>
-        </article>
-        <article class="card role">
-          <span class="role__when">May — Aug 2021</span>
-          <h3>Software Developer Intern</h3>
-          <p class="role__org">Ziva Dynamics</p>
-          <p class="role__blurb">Shipped production C++ and Python with a Qt/PySide2 interface and Git-based automated testing.</p>
-        </article>
-        <article class="card role">
-          <span class="role__when">Jan — May 2021</span>
-          <h3>IT Intern</h3>
-          <p class="role__org">Mulgrave School</p>
-          <p class="role__blurb">Built a Raspberry Pi remote 3D-printing setup and administered Active Directory.</p>
-        </article>
-      </div>
+    <!-- Education -->
+    <section class="section" id="education">
+      <details class="fold" open>
+        <summary class="section__head">
+          <span class="kicker">02</span>
+          <h2>Education</h2>
+          <svg class="fold__chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </summary>
+        <ol class="entries">
+        <li class="entry">
+          <div class="entry__top"><h3>Johns Hopkins University</h3><span class="entry__when">Starting spring</span></div>
+          <p class="entry__role">M.S., Robotics and Autonomous Systems Engineering</p>
+          <ul class="entry__points">
+            <li>Part-time, alongside R&amp;D work at Unifiller</li>
+          </ul>
+        </li>
+        <li class="entry">
+          <div class="entry__top"><h3>Simon Fraser University</h3><span class="entry__when">2018 — 2023</span></div>
+          <p class="entry__role">B.A.Sc., Mechatronic Systems Engineering</p>
+          <ul class="entry__points">
+            <li>Capstone: Lief, a foot wearable for dystonia pain, as controls lead</li>
+            <li>Built state-space controllers, STM32 and 8051 firmware, and BLE hardware along the way</li>
+          </ul>
+        </li>
+        </ol>
+      </details>
     </section>
 
     <!-- Projects -->
     <section class="section" id="projects">
       <header class="section__head">
-        <span class="kicker">02</span>
+        <span class="kicker">03</span>
         <h2>Projects</h2>
       </header>
 
@@ -198,7 +228,7 @@
     <!-- Skills -->
     <section class="section" id="skills">
       <header class="section__head">
-        <span class="kicker">03</span>
+        <span class="kicker">04</span>
         <h2>Skills</h2>
       </header>
       <div class="skills">
@@ -220,7 +250,7 @@
     <!-- Contact -->
     <section class="section contact" id="contact">
       <div class="card contact__card">
-        <span class="kicker">04</span>
+        <span class="kicker">05</span>
         <h2>Building something with moving parts?</h2>
         <p>I'm always up for talking robotics, mechanical design, or hardware that has to work on a factory floor.</p>
         <div class="hero__actions">
