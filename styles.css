@@ -225,6 +225,9 @@ main { width: min(var(--wrap), calc(100% - 40px)); margin: 0 auto; }
 .nav { grid-column: 2 / 4; justify-self: end; display: flex; align-items: center; gap: 8px; }
 .tab { padding: 8px 14px; font-size: 14px; }
 
+.inline-link { color: var(--ink); text-decoration: underline; text-decoration-color: var(--line-2); text-underline-offset: 3px; transition: text-decoration-color .2s; }
+.inline-link:hover { text-decoration-color: var(--accent); }
+
 /* Projects: compact rows, small uniform thumbnails */
 .projects { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 .project { display: grid; grid-template-columns: 132px 1fr; gap: 18px; padding: 12px; align-items: start; }
