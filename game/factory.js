@@ -10,7 +10,7 @@ const SEG = 24;              // one zone per 24 units, per side
 const NSLOT = 8;             // 8 x 24 = 192 units of hall per side
 const IN = 5.6;              // zones start here (the line's rails end at ~5.1)
 
-const C = {
+export const C = {
   white: 0xeef1f7, white2: 0xe2e6ef, steel: 0xc6ccda, steel2: 0xa9b0c3, steel3: 0x8a92aa,
   navy: 0x2f3658, navy2: 0x454e74, ink: 0x1d233f,
   peri: 0xa9bcff, periDeep: 0x6f84e0, rack: 0x5b6fd0,
@@ -22,12 +22,12 @@ const C = {
 };
 
 /* ---------- a tiny geometry merger with vertex colours ---------- */
-const BOXG = new THREE.BoxGeometry(1, 1, 1);
-const CYLG = new THREE.CylinderGeometry(0.5, 0.5, 1, 14);
-const SPHG = new THREE.SphereGeometry(0.5, 16, 10);
+export const BOXG = new THREE.BoxGeometry(1, 1, 1);
+export const CYLG = new THREE.CylinderGeometry(0.5, 0.5, 1, 14);
+export const SPHG = new THREE.SphereGeometry(0.5, 16, 10);
 const tmpM = new THREE.Matrix4(), tmpQ = new THREE.Quaternion(), tmpE = new THREE.Euler(), tmpC = new THREE.Color();
 
-class Builder {
+export class Builder {
   constructor() { this.pos = []; this.nor = []; this.col = []; }
   add(geo, color, x, y, z, sx = 1, sy = 1, sz = 1, rx = 0, ry = 0, rz = 0) {
     const g = geo.index ? geo.toNonIndexed() : geo;
@@ -85,19 +85,22 @@ function common(b, gl, { wall = true } = {}) {
 }
 
 // Hanging "rooftop-style" air handler: a cabinet with two fans, ducted into the run.
+// Its top stays under the roof trusses (bottom chord at 8.18).
 function airHandler(b, gl, z) {
-  b.box(C.white2, 3.6, 1.6, 2.6, 12.9, 7.75, z);
-  b.box(C.steel, 3.7, 0.12, 2.7, 12.9, 6.92, z);
+  const d = -0.4;
+  b.box(C.white2, 3.6, 1.6, 2.6, 12.9, 7.75 + d, z);
+  b.box(C.steel, 3.7, 0.12, 2.7, 12.9, 6.92 + d, z);
   for (const dz of [-0.62, 0.62]) {
-    b.cyl(C.ink, 0.5, 0.06, 11.08, 7.75, z + dz, "x");
-    b.cyl(C.steel2, 0.52, 0.04, 11.06, 7.75, z + dz, "x");
-    b.box(C.steel3, 0.04, 0.9, 0.06, 11.03, 7.75, z + dz);
-    b.box(C.steel3, 0.04, 0.06, 0.9, 11.03, 7.75, z + dz);
+    b.cyl(C.ink, 0.5, 0.06, 11.08, 7.75 + d, z + dz, "x");
+    b.cyl(C.steel2, 0.52, 0.04, 11.06, 7.75 + d, z + dz, "x");
+    b.box(C.steel3, 0.04, 0.9, 0.06, 11.03, 7.75 + d, z + dz);
+    b.box(C.steel3, 0.04, 0.06, 0.9, 11.03, 7.75 + d, z + dz);
   }
-  for (let i = 0; i < 5; i++) b.box(C.steel, 0.02, 0.05, 2.4, 11.09, 7.15 + i * 0.07, z); // louvres
-  b.box(C.duct, 0.8, 0.7, 0.8, 11.0, 7.55, z + 1.6);
-  for (const dx of [-1.4, 1.4]) b.box(C.steel2, 0.05, 0.75, 0.05, 12.9 + dx, ROOF - 0.4, z);
-  gl.box(C.peri, 0.03, 0.08, 0.5, 11.07, 8.35, z - 0.9);                     // status pip
+  for (let i = 0; i < 5; i++) b.box(C.steel, 0.02, 0.05, 2.4, 11.09, 7.15 + d + i * 0.07, z); // louvres
+  b.box(C.duct, 0.8, 0.7, 0.8, 11.0, 7.45, z + 1.6);
+  const top = 8.55 + d;
+  for (const dx of [-1.4, 1.4]) b.box(C.steel2, 0.05, ROOF - top, 0.05, 12.9 + dx, (ROOF + top) / 2, z);
+  gl.box(C.peri, 0.03, 0.08, 0.5, 11.07, 8.35 + d, z - 0.9);                 // status pip
 }
 
 function cart(b, x, z, load = "parts", ry = 0) {
