@@ -146,23 +146,49 @@ main { width: min(var(--wrap), calc(100% - 40px)); margin: 0 auto; }
 }
 .hero__clock { display: flex; align-self: center; justify-content: center; grid-column: 2; grid-row: 1; }
 .hero__body { grid-column: 1; grid-row: 1; }
-/* Watch dial wrapped around the clock */
-.dial { position: relative; width: clamp(260px, 27vw, 360px); aspect-ratio: 1; border-radius: 50%; }
-.dial::before { content: ""; position: absolute; inset: 9%; border-radius: 50%; background: radial-gradient(circle at 50% 35%, rgba(255,255,255,.035), transparent 70%); border: 1px solid var(--line); }
-.dial__ticks { position: absolute; inset: 0; width: 100%; height: 100%; }
+/* Watch dial as a cycloidal drive: hour marks are ring pins, the disc's dot reads the hour.
+   2.5D: thin layers stacked in Z inside one tilting stage; the time text stays flat on top. */
+.dial { position: relative; width: clamp(260px, 27vw, 360px); aspect-ratio: 1; border-radius: 50%; perspective: 1100px; }
+.dial__stage { position: absolute; inset: 0; transform-style: preserve-3d; will-change: transform; }
+.dial__stage > * { position: absolute; inset: 0; width: 100%; height: 100%; }
 .dial__ticks line { stroke: rgba(232, 236, 248, .22); stroke-width: .6; stroke-linecap: round; }
-.dial__ticks line.major { stroke: rgba(232, 236, 248, .55); stroke-width: 1; }
+.dial__layer { overflow: visible; pointer-events: none; }
+.dial__shadow { transform: translate3d(1%, 2%, 1px); opacity: .7; }
+.dial__shadow path { fill: none; stroke: #04061a; stroke-width: 2.6; }
+.dial__shadow circle { fill: #04061a; }
+.dial__pins circle { fill: none; stroke-width: .7; }
+.dial__pins--base { transform: translateZ(4px); }
+.dial__pins--base circle { stroke: rgba(232, 236, 248, .16); }
+.dial__pins--top { transform: translateZ(16px); }
+.dial__pins--top circle { stroke: rgba(232, 236, 248, .62); fill: rgba(16, 22, 47, .55); }
+.dial__disc path { fill: none; stroke-width: .7; stroke-linejoin: round; }
+.dial__disc--3 { transform: translateZ(6px); }
+.dial__disc--2 { transform: translateZ(8.5px); }
+.dial__disc--1 { transform: translateZ(11px); }
+.dial__disc--3 path { stroke: rgba(169, 188, 255, .10); }
+.dial__disc--2 path { stroke: rgba(169, 188, 255, .14); }
+.dial__disc--1 path { stroke: rgba(169, 188, 255, .2); }
+.dial__disc--top { transform: translateZ(13px); }
+.dial__disc--top path { stroke: rgba(169, 188, 255, .58); fill: rgba(169, 188, 255, .028); }
+.dial__hour { fill: var(--accent); }
 .dial__sweep {
-  position: absolute; inset: 0; border-radius: 50%;
+  border-radius: 50%;
   background: conic-gradient(from 0deg, transparent 0deg, transparent 300deg, rgba(169, 188, 255, .0) 300deg, rgba(169, 188, 255, .45) 360deg);
-  -webkit-mask: radial-gradient(circle, transparent 0 calc(50% - 7px), #000 calc(50% - 6px) calc(50% - 1px), transparent 50%);
-          mask: radial-gradient(circle, transparent 0 calc(50% - 7px), #000 calc(50% - 6px) calc(50% - 1px), transparent 50%);
+  -webkit-mask: radial-gradient(circle closest-side, transparent 0 calc(100% - 7px), #000 calc(100% - 6px) calc(100% - 1px), transparent 100%);
+          mask: radial-gradient(circle closest-side, transparent 0 calc(100% - 7px), #000 calc(100% - 6px) calc(100% - 1px), transparent 100%);
   animation: sweep 60s linear infinite; animation-delay: var(--sweep-delay, 0s);
 }
 .dial__sweep::after { content: ""; position: absolute; left: 50%; top: 1px; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px 2px rgba(169, 188, 255,.55); }
-.dial__sweep { -webkit-mask-composite: source-over; }
 @keyframes sweep { to { rotate: 360deg; } }
-.dial__face { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; }
+/* Touch screens: a slow idle sway instead of cursor tilt (compositor-only). */
+@media (hover: none), (pointer: coarse) {
+  .dial__stage { animation: dial-idle 18s ease-in-out infinite; }
+}
+@keyframes dial-idle {
+  0%, 100% { transform: rotateX(3deg) rotateY(-2deg); }
+  50%      { transform: rotateX(-2deg) rotateY(3deg); }
+}
+.dial__face { position: absolute; inset: 0; z-index: 1; pointer-events: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; }
 .clock__date { font: 400 12px/1 var(--mono); color: var(--ink-3); letter-spacing: .1em; text-transform: uppercase; }
 .clock__place { font: 400 13px/1 var(--mono); color: var(--ink-3); letter-spacing: .06em; text-transform: uppercase; }
 .clock__time {
@@ -284,7 +310,7 @@ main { width: min(var(--wrap), calc(100% - 40px)); margin: 0 auto; }
   font-family: var(--display); font-weight: 400; letter-spacing: -0.015em;
 }
 .hero__title { font-size: clamp(52px, 6.2vw, 84px); line-height: 1; }
-.clock__time { font-size: clamp(42px, 4.4vw, 62px); line-height: 1; }
+.clock__time { font-size: clamp(40px, 3.9vw, 54px); line-height: 1; }
 .section__head h2 { font-size: clamp(34px, 3.6vw, 48px); }
 .contact__card h2 em, .hero__title em { font-style: italic; color: var(--ink-2); }
 
@@ -293,14 +319,14 @@ main { width: min(var(--wrap), calc(100% - 40px)); margin: 0 auto; }
   .hero { display: flex; flex-direction: column; align-items: stretch; gap: 36px; min-height: 0; padding-top: 116px; }
   .hero__clock { order: 2; align-self: center; }
   .dial { width: 280px; }
-  .clock__time { font-size: 48px; }
+  .clock__time { font-size: 42px; }
   .projects { grid-template-columns: 1fr; }
   .skills { grid-template-columns: 1fr; }
 }
 @media (max-width: 640px) {
   .hero__title { font-size: 56px; }
-  .dial { width: 250px; }
-  .clock__time { font-size: 42px; }
+  .dial { width: 260px; }
+  .clock__time { font-size: 38px; }
   .hero__lede { font-size: 17px; }
   .bar { grid-template-columns: auto 1fr; gap: 10px; padding: 14px; }
   .nav { grid-column: 2; min-width: 0; }
@@ -317,6 +343,7 @@ main { width: min(var(--wrap), calc(100% - 40px)); margin: 0 auto; }
   html { scroll-behavior: auto; }
   .reveal { opacity: 1; transform: none; transition: none; }
   .dial__sweep { animation: none; }
+  .dial__stage { animation: none; transform: none !important; }
   .project__shot img, .entry__toggle { transition: none; }
   .entry details[open] .entry__points { animation: none; }
   .entry--now .entry__when::before { animation: none; opacity: 1; }
