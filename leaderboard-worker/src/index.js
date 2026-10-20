@@ -6,12 +6,28 @@
 //   POST /profile/claim     { username, best?, games?, gears?, lastPlayed? } -> { code } (shown once)
 //   POST /profile/restore   { username, code }
 //   POST /profile/sync      { username, code, best, games, gears, lastPlayed }
+//   POST /passkey/register/options { username, code? | token? } -> { challengeId, options }
+//   POST /passkey/register/verify  { challengeId, response, best?, games?, gears?, lastPlayed? }
+//                                  -> { token, profile, backupCode? } (backupCode only when the name is new)
+//   POST /passkey/login/options    {} -> { challengeId, options } (discoverable, no name needed)
+//   POST /passkey/login/verify     { challengeId, response } -> { token, profile }
+//   POST /profile/backup-code      { username, token } -> { code } (replaces the old code)
 //   POST /hit               once per page load, no body, no cookies
 //   GET  /stats             daily uniques; requires a Cloudflare Access JWT
+//
+// Passkeys (WebAuthn, RP ID auamai.dev) store only the public key and a counter.
+// A passkey sign-in returns a session token; /score and /profile/sync take
+// either the save code or that token. Only SHA-256 of tokens is kept.
 //
 // Stored: usernames, run scores, SHA-256 of save codes, SHA-256 of
 // (daily salt + IP + UA) for 30 days, and hashed rate-limit keys for one minute.
 // No emails, passwords, cookies or raw IPs.
+
+import {
+  generateRegistrationOptions, verifyRegistrationResponse,
+  generateAuthenticationOptions, verifyAuthenticationResponse,
+} from "@simplewebauthn/server";
+import { isoBase64URL } from "@simplewebauthn/server/helpers";
 
 const NAME_RE = /^[A-Za-z0-9_]{3,16}$/;
 const CODE_RE = /^[A-HJ-NP-Z2-9]{10}$/;
@@ -35,7 +51,15 @@ const LIMITS = {
   restore: 10,
   sync: 20,
   hit: 30,
+  passkey: 20,
+  backup: 5,
 };
+
+const RP_ID = "auamai.dev";
+const RP_NAME = "Factory Run";
+const CHALLENGE_TTL_MS = 5 * 60 * 1000;
+const SESSION_TTL_MS = 400 * 24 * 60 * 60 * 1000;
+const TOKEN_RE = /^[0-9a-f]{64}$/;
 
 export default {
   async fetch(request, env, ctx) {
@@ -76,6 +100,15 @@ export default {
           case "/profile/sync":
             if (!(await rateLimit(env, ip, "sync", LIMITS.sync))) return json({ error: "slow down" }, 429, cors);
             return await handleSync(request, env, cors);
+          case "/passkey/register/options":
+          case "/passkey/register/verify":
+          case "/passkey/login/options":
+          case "/passkey/login/verify":
+            if (!(await rateLimit(env, ip, "passkey", LIMITS.passkey))) return json({ error: "slow down" }, 429, cors);
+            return await handlePasskey(url.pathname, request, env, cors, origin);
+          case "/profile/backup-code":
+            if (!(await rateLimit(env, ip, "backup", LIMITS.backup))) return json({ error: "slow down" }, 429, cors);
+            return await handleBackupCode(request, env, cors);
         }
       }
       return json({ error: "not found" }, 404, cors);
@@ -92,6 +125,8 @@ export default {
     await env.DB.prepare("INSERT OR IGNORE INTO visit_salt (day, salt) VALUES (?1, ?2)").bind(today, randomHex(32)).run();
     await env.DB.prepare("DELETE FROM visits WHERE day < ?1").bind(utcDay(-VISIT_RETENTION_DAYS)).run();
     await env.DB.prepare("DELETE FROM rate_limits WHERE win < ?1").bind(currentWindow() - 1).run();
+    await env.DB.prepare("DELETE FROM webauthn_challenges WHERE expires_at < ?1").bind(Date.now()).run();
+    await env.DB.prepare("DELETE FROM sessions WHERE expires_at < ?1").bind(Date.now()).run();
   },
 };
 
@@ -123,10 +158,12 @@ async function handleScore(request, env, cors) {
   if (durationMs > MAX_DURATION_MS) return json({ error: "run too long" }, 400, cors);
   if (score > (durationMs / 1000) * MAX_SCORE_PER_SEC + SCORE_GRACE) return json({ error: "implausible score" }, 400, cors);
 
-  // A claimed name only accepts runs that carry its save code.
-  const profile = await env.DB.prepare("SELECT code_hash FROM profiles WHERE username = ?1").bind(username).first();
+  // A claimed name only accepts runs that carry its save code or a passkey session token.
+  const profile = await env.DB.prepare("SELECT username, code_hash FROM profiles WHERE username = ?1").bind(username).first();
   if (profile) {
-    if (!(await codeMatches(username, body.code, profile.code_hash))) return json({ error: "name is claimed" }, 403, cors);
+    if (!(await codeMatches(profile.username, body.code, profile.code_hash)) && !(await tokenMatches(env, profile.username, body.token))) {
+      return json({ error: "name is claimed" }, 403, cors);
+    }
   }
 
   await env.DB.prepare("INSERT INTO scores (username, score, duration_ms, created_at) VALUES (?1, ?2, ?3, ?4)")
@@ -191,7 +228,8 @@ async function authProfile(env, body) {
   if (!NAME_RE.test(username)) return null;
   const row = await env.DB.prepare("SELECT * FROM profiles WHERE username = ?1").bind(username).first();
   if (!row) return null;
-  return (await codeMatches(row.username, body.code, row.code_hash)) ? row : null;
+  if (await codeMatches(row.username, body.code, row.code_hash)) return row;
+  return (await tokenMatches(env, row.username, body.token)) ? row : null;
 }
 
 function publicProfile(r) {
@@ -220,6 +258,185 @@ function randomCode() {
   let out = "";
   for (const b of bytes) out += CODE_ALPHABET[b & 31]; // 256 % 32 === 0, so no bias
   return out;
+}
+
+/* ---------- passkeys ---------- */
+
+async function handlePasskey(path, request, env, cors, origin) {
+  const body = await readJson(request, 16384);
+  if (!body) return json({ error: "bad request" }, 400, cors);
+  if (path === "/passkey/register/options") return passkeyRegisterOptions(body, env, cors);
+  if (path === "/passkey/register/verify") return passkeyRegisterVerify(body, env, cors, origin);
+  if (path === "/passkey/login/options") return passkeyLoginOptions(env, cors);
+  return passkeyLoginVerify(body, env, cors, origin);
+}
+
+// Only pages on auamai.dev (and its subdomains) can use passkeys for this RP ID.
+function passkeyOrigins(env) {
+  return allowedOrigins(env).filter((o) => /^https:\/\/([a-z0-9-]+\.)*auamai\.dev$/.test(o));
+}
+
+async function userHandle(username) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`factory-run-user:${username.toLowerCase()}`));
+  return new Uint8Array(buf).slice(0, 16);
+}
+
+async function saveChallenge(env, challenge, kind, username) {
+  const id = randomHex(16);
+  await env.DB.prepare("INSERT INTO webauthn_challenges (id, challenge, kind, username, expires_at) VALUES (?1, ?2, ?3, ?4, ?5)")
+    .bind(id, challenge, kind, username || null, Date.now() + CHALLENGE_TTL_MS).run();
+  return id;
+}
+
+// Each challenge works once: it is deleted as it is read.
+async function takeChallenge(env, id, kinds) {
+  if (typeof id !== "string" || !/^[0-9a-f]{32}$/.test(id)) return null;
+  const row = await env.DB.prepare("DELETE FROM webauthn_challenges WHERE id = ?1 RETURNING challenge, kind, username, expires_at").bind(id).first();
+  if (!row || row.expires_at < Date.now() || !kinds.includes(row.kind)) return null;
+  return row;
+}
+
+async function passkeyRegisterOptions(body, env, cors) {
+  const username = String(body.username || "");
+  const nameErr = checkName(username);
+  if (nameErr) return json({ error: nameErr }, 400, cors);
+  const row = await env.DB.prepare("SELECT * FROM profiles WHERE username = ?1").bind(username).first();
+  // A claimed name can add a passkey only with its code or a session token.
+  if (row && !(await authProfile(env, { username: row.username, code: body.code, token: body.token }))) {
+    return json({ error: "name taken" }, 409, cors);
+  }
+  const name = row ? row.username : username;
+  const { results: existing } = await env.DB.prepare("SELECT cred_id, transports FROM passkeys WHERE username = ?1").bind(name).all();
+  const options = await generateRegistrationOptions({
+    rpName: RP_NAME,
+    rpID: RP_ID,
+    userName: name,
+    userDisplayName: `${name} · Factory Run`,
+    userID: await userHandle(name),
+    attestationType: "none",
+    timeout: 120000,
+    excludeCredentials: existing.map((c) => ({ id: c.cred_id, transports: c.transports ? JSON.parse(c.transports) : undefined })),
+    authenticatorSelection: { residentKey: "required", userVerification: "preferred" },
+    supportedAlgorithmIDs: [-7, -257],
+  });
+  const challengeId = await saveChallenge(env, options.challenge, row ? "reg-add" : "reg-new", name);
+  return json({ ok: true, challengeId, options }, 200, cors);
+}
+
+async function passkeyRegisterVerify(body, env, cors, origin) {
+  const ch = await takeChallenge(env, body.challengeId, ["reg-new", "reg-add"]);
+  if (!ch) return json({ error: "challenge expired" }, 400, cors);
+  let v;
+  try {
+    v = await verifyRegistrationResponse({
+      response: body.response,
+      expectedChallenge: ch.challenge,
+      expectedOrigin: passkeyOrigins(env),
+      expectedRPID: RP_ID,
+      requireUserVerification: false,
+    });
+  } catch {
+    return json({ error: "passkey not verified" }, 400, cors);
+  }
+  if (!v.verified || !v.registrationInfo) return json({ error: "passkey not verified" }, 400, cors);
+  const { credential } = v.registrationInfo;
+  const now = Date.now();
+  const s = cleanStats(body);
+  let backupCode = null;
+
+  if (ch.kind === "reg-new") {
+    // The name was free when the options were made; claim it now (or lose the race cleanly).
+    backupCode = randomCode();
+    const res = await env.DB.prepare(
+      `INSERT OR IGNORE INTO profiles (username, code_hash, best, games, gears, last_played, created_at, updated_at)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?7)`
+    ).bind(ch.username, await codeHash(ch.username, backupCode), s.best, s.games, s.gears, s.lastPlayed, now).run();
+    if (!res.meta || res.meta.changes !== 1) return json({ error: "name taken" }, 409, cors);
+  } else {
+    await env.DB.prepare(
+      `UPDATE profiles SET best = MAX(best, ?2), games = MAX(games, ?3), gears = MAX(gears, ?4),
+         last_played = MAX(last_played, ?5), updated_at = ?6 WHERE username = ?1`
+    ).bind(ch.username, s.best, s.games, s.gears, s.lastPlayed, now).run();
+  }
+  const ins = await env.DB.prepare(
+    `INSERT OR IGNORE INTO passkeys (cred_id, username, public_key, counter, transports, created_at, last_used)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6)`
+  ).bind(credential.id, ch.username, isoBase64URL.fromBuffer(credential.publicKey), credential.counter || 0,
+    JSON.stringify(Array.isArray(body.response?.response?.transports) ? body.response.response.transports.slice(0, 6) : []), now).run();
+  if (!ins.meta || ins.meta.changes !== 1) return json({ error: "passkey already saved" }, 409, cors);
+
+  const token = await newSession(env, ch.username);
+  const row = await env.DB.prepare("SELECT * FROM profiles WHERE username = ?1").bind(ch.username).first();
+  return json({ ok: true, token, profile: publicProfile(row), ...(backupCode ? { backupCode } : {}) }, 200, cors);
+}
+
+async function passkeyLoginOptions(env, cors) {
+  const options = await generateAuthenticationOptions({ rpID: RP_ID, userVerification: "preferred", timeout: 120000 });
+  const challengeId = await saveChallenge(env, options.challenge, "login", null);
+  return json({ ok: true, challengeId, options }, 200, cors);
+}
+
+async function passkeyLoginVerify(body, env, cors, origin) {
+  const ch = await takeChallenge(env, body.challengeId, ["login"]);
+  if (!ch) return json({ error: "challenge expired" }, 400, cors);
+  const credId = body.response && typeof body.response.id === "string" ? body.response.id : "";
+  if (!credId || credId.length > 1400) return json({ error: "unknown passkey" }, 401, cors);
+  const pk = await env.DB.prepare("SELECT * FROM passkeys WHERE cred_id = ?1").bind(credId).first();
+  if (!pk) return json({ error: "unknown passkey" }, 401, cors);
+  let v;
+  try {
+    v = await verifyAuthenticationResponse({
+      response: body.response,
+      expectedChallenge: ch.challenge,
+      expectedOrigin: passkeyOrigins(env),
+      expectedRPID: RP_ID,
+      requireUserVerification: false,
+      credential: {
+        id: pk.cred_id,
+        publicKey: isoBase64URL.toBuffer(pk.public_key),
+        counter: pk.counter,
+        transports: pk.transports ? JSON.parse(pk.transports) : undefined,
+      },
+    });
+  } catch {
+    return json({ error: "passkey not verified" }, 401, cors);
+  }
+  if (!v.verified) return json({ error: "passkey not verified" }, 401, cors);
+  await env.DB.prepare("UPDATE passkeys SET counter = ?2, last_used = ?3 WHERE cred_id = ?1")
+    .bind(pk.cred_id, v.authenticationInfo.newCounter || 0, Date.now()).run();
+  const row = await env.DB.prepare("SELECT * FROM profiles WHERE username = ?1").bind(pk.username).first();
+  if (!row) return json({ error: "unknown passkey" }, 401, cors);
+  const token = await newSession(env, row.username);
+  return json({ ok: true, token, profile: publicProfile(row) }, 200, cors);
+}
+
+// A signed-in device can make a fresh backup code for a device without passkeys.
+async function handleBackupCode(request, env, cors) {
+  const body = await readJson(request);
+  if (!body) return json({ error: "bad request" }, 400, cors);
+  const username = String(body.username || "");
+  if (!NAME_RE.test(username)) return json({ error: "bad request" }, 400, cors);
+  const row = await env.DB.prepare("SELECT username FROM profiles WHERE username = ?1").bind(username).first();
+  if (!row || !(await tokenMatches(env, row.username, body.token))) return json({ error: "not signed in" }, 401, cors);
+  const code = randomCode();
+  await env.DB.prepare("UPDATE profiles SET code_hash = ?2, updated_at = ?3 WHERE username = ?1")
+    .bind(row.username, await codeHash(row.username, code), Date.now()).run();
+  return json({ ok: true, username: row.username, code }, 200, cors);
+}
+
+async function newSession(env, username) {
+  const token = randomHex(32);
+  const now = Date.now();
+  await env.DB.prepare("INSERT INTO sessions (token_hash, username, created_at, expires_at) VALUES (?1, ?2, ?3, ?4)")
+    .bind(await sha256hex(`factory-run-session:${token}`), username, now, now + SESSION_TTL_MS).run();
+  return token;
+}
+
+async function tokenMatches(env, username, token) {
+  if (typeof token !== "string" || !TOKEN_RE.test(token)) return false;
+  const row = await env.DB.prepare("SELECT username, expires_at FROM sessions WHERE token_hash = ?1")
+    .bind(await sha256hex(`factory-run-session:${token}`)).first();
+  return Boolean(row && row.expires_at > Date.now() && row.username.toLowerCase() === username.toLowerCase());
 }
 
 /* ---------- unique visitors ---------- */
@@ -358,12 +575,12 @@ function json(data, status = 200, headers = {}) {
   });
 }
 
-async function readJson(request) {
+async function readJson(request, max = 2048) {
   const len = Number(request.headers.get("Content-Length") || 0);
-  if (len > 2048) return null;
+  if (len > max) return null;
   try {
     const text = await request.text();
-    if (text.length > 2048) return null;
+    if (text.length > max) return null;
     const v = JSON.parse(text);
     return v && typeof v === "object" && !Array.isArray(v) ? v : null;
   } catch {

@@ -1,9 +1,10 @@
 // Factory run: a small endless runner. Loaded only when someone presses Play.
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
-import * as P from "./profile.js?v=20261020r4";
-import { Factory } from "./factory.js?v=20261020r4";
-import { Ceiling } from "./ceiling.js?v=20261020r4";
-import { createKit, RUNNERS, ROLLERS } from "./robots/index.js?v=20261020r4";
+import * as P from "./profile.js?v=20261020r5";
+import { Factory } from "./factory.js?v=20261020r5";
+import { Ceiling } from "./ceiling.js?v=20261020r5";
+import { createKit, RUNNERS, ROLLERS } from "./robots/index.js?v=20261020r5";
+import { UI3D } from "./ui3d.js?v=20261020r5";
 
 /* ---------- tuning ---------- */
 const LANES = [-2.2, 0, 2.2];
@@ -30,7 +31,11 @@ const DRIVE_MULT = 1.5;      // score multiplier while rolling
 const RATE_CAP = 140;        // points in any one-second window, under the server's 150/s
 const JUMP_BUF = 0.16;       // a jump pressed this close before landing still fires on landing
 const OVER_LOCK = 450;       // ms after game over before a key or tap can restart
-const COUNT_T = 1.5;         // resume countdown, seconds (three beats)
+const COUNT_BEAT = 0.42;    // countdown: three numbers of this length, then a GO beat while play starts
+const SLOW_T = 1.2;          // first-run hint slow-mo: real seconds, eased in and out
+const SLOW_K = 0.4;          // game speed at the bottom of the slow-mo
+const TUT_SPEED = 9.5;       // first-run start speed, easing up to the normal curve
+const TUT_EASE = 16;         // seconds to reach the normal curve
 
 // Light factory built from the portfolio's own palette (styles.css):
 // --ink #f4f6fb is the white of the hall, the page navy #10162f is the ink,
@@ -54,16 +59,18 @@ const ICON = {
   right: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 6l6 6-6 6"/></svg>',
   up: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 14.5l6-6 6 6"/></svg>',
   down: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9.5l6 6 6-6"/></svg>',
+  key: '<svg class="fr__key" viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="12" r="3.6"/><path d="M11.6 12H21M17.5 12v3.2M20.2 12v2.4"/></svg>',
   wheel: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="1.6"/><path d="M12 4.5v5.9M12 13.6v5.9M5.5 15.8l5.1-2.9M13.4 11.1l5.1-2.9M5.5 8.2l5.1 2.9M13.4 12.9l5.1 2.9"/></svg>',
 };
 
 // Short, in-context first-run tips. Touch copy, key copy.
+// Each is a short 3D title and a quieter line under it.
 const TIPS = {
-  lanes: { icon: "lr", touch: "Swipe left or right to change lanes", keys: "← →  or  A D  to change lanes" },
-  jump: { icon: "up", touch: "Swipe up to jump", keys: "↑  or  Space  to jump" },
-  slide: { icon: "down", touch: "Swipe down to slide under", keys: "↓  or  S  to slide under" },
-  wheel: { icon: "wheel", all: "Grab the wheel: roll for 8 s at ×1.5" },
-  rolling: { icon: "wheel", all: "Rolling. Points ×1.5, jump still works" },
+  lanes: { icon: "lr", touch: ["Swipe left or right", "to change lanes"], keys: ["← →  or  A  D", "to change lanes"] },
+  jump: { icon: "up", touch: ["Swipe up", "to jump"], keys: ["↑  or  Space", "to jump"] },
+  slide: { icon: "down", touch: ["Swipe down", "to slide under"], keys: ["↓  or  S", "to slide under"] },
+  wheel: { icon: "wheel", all: ["Grab the wheel", "roll for 8 s at ×1.5"] },
+  rolling: { icon: "wheel", all: ["Rolling ×1.5", "jump still works"] },
 };
 const CAUSE = { crate: "Hit a crate", stack: "Hit a stack", arm: "Caught by the arm", bot: "Ran into a robot", gap: "Fell through the line" };
 
@@ -81,7 +88,7 @@ function loadCss() {
     cssLoaded = new Promise((resolve) => {
       const link = document.createElement("link");
       link.rel = "stylesheet";
-      link.href = new URL("./game.css?v=20261020r4", import.meta.url).href;
+      link.href = new URL("./game.css?v=20261020r5", import.meta.url).href;
       link.onload = link.onerror = () => resolve();
       document.head.appendChild(link);
     });
@@ -192,8 +199,8 @@ class Game {
         <button type="button" data-move="slide" aria-label="Slide">${ICON.down}</button>
         <button type="button" data-move="right" aria-label="Move right">${ICON.right}</button>
       </div>
-      <div class="fr__tip" aria-hidden="true"><span class="fr__tip-icon"></span><span class="fr__tip-text"></span></div>
-      <div class="fr__count" aria-hidden="true"></div>
+      <div class="fr__tip" aria-hidden="true"><span class="fr__tip-icon"></span><span class="fr__tip-title"></span><span class="fr__tip-text"></span></div>
+      <div class="fr__count" aria-hidden="true"><span class="fr__count-ring"></span><span class="fr__count-num"></span></div>
       <div class="fr__layer"><div class="fr__panel" role="document"></div></div>
       <div class="fr__toast" role="status" aria-live="polite"></div>
       <div class="fr__sr" role="status" aria-live="polite"></div>`;
@@ -280,6 +287,8 @@ class Game {
     };
     this.gearGeo = gearGeometry();
     this.kit = createKit(renderer, { lite: this.lite });
+    // 3D hints and countdown (an overlay scene drawn after the hall); 2D fallback at the lowest quality.
+    this.ui = new UI3D(renderer, { still: this.reduceMotion });
 
     this.buildWorld();
     this.buildRobot();
@@ -545,7 +554,7 @@ class Game {
       this.toNext = Math.max(16, this.speed * 0.7) + Math.random() * 10;
       return;
     }
-    const n = Math.random() < 0.35 + diff * 0.35 ? 2 : 1; // never all three lanes
+    const n = !this.tutorial && Math.random() < 0.35 + diff * 0.35 ? 2 : 1; // never all three lanes; one at a time while learning
     const lanes = shuffle([0, 1, 2]);
     const types = diff < 0.15 ? ["crate", "gap", "arm"] : ["crate", "gap", "arm", "stack", "stack"];
     let crateLane = -1;
@@ -563,7 +572,7 @@ class Game {
       if (this.tokenReady() && Math.random() < WHEEL_CHANCE) this.spawnToken(ln, z);
       else for (let i = 0; i < 5; i++) this.spawnGear(ln, z + 4.8 - i * 2.4, 1.0);
     }
-    this.toNext = Math.max(14, this.speed * 0.62) + Math.random() * 10;
+    this.toNext = (Math.max(14, this.speed * 0.62) + Math.random() * 10) * (this.tutorial ? 1.35 : 1);
   }
 
   tokenReady() {
@@ -601,6 +610,8 @@ class Game {
     this.factory.setQuality(this.quality);
     this.ceiling.setQuality(this.quality);
     if (this.quality >= 2 && !this.lite) this.useLiteKit();
+    // Dropping to the flat fallback mid-hint moves the hint across too.
+    if (!this.use3d && this.ui && this.ui.hint.on) { const id = this.tipNow; this.ui.hint.on = false; this.ui.hint.g.visible = false; if (id) { this.tipNow = null; this.showTip(id, this.tipLeft, true); } }
     this.resize();
   }
 
@@ -641,7 +652,11 @@ class Game {
       this.lookY = 0.9;
     }
     this.camera.updateProjectionMatrix();
+    if (this.ui) { this.ui.resize(w, h); this.placeTipSub(); }
   }
+
+  // 3D hints and countdown unless quality has dropped to its last step.
+  get use3d() { return this.quality < 3 && !window.__frFlatUi; }
 
   measure(dt) {
     if (this.state !== "play" || this.runTime < 2 || this.quality >= 3 || window.__frLockQuality) return;
@@ -749,7 +764,7 @@ class Game {
     });
     // A tap anywhere on the game-over screen (outside its buttons) runs again.
     this.layer.addEventListener("click", (e) => {
-      if (this.view === "over" && !e.target.closest("button, a, input, .fr__board")) this.tryStart();
+      if (this.view === "over" && !e.target.closest("button, a, input, form, .fr__board, .fr__save")) this.tryStart();
     });
     this.panel.addEventListener("click", (e) => this.onPanelClick(e));
     this.panel.addEventListener("submit", (e) => this.onPanelSubmit(e));
@@ -817,26 +832,43 @@ class Game {
   }
 
   /* ---------- first-run tips ---------- */
-  tipText(id) {
+  tipLines(id) {
     const t = TIPS[id];
     return t.all || (this.coarse ? t.touch : t.keys);
   }
+  tipText(id) { return this.tipLines(id).join(" "); }
 
-  showTip(id, secs = 2.6) {
-    if (this.tips[id] || this.tipNow === id) return;
+  showTip(id, secs = 2.6, again = false) {
+    if ((this.tips[id] && !again) || this.tipNow === id) return;
     this.tipNow = id;
     this.tipLeft = secs;
-    const ic = TIPS[id].icon;
+    this.tipAt = this.realT || 0;
+    const ic = TIPS[id].icon, [title, sub] = this.tipLines(id);
+    const flat = !this.use3d;
+    this.tipEl.classList.toggle("is-3d", !flat);
     this.tipEl.querySelector(".fr__tip-icon").innerHTML = ic === "lr" ? ICON.left + ICON.right : ic === "wheel" ? ICON.wheel : ICON[ic];
-    this.tipEl.querySelector(".fr__tip-text").textContent = this.tipText(id);
+    this.tipEl.querySelector(".fr__tip-title").textContent = title;
+    this.tipEl.querySelector(".fr__tip-text").textContent = sub;
     this.tipEl.dataset.tip = id;
+    if (!flat) { this.ui.showHint(id, title, ic); this.placeTipSub(); }
+    this.tipEl.classList.remove("is-on");
+    void this.tipEl.offsetWidth;
     this.tipEl.classList.add("is-on");
-    this.sr(this.tipText(id));
+    if (!again) this.sr(this.tipText(id));
+    // First sight of a jump, slide or wheel hint: time eases down so there's a moment to read it.
+    if (!again && id !== "lanes" && id !== "rolling" && !this.reduceMotion) this.slowT = SLOW_T;
+  }
+
+  // The 3D title lives in the overlay scene; its quieter line is crisp DOM text under it.
+  placeTipSub() {
+    if (!this.tipNow || !this.use3d || !this.ui.hint.on) return;
+    this.tipEl.style.setProperty("--fr-tip-y", `${this.ui.hint.subY.toFixed(1)}px`);
   }
 
   hideTip() {
     this.tipNow = null;
     this.tipEl.classList.remove("is-on");
+    this.ui?.hideHint();
   }
 
   // A tip is done once the player has done the thing it teaches.
@@ -852,16 +884,19 @@ class Game {
       this.tipLeft -= dt;
       if (this.tipLeft <= 0) this.hideTip();
     }
+    // The first time something needs a jump or a slide, say so while it's still well ahead
+    // (a jump or slide hint takes over from the lanes hint; it's the one that matters now).
+    if (!this.tipNow || this.tipNow === "lanes") {
+      for (const o of this.obstacles) {
+        if (o.passed || o.z < -48 || o.z > -11 || Math.abs(o.x - this.r.x) > 1.2) continue;
+        const need = o.type === "arm" ? "slide" : o.type === "stack" ? null : "jump";
+        if (need && !this.tips[need]) return this.showTip(need, 2.4);
+      }
+    }
     if (this.tipNow) return;
     if (!this.tips.lanes && this.runTime > 0.8 && this.runTime < 30) return this.showTip("lanes", 3);
-    // The first time something needs a jump or a slide, say so while it's still well ahead.
-    for (const o of this.obstacles) {
-      if (o.passed || o.z < -30 || o.z > -11 || Math.abs(o.x - this.r.x) > 1.2) continue;
-      const need = o.type === "arm" ? "slide" : o.type === "stack" ? null : "jump";
-      if (need && !this.tips[need]) return this.showTip(need, 2.2);
-    }
     const tk = this.token;
-    if (tk && !tk.taken && tk.z > -42 && tk.z < -8 && !this.tips.wheel) this.showTip("wheel", 2.6);
+    if (tk && !tk.taken && tk.z > -56 && tk.z < -8 && !this.tips.wheel) this.showTip("wheel", 2.6);
   }
 
   /* ---------- run lifecycle ---------- */
@@ -874,6 +909,7 @@ class Game {
 
   startRun() {
     if (!this.profile) return this.showMenu();
+    const fromMenu = this.view === "menu";
     this.clearWorld();
     this.hideTip();
     Object.assign(this.r, { lane: 1, x: 0, y: 0, vy: 0, ground: true, slideT: 0, queueSlide: false, jumpBuf: 0 });
@@ -888,6 +924,9 @@ class Game {
     this.score = 0;
     this.gearsRun = 0;
     this.toNext = 10;
+    this.slowT = 0;
+    // First run (until lanes, jump and slide are learned): a gentler start and roomier rows.
+    this.tutorial = !(this.tips.lanes && this.tips.jump && this.tips.slide);
     this.deathT = 0;
     this.fps.frames = 0; this.fps.acc = 0;
     this.shown = { score: -1, gears: -1 };
@@ -903,6 +942,9 @@ class Game {
     this.elPower.classList.remove("is-ending");
     this.root.classList.add("is-playing");
     if (document.activeElement && this.root.contains(document.activeElement)) document.activeElement.blur();
+    // From the menu: 3-2-1-GO. A quick retry from game over: just the GO beat.
+    if (fromMenu) this.startCount(["3", "2", "1", "GO"]);
+    else this.startCount(["GO"]);
   }
 
   /* ---------- wheel power-up ---------- */
@@ -968,11 +1010,12 @@ class Game {
 
   pause() {
     if (this.state !== "play" && this.state !== "count") return;
+    this.saveUi = { open: "", msg: "", busy: false, code: "" };
     this.state = "pause";
     this.view = "pause";
     this.swipe = null;
     this.drawn = false;
-    this.countEl.classList.remove("is-on");
+    this.stopCount();
     this.btnPause.setAttribute("aria-label", "Resume");
     this.pad.hidden = true;
     this.root.classList.remove("is-playing");
@@ -984,16 +1027,15 @@ class Game {
         <button class="fr__btn" type="button" data-panel="restart">Restart</button>
         <button class="fr__btn" type="button" data-panel="menu">Quit run</button>
       </div>
+      <div data-slot="save">${this.saveHtml("pause")}</div>
       ${this.settingsHtml()}`);
   }
 
   // Resume after a short 3-2-1 so nobody comes back straight into a crate.
   resume() {
     if (this.state !== "pause") return;
-    this.state = "count";
     this.view = "play";
-    this.countT = COUNT_T;
-    this.shownCount = 0;
+    this.startCount(["3", "2", "1", "GO"]);
     this.btnPause.setAttribute("aria-label", "Pause");
     this.pad.hidden = !this.settings.pad;
     this.root.classList.add("is-playing");
@@ -1001,21 +1043,47 @@ class Game {
     this.last = performance.now();
   }
 
-  updateCount(dt) {
-    this.countT -= dt;
-    const n = Math.ceil((this.countT / COUNT_T) * 3);
-    if (n !== this.shownCount && n > 0) {
-      this.shownCount = n;
-      this.countEl.textContent = n;
-      this.countEl.classList.remove("is-on");
-      void this.countEl.offsetWidth; // restart the little pop
-      this.countEl.classList.add("is-on");
-    }
-    if (this.countT <= 0) {
-      this.countEl.classList.remove("is-on");
-      this.state = "play";
-    }
+  // The numbers hold the run still; play starts on GO while GO itself plays out.
+  startCount(seq) {
+    this.countSeq = seq;
+    this.countT = 0;
+    this.shownCount = "";
+    this.countHold = (seq.length - 1) * COUNT_BEAT;
+    this.state = this.countHold > 0 ? "count" : "play";
+    this.countFlat = !this.use3d;
+    if (this.countFlat) this.ui.stopCount(); else this.ui.startCount(seq);
+    this.countOn = true;
+    this.tickCount(0);
   }
+
+  stopCount() {
+    this.countOn = false;
+    this.ui?.stopCount();
+    this.countEl.classList.remove("is-on");
+    this.countEl.dataset.n = "";
+  }
+
+  // Runs on real time in every state, so GO finishes even after play resumes.
+  tickCount(dt) {
+    if (!this.countOn) return;
+    this.countT += dt;
+    const n = this.countSeq.length, i = Math.min(n - 1, Math.floor(this.countT / COUNT_BEAT));
+    const label = this.countSeq[i];
+    if (label !== this.shownCount) {
+      this.shownCount = label;
+      if (this.countFlat) {
+        this.countEl.querySelector(".fr__count-num").textContent = label;
+        this.countEl.dataset.n = label;
+        this.countEl.classList.remove("is-on");
+        void this.countEl.offsetWidth; // restart the punch
+        this.countEl.classList.add("is-on");
+      }
+    }
+    if (this.state === "count" && this.countT >= this.countHold) this.state = "play";
+    if (this.countT >= this.countHold + 0.5) this.stopCount();
+  }
+
+  updateCount() { /* kept for the old test harness: the countdown now ticks in loop() */ }
 
   die(kind, type) {
     if (this.state !== "play") return;
@@ -1048,18 +1116,37 @@ class Game {
 
   async submitRun(score, durationMs) {
     if (!P.online()) return;
+    const p = this.profile;
     if (this.lastRun.post === "posting") {
       const run = this.lastRun;
-      const res = await P.postScore(this.profile, score, durationMs);
+      const res = await P.postScore(p, score, durationMs);
       run.post = res.ok ? "ok" : res.status === 403 ? "claimed" : res.status === 429 ? "busy" : res.offline && navigator.onLine === false ? "offline" : "error";
       if (res.ok && res.data && res.data.rank) run.rank = res.data.rank;
-      if (run === this.lastRun) this.updateOverStatus();
+      if (res.status === 403) { p.claimed = true; p.code = ""; p.token = ""; }
+      // Not posted: keep it (the best one) for when the board can take it.
+      if (!res.ok) P.hold(p, score, durationMs);
+      else if (p.held && p.held.score <= score) { p.held = null; P.save(p); }
+      if (run === this.lastRun) { this.updateOverStatus(); this.refreshSave(); }
+      if (res.ok && p.held) await this.postHeld();
     }
-    if (this.profile.code) {
-      const s = await P.sync(this.profile);
-      if (s.ok && s.data && s.data.profile) P.merge(this.profile, s.data.profile);
+    if (P.linked(p)) {
+      const s = await P.sync(p);
+      if (s.ok && s.data && s.data.profile) P.merge(p, s.data.profile);
     }
     this.refreshBoard();
+  }
+
+  // Post the held run (the best one the board missed). Updates the game-over card if it's that run.
+  async postHeld() {
+    const p = this.profile, h = p && p.held;
+    if (!h) return null;
+    const res = await P.postScore(p, h.score, h.durationMs);
+    if (res.ok) {
+      p.held = null; P.save(p);
+      const run = this.lastRun;
+      if (run && run.score === h.score && run.post !== "ok") { run.post = "ok"; run.rank = res.data && res.data.rank; this.updateOverStatus(); }
+    } else if (res.status === 403) { p.claimed = true; P.save(p); }
+    return res;
   }
 
   async refreshBoard() {
@@ -1135,7 +1222,7 @@ class Game {
     this.btnPause.hidden = true;
     this.pad.hidden = true;
     this.root.classList.remove("is-playing");
-    this.countEl.classList.remove("is-on");
+    this.stopCount();
     this.hideTip();
     this.clearWorld();
     Object.assign(this.r, { lane: 1, x: 0, y: 0, vy: 0, ground: true, slideT: 0, queueSlide: false, jumpBuf: 0 });
@@ -1149,11 +1236,6 @@ class Game {
         <p class="fr__muted">Best ${fmt(p.best)} · ${fmt(p.games)} ${p.games === 1 ? "run" : "runs"} · ${fmt(p.gears)} gears</p>
         <div class="fr__actions"><button class="fr__btn fr__btn--solid fr__btn--wide" type="button" data-panel="start">Start</button></div>`;
       links.push(`<button class="fr__link" type="button" data-panel="switch">Not you?</button>`);
-      if (P.online()) {
-        links.push(p.code
-          ? `<span class="fr__note">Saved across devices</span>`
-          : `<button class="fr__link" type="button" data-panel="claim">Save across devices</button>`);
-      }
     } else {
       body = `
         <form class="fr__form" data-form="name" novalidate>
@@ -1169,11 +1251,18 @@ class Game {
           </div>
         </form>`;
     }
-    if (P.online()) links.push(`<button class="fr__link" type="button" data-panel="restore">Load a save code</button>`);
+    const fresh = !p || this.switching;
+    if (P.online() && fresh) {
+      // No name on this device yet: sign in with a passkey that synced here, or (tucked away) a backup code.
+      if (P.passkeysOk()) links.push(`<button class="fr__link fr__link--key" type="button" data-panel="pk-login">${ICON.key}Sign in with passkey</button>`);
+      links.push(`<button class="fr__link fr__link--quiet" type="button" data-panel="restore">${P.passkeysOk() ? "No passkey? Use a backup code" : "Load a backup code"}</button>`);
+    }
+    if (!this.saveUi || this.saveUi.ctx !== "menu") this.saveUi = { open: "", msg: "", busy: false, code: "", ctx: "menu" };
     this.renderPanel(`
       <h2 class="fr__title">Factory run</h2>
       <p class="fr__sub">Run the floor, collect gears, stay clear of the machines.</p>
       ${body}
+      ${!fresh ? `<div data-slot="save">${this.saveHtml("menu")}</div>` : ""}
       <div class="fr__links">${links.join("")}</div>
       ${this.controlsHtml()}
       ${this.settingsHtml()}
@@ -1188,8 +1277,8 @@ class Game {
       : `Best ${fmt(this.profile.best)}`;
     const post = {
       posting: "Posting to the board…",
-      ok: r.rank ? `#${r.rank} on the board` : "Posted to the board",
-      claimed: "Not posted: that name is claimed. Load its save code to post.",
+      ok: r.rank ? `Posted · #${r.rank} on the board` : "Posted to the board",
+      claimed: "Not posted yet: this name is saved to another device. Sign in and it posts.",
       offline: "Not posted: you're offline. Saved on this device.",
       busy: "Not posted: too many runs at once. Saved on this device.",
       error: "Not posted: the board didn't answer. Saved on this device.",
@@ -1206,19 +1295,24 @@ class Game {
 
   showOver() {
     const r = this.lastRun;
-    const links = [];
-    if (P.online() && !this.profile.code) links.push(`<button class="fr__link" type="button" data-panel="claim">Save across devices</button>`);
+    this.saveUi = { open: "", msg: "", busy: false, code: "" };
+    // The save offer opens itself once, after a first good run. Later it's a quiet link.
+    const p = this.profile;
+    if (P.online() && !P.linked(p) && !p.claimed && !this.settings.savePrompted && (r.score >= 300 || (r.best && p.games >= 2))) {
+      this.saveUi.open = "offer";
+      this.settings.savePrompted = 1; P.setSetting("savePrompted", 1);
+    }
     this.renderPanel(`
       <p class="fr__label">${esc(r.cause)}</p>
       <p class="fr__big">${fmt(r.score)}</p>
       <div class="fr__status" data-slot="status">${this.overStatusHtml()}</div>
+      <div data-slot="save">${this.saveHtml("over")}</div>
       <p class="fr__muted">${fmt(r.gears)} gears · ${clock(r.time)}</p>
       <div class="fr__actions">
-        <button class="fr__btn fr__btn--solid fr__btn--wide" type="button" data-panel="start">Run again</button>
+        <button class="fr__btn fr__btn--solid fr__btn--wide" type="button" data-panel="start" autofocus>Run again</button>
         <button class="fr__btn" type="button" data-panel="menu">Menu</button>
       </div>
       <p class="fr__muted fr__again">${this.coarse ? "Tap anywhere to run again" : "Space or Enter to run again"}</p>
-      ${links.length ? `<div class="fr__links">${links.join("")}</div>` : ""}
       ${this.boardHtml()}`, "over");
     this.overAt = performance.now();
     this.layer.classList.add("is-arming");
@@ -1229,13 +1323,13 @@ class Game {
   showRestore(error = "") {
     this.state = "menu";
     this.renderPanel(`
-      <h2 class="fr__title">Load a save code</h2>
-      <p class="fr__sub">Enter the name and the 10-character code you were given.</p>
+      <h2 class="fr__title">Use a backup code</h2>
+      <p class="fr__sub">Enter your name and the 10-character backup code.</p>
       <form class="fr__form" data-form="restore" novalidate>
         <label class="fr__label" for="fr-rname">Name</label>
         <input id="fr-rname" class="fr__input" name="username" type="text" autocomplete="username" autocapitalize="off"
           autocorrect="off" spellcheck="false" enterkeyhint="next" maxlength="16" autofocus />
-        <label class="fr__label" for="fr-code">Save code</label>
+        <label class="fr__label" for="fr-code">Backup code</label>
         <input id="fr-code" class="fr__input fr__input--code" name="code" type="text" autocomplete="off" autocapitalize="characters"
           autocorrect="off" spellcheck="false" enterkeyhint="go" maxlength="11" placeholder="ABCDE 23456" aria-describedby="fr-code-hint" />
         <p class="fr__hint${error ? " is-error" : ""}" id="fr-code-hint" role="${error ? "alert" : "note"}">${esc(error || "Letters and numbers. Spaces don't matter.")}</p>
@@ -1261,9 +1355,9 @@ class Game {
   showCode(code) {
     const pretty = `${code.slice(0, 5)} ${code.slice(5)}`;
     this.renderPanel(`
-      <p class="fr__label">Your save code</p>
+      <p class="fr__label">Your backup code</p>
       <p class="fr__code">${esc(pretty)}</p>
-      <p class="fr__sub">Write this down. It's the only way to load ${esc(this.profile.username)} on another device, and it won't be shown again.</p>
+      <p class="fr__sub">For a device without passkeys. Write it down: it loads ${esc(this.profile.username)} anywhere, and it won't be shown again.</p>
       <div class="fr__actions">
         <button class="fr__btn fr__btn--solid" type="button" data-panel="back">I've saved it</button>
         <button class="fr__btn" type="button" data-panel="copy" data-code="${esc(code)}">Copy</button>
@@ -1276,9 +1370,193 @@ class Game {
     else { this.switching = false; this.showMenu(); }
   }
 
+  /* ---------- saving across devices ---------- */
+  // What the passkey prompt will look like on this device.
+  keyName() {
+    const ua = navigator.userAgent || "";
+    if (/iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) return "Face ID";
+    if (/Macintosh/.test(ua)) return "Touch ID";
+    if (/Android/.test(ua)) return "fingerprint";
+    if (/Windows/.test(ua)) return "Windows Hello";
+    return "a passkey";
+  }
+
+  // One block, used inline on the menu, the pause card and the game-over card.
+  // ctx: "menu" | "pause" | "over". Nothing here ever leaves the run.
+  saveHtml(ctx) {
+    const p = this.profile, u = this.saveUi || {};
+    if (!P.online() || !p) return "";
+    const keys = P.passkeysOk(), name = esc(p.username);
+    const msg = u.msg ? `<p class="fr__hint is-error" role="alert">${esc(u.msg)}</p>` : "";
+    const busy = u.busy ? " disabled" : "";
+    const codeForm = (btn) => `
+      <form class="fr__inline" data-form="inlinecode" novalidate>
+        <label class="fr__sr" for="fr-icode">Backup code for ${name}</label>
+        <input id="fr-icode" class="fr__input fr__input--code" name="code" type="text" autocomplete="one-time-code" autocapitalize="characters"
+          autocorrect="off" spellcheck="false" enterkeyhint="go" maxlength="11" placeholder="ABCDE 23456" />
+        <button class="fr__btn" type="submit"${busy}>${btn}</button>
+      </form>`;
+    const renameForm = `
+      <form class="fr__inline" data-form="rename" novalidate>
+        <label class="fr__sr" for="fr-newname">New name</label>
+        <input id="fr-newname" class="fr__input" name="username" type="text" autocomplete="nickname" autocapitalize="off"
+          autocorrect="off" spellcheck="false" enterkeyhint="go" minlength="3" maxlength="16" placeholder="new_name" />
+        <button class="fr__btn" type="submit"${busy}>Use name</button>
+      </form>`;
+
+    // Saved and signed in on this device.
+    if (P.linked(p)) {
+      if (u.code) {
+        return `<div class="fr__save is-done"><p class="fr__label">Backup code</p><p class="fr__code fr__code--sm">${esc(u.code.slice(0, 5) + " " + u.code.slice(5))}</p>
+          <p class="fr__muted">For a device without passkeys. It replaces any older code.</p>
+          <div class="fr__links"><button class="fr__link" type="button" data-panel="copy" data-code="${esc(u.code)}">Copy</button><button class="fr__link" type="button" data-panel="save-close">Done</button></div></div>`;
+      }
+      if (u.open === "done") {
+        // Signed in with a backup code: offer the passkey so the code isn't needed next time.
+        if (keys && !p.passkey) {
+          return `<div class="fr__save is-done"><p class="fr__note">Signed in as ${name}.</p>
+            <button class="fr__btn fr__btn--accent" type="button" data-panel="pk-save"${busy}>${ICON.key}Add ${this.keyName()}</button>${msg}</div>`;
+        }
+        return `<div class="fr__save is-done"><p class="fr__note">Saved. ${name} and your best score load on any device: choose Sign in with passkey.</p></div>`;
+      }
+      if (ctx !== "menu") return "";
+      const extra = keys && !p.passkey
+        ? `<button class="fr__link" type="button" data-panel="pk-save"${busy}>Add ${this.keyName()}</button>`
+        : p.token ? `<button class="fr__link fr__link--quiet" type="button" data-panel="backup-new"${busy}>Backup code</button>` : "";
+      return `<div class="fr__links"><span class="fr__note">Saved across devices</span>${extra}</div>${msg}`;
+    }
+
+    // This name is saved on another device: sign in right here.
+    if (p.claimed) {
+      return `<div class="fr__save" data-open="${u.open || ""}">
+        ${ctx === "over" ? "" : `<p class="fr__save-lede"><b class="fr__name">${name}</b> is saved to another device. Sign in to keep your runs on the board.</p>`}
+        ${keys ? `<button class="fr__btn fr__btn--accent" type="button" data-panel="pk-login"${busy}>${ICON.key}Sign in as ${name}</button>` : ""}
+        ${u.open === "code" || !keys ? codeForm(u.busy ? "Signing in…" : "Sign in") : ""}
+        ${u.open === "rename" ? renameForm : ""}
+        ${msg}
+        <div class="fr__links">
+          ${keys && u.open !== "code" ? `<button class="fr__link fr__link--quiet" type="button" data-panel="save-code">Use a backup code</button>` : ""}
+          ${u.open !== "rename" ? `<button class="fr__link fr__link--quiet" type="button" data-panel="save-rename">Use a different name</button>` : ""}
+        </div></div>`;
+    }
+
+    // Not saved yet: offer it. Opened on the menu, once after a good run, or from the quiet link.
+    const open = ctx === "menu" || u.open === "offer" || u.open === "codeclaim";
+    if (!open) {
+      return `<div class="fr__links"><button class="fr__link" type="button" data-panel="save-offer">Save across devices</button></div>`;
+    }
+    return `<div class="fr__save">
+      <p class="fr__save-lede">Save your name and best score across devices</p>
+      <p class="fr__muted">${keys ? `${this.keyName() === "a passkey" ? "A passkey" : `With ${this.keyName()}, a passkey that`} syncs through iCloud Keychain or Google Password Manager. No email, no password.` : "Get a backup code to load this name on another device."}</p>
+      ${keys ? `<button class="fr__btn fr__btn--accent" type="button" data-panel="pk-save"${busy}>${ICON.key}${u.busy ? "Saving…" : `Save with ${this.keyName()}`}</button>` : `<button class="fr__btn fr__btn--accent" type="button" data-panel="code-claim"${busy}>Get a backup code</button>`}
+      ${msg}
+      ${keys ? `<div class="fr__links"><button class="fr__link fr__link--quiet" type="button" data-panel="code-claim"${busy}>No passkey? Use a backup code</button></div>` : ""}
+    </div>`;
+  }
+
+  refreshSave() {
+    const slot = this.panel.querySelector('[data-slot="save"]');
+    if (!slot) return;
+    const ctx = this.view === "over" ? "over" : this.view === "pause" ? "pause" : "menu";
+    slot.innerHTML = this.saveHtml(ctx);
+    const f = slot.querySelector("input");
+    if (f && this.saveUi.focus) { f.focus({ preventScroll: true }); this.saveUi.focus = false; }
+  }
+
+  saveMsg(res, what) {
+    if (res.cancelled) return "";
+    if (res.status === 409) return what === "save" ? "That name is already saved by someone. Sign in if it's yours, or use a different name." : "That didn't work. Try again.";
+    if (res.status === 401) return what === "login" ? "That passkey isn't saved for Factory Run." : "That name and code don't match.";
+    if (res.status === 429) return "Too many tries. Give it a minute.";
+    if (res.offline) return "Couldn't reach the server. Check your connection.";
+    if (res.exists) return "This device already has a passkey for this name.";
+    return "That didn't work. Try again.";
+  }
+
+  // Signed in or saved: post what the board missed, sync the best score, update the card in place.
+  async afterLink() {
+    const p = this.profile;
+    p.claimed = false;
+    P.save(p);
+    if (this.lastRun && this.lastRun.post === "claimed" && !p.held && this.lastRun.score > 0 && this.lastRun.time >= 3) {
+      P.hold(p, this.lastRun.score, Math.round(this.lastRun.time * 1000));
+    }
+    if (this.lastRun && this.lastRun.post === "claimed") { this.lastRun.post = "posting"; this.updateOverStatus(); }
+    await this.postHeld();
+    if (this.lastRun && this.lastRun.post === "posting") { this.lastRun.post = "error"; this.updateOverStatus(); }
+    const s = await P.sync(p);
+    if (s.ok && s.data && s.data.profile) P.merge(p, s.data.profile);
+    if (this.view === "over") this.updateOverStatus();
+    if (this.elBest) this.elBest.textContent = fmt(p.best);
+    this.refreshSave();
+    this.refreshBoard();
+  }
+
+  async saveAction(a, b) {
+    const u = this.saveUi || (this.saveUi = { open: "", msg: "", busy: false, code: "" });
+    if (u.busy) return;
+    u.msg = "";
+    if (a === "save-offer") { u.open = "offer"; return this.refreshSave(); }
+    if (a === "save-code") { u.open = "code"; u.focus = true; return this.refreshSave(); }
+    if (a === "save-rename") { u.open = "rename"; u.focus = true; return this.refreshSave(); }
+    if (a === "save-close") { u.code = ""; u.open = ""; return this.refreshSave(); }
+    u.busy = true; this.refreshSave();
+    let res;
+    if (a === "pk-save") {
+      res = await P.passkeyRegister(this.profile);
+      u.busy = false;
+      if (res.ok) {
+        P.save(this.profile);
+        u.open = "done";
+        this.toast(`Saved with ${this.keyName()}`);
+        return this.afterLink();
+      }
+      if (res.status === 409) { this.profile.claimed = true; P.save(this.profile); }
+      u.msg = this.saveMsg(res, "save");
+    } else if (a === "pk-login") {
+      res = await P.passkeyLogin();
+      u.busy = false;
+      if (res.ok) {
+        const rp = res.profile, cur = this.profile;
+        const same = cur && cur.username.toLowerCase() === rp.username.toLowerCase();
+        const base = same ? cur : P.create(rp.username);
+        // A run held under the old name on this device goes with the account you signed in to.
+        if (!same && cur && cur.held) base.held = cur.held;
+        Object.assign(base, { username: rp.username, token: res.token, passkey: true, claimed: false });
+        this.profile = P.merge(base, rp);
+        this.switching = false;
+        this.toast(`Signed in as ${rp.username}`);
+        if (this.view === "menu") { this.showMenu(); }
+        else u.open = "done";
+        return this.afterLink();
+      }
+      u.msg = this.saveMsg(res, "login");
+    } else if (a === "code-claim") {
+      res = await P.claim(this.profile);
+      u.busy = false;
+      if (res.ok && res.data && res.data.code) {
+        this.profile.code = res.data.code;
+        u.code = res.data.code;
+        P.save(this.profile);
+        return this.afterLink();
+      }
+      if (res.status === 409) { this.profile.claimed = true; P.save(this.profile); }
+      u.msg = this.saveMsg(res, "save");
+    } else if (a === "backup-new") {
+      res = await P.newBackupCode(this.profile);
+      u.busy = false;
+      if (res.ok && res.data && res.data.code) { this.profile.code = res.data.code; P.save(this.profile); u.code = res.data.code; }
+      else u.msg = this.saveMsg(res, "code");
+    }
+    u.busy = false;
+    this.refreshSave();
+    // The fresh menu has no save block to hold the message.
+    if (u.msg && !this.panel.querySelector('[data-slot="save"]')) this.toast(u.msg);
+  }
+
   onPanelInput(e) {
     const el = e.target;
-    if (el.id === "fr-code") {
+    if (el.id === "fr-code" || el.id === "fr-icode") {
       // Upper-case as you type and group 5 + 5, like the code was shown.
       const raw = el.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10);
       const v = raw.length > 5 ? `${raw.slice(0, 5)} ${raw.slice(5)}` : raw;
@@ -1307,6 +1585,7 @@ class Game {
     else if (a === "restore") this.showRestore();
     else if (a === "claim") this.showClaim();
     else if (a === "back") this.backFromSub(true);
+    else if (/^(save-|pk-|code-claim|backup-new)/.test(a)) this.saveAction(a, b);
     else if (a === "retryboard") this.refreshBoard();
     else if (a === "toggle") {
       const k = b.dataset.key;
@@ -1345,6 +1624,41 @@ class Game {
       if (!this.profile || this.profile.username !== name) this.profile = P.create(name);
       this.switching = false;
       this.startRun();
+    } else if (form.dataset.form === "inlinecode") {
+      const u = this.saveUi, p = this.profile, code = form.code.value;
+      if (!P.isCode(code)) { u.msg = "The code is 10 letters and numbers."; u.open = "code"; return this.refreshSave(); }
+      u.busy = true; u.msg = ""; this.refreshSave();
+      const res = await P.restore(p.username, code);
+      u.busy = false;
+      if (res.ok && res.data && res.data.profile) {
+        p.code = P.cleanCode(code);
+        P.merge(p, res.data.profile);
+        u.open = "done";
+        this.toast(`Signed in as ${p.username}`);
+        return this.afterLink();
+      }
+      u.msg = this.saveMsg(res, "code"); u.open = "code";
+      this.refreshSave();
+    } else if (form.dataset.form === "rename") {
+      const u = this.saveUi, name = form.username.value.trim();
+      const err = P.checkName(name);
+      if (err) { u.msg = err; u.open = "rename"; return this.refreshSave(); }
+      const old = this.profile;
+      // A fresh name for this device. This run comes along so it can still post.
+      const np = P.create(name);
+      if (this.lastRun && this.view === "over") { np.best = this.lastRun.score; np.games = 1; np.gears = this.lastRun.gears; np.lastPlayed = Date.now(); }
+      if (old && old.held && this.view === "over" && this.lastRun && old.held.score === this.lastRun.score) np.held = old.held;
+      else if (this.view === "over" && this.lastRun && this.lastRun.post === "claimed") P.hold(np, this.lastRun.score, Math.round(this.lastRun.time * 1000));
+      P.save(np);
+      this.profile = np;
+      u.open = ""; u.msg = "";
+      this.toast(`Playing as ${name}`);
+      if (this.view === "menu") return this.showMenu();
+      if (this.lastRun && this.lastRun.post === "claimed") { this.lastRun.post = "posting"; this.updateOverStatus(); }
+      this.refreshSave();
+      const r = await this.postHeld();
+      if (this.lastRun && this.lastRun.post === "posting") { this.lastRun.post = r && r.status === 403 ? "claimed" : "error"; this.updateOverStatus(); this.refreshSave(); }
+      this.refreshBoard();
     } else if (form.dataset.form === "restore") {
       const name = form.username.value.trim();
       const code = form.code.value;
@@ -1359,12 +1673,13 @@ class Game {
         const base = same ? this.profile : P.create(rp.username);
         base.username = rp.username;
         base.code = P.cleanCode(code);
+        base.claimed = false;
         this.profile = P.merge(base, rp);
         this.switching = false;
         document.activeElement?.blur?.();
         this.toast(`Loaded ${rp.username}`);
         this.showMenu();
-        this.refreshBoard();
+        this.afterLink();
       } else {
         this.showRestore(res.status === 401 ? "That name and code don't match."
           : res.status === 429 ? "Too many tries. Give it a minute."
@@ -1386,25 +1701,51 @@ class Game {
     this.raf = requestAnimationFrame(this.loop);
     const dt = Math.min(0.05, Math.max(0, (now - this.last) / 1000));
     this.last = now;
-    this.update(dt);
+    this.step(dt);
     // A paused frame doesn't change: draw it once, then let the GPU rest.
     if (this.state === "pause" && this.drawn) return;
     this.renderer.render(this.scene, this.camera);
+    this.ui.render();
     this.drawn = this.state === "pause";
     this.measure(dt);
+  }
+
+  // One real-time frame: countdown and hint animation on real time, the run itself on game time.
+  step(dt) {
+    this.realT = (this.realT || 0) + dt;
+    if (this.state !== "pause") this.tickCount(dt);
+    this.update(dt);
+    if (this.state !== "pause") this.ui.update(dt);
+  }
+
+  // Slow-mo factor for this frame: eases to SLOW_K, holds, eases back.
+  timeScale(dt) {
+    if (!(this.slowT > 0) || this.state !== "play") return 1;
+    this.slowT = Math.max(0, this.slowT - dt);
+    const u = 1 - this.slowT / SLOW_T; // 0 -> 1 across the slow-mo
+    const k = u < 0.12 ? u / 0.12 : u > 0.7 ? 1 - (u - 0.7) / 0.3 : 1;
+    const e = k * k * (3 - 2 * k);
+    return 1 - (1 - SLOW_K) * e;
   }
 
   update(dt) {
     const st = this.state;
     if (st === "pause") return;
-    if (st === "count") { this.updateCount(dt); return; }
+    if (st === "count") {
+      if (!this.countOn) this.state = "play"; // old harness path: no countdown running
+      else { this.animateRobot(0, 0, false); return; }
+    }
+    dt *= this.timeScale(dt);
     this.t += dt;
     const r = this.r, R = this.robot;
 
     let v = 0;
     if (st === "play") {
       this.runTime += dt;
-      this.speed = Math.min(MAX_SPEED, START_SPEED + ACCEL * this.runTime);
+      const base = Math.min(MAX_SPEED, START_SPEED + ACCEL * this.runTime);
+      // First run: start slower and ease onto the normal curve.
+      if (this.tutorial) { const u = Math.min(1, this.runTime / TUT_EASE), e = u * u * (3 - 2 * u); this.speed = TUT_SPEED + (base - TUT_SPEED) * e; }
+      else this.speed = base;
       v = this.speed;
     } else if (st === "dying") {
       this.deathT += dt;
@@ -1629,6 +1970,7 @@ class Game {
     this.scene.traverse((o) => { if (o.geometry && o.geometry !== BOX) o.geometry.dispose(); });
     Object.values(this.M).forEach((m) => m.dispose());
     this.gearGeo.dispose();
+    this.ui.dispose();
     this.robot.runner.dispose(); this.robot.roller.dispose();
     this.kit.dispose();
     this.factory.dispose();
