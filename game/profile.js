@@ -1,6 +1,7 @@
 // Player profile: saved on this device, optionally linked to the Worker with a passkey
 // (Face ID / Touch ID / fingerprint, synced by iCloud Keychain or Google Password Manager)
 // or, as a fallback, a backup code.
+import { cosClean } from "./meta.js?v=20261020r6";
 import { API_BASE } from "./config.js";
 
 const KEY = "au_factory_profile_v1";
@@ -47,6 +48,8 @@ export function load() {
       // This name is saved on the server and this device isn't signed in to it (learned from a 403/409).
       claimed: p.claimed === true,
       // The best run the board hasn't taken yet (offline, or the name needed a sign-in). Posted on sign-in.
+      // Gear shop: gears spent, items owned, items worn (round 6). Synced with a claimed name.
+      cos: cosClean(p.cos),
       held: p.held && int(p.held.score) > 0 && int(p.held.durationMs) >= 3000 ? { score: int(p.held.score), durationMs: int(p.held.durationMs) } : null,
     };
   } catch {
@@ -59,7 +62,7 @@ export function save(p) {
 }
 
 export function create(username) {
-  const p = { username, best: 0, games: 0, gears: 0, lastPlayed: 0, code: "", token: "", passkey: false, claimed: false, held: null };
+  const p = { username, best: 0, games: 0, gears: 0, lastPlayed: 0, code: "", token: "", passkey: false, claimed: false, held: null, cos: cosClean(null) };
   save(p);
   return p;
 }
@@ -85,6 +88,10 @@ export function merge(p, remote) {
   p.games = Math.max(p.games, int(remote.games));
   p.gears = Math.max(p.gears, int(remote.gears));
   p.lastPlayed = Math.max(p.lastPlayed, int(remote.lastPlayed));
+  if (remote.cos) {
+    const a = cosClean(p.cos), b = cosClean(remote.cos);
+    p.cos = { spent: Math.max(a.spent, b.spent), owned: [...new Set([...a.owned, ...b.owned])], eq: { ...b.eq, ...a.eq } };
+  }
   save(p);
   return p;
 }
@@ -125,14 +132,16 @@ async function req(method, path, body, ms = 5000) {
   }
 }
 
-export const topScores = () => req("GET", "/scores");
-export const postScore = (p, score, durationMs) =>
-  req("POST", "/score", { username: p.username, score, durationMs, ...auth(p) });
+// board: "all" (default), "daily" (today's Daily Run) or "weekly" (since Monday 00:00 Vancouver).
+export const topScores = (board = "all") => req("GET", board === "all" ? "/scores" : `/scores?board=${board}`);
+// run: { mode: "free" | "daily" | "challenge", day, seed } (round 6; older Workers ignore it).
+export const postScore = (p, score, durationMs, run = {}) =>
+  req("POST", "/score", { username: p.username, score, durationMs, ...run, ...auth(p) });
 export const claim = (p) =>
   req("POST", "/profile/claim", { username: p.username, best: p.best, games: p.games, gears: p.gears, lastPlayed: p.lastPlayed });
 export const restore = (username, code) => req("POST", "/profile/restore", { username, code: cleanCode(code) });
 export const sync = (p) =>
-  req("POST", "/profile/sync", { username: p.username, ...auth(p), best: p.best, games: p.games, gears: p.gears, lastPlayed: p.lastPlayed });
+  req("POST", "/profile/sync", { username: p.username, ...auth(p), best: p.best, games: p.games, gears: p.gears, lastPlayed: p.lastPlayed, cos: cosClean(p.cos) });
 const auth = (p) => ({ ...(p.code ? { code: p.code } : {}), ...(p.token ? { token: p.token } : {}) });
 
 /* ---------- passkeys ---------- */

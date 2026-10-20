@@ -1,11 +1,14 @@
 // Factory run: 3D hints and countdown, drawn in a small overlay scene on top of the hall.
-// Extruded Inter Tight text in the gear palette (periwinkle face, deep periwinkle sides),
+// Extruded Inter Tight text in deep navy with a lighter navy-periwinkle extrusion, on a soft pearl glow,
 // with gesture icons that move the way the swipe does. One geometry per string, cached.
-// Only renders while something is on screen; at the lowest quality the game uses the 2D fallback.
+// Drawn on its own small transparent canvas at the screen's pixel ratio (capped at 2) with MSAA, so it
+// stays crisp when the hall drops resolution to hold frame rate. Only renders while something is on
+// screen; at the lowest quality the game uses the 2D fallback.
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
-import { GLYPHS } from "./glyphs.js?v=20261020r5";
+import { GLYPHS } from "./glyphs.js?v=20261020r6";
 
-const PAL = { face: 0x8fa2f0, side: 0x2c3570, navy: 0x10162f, pearl: 0xf4f6fb, accent: 0xa9bcff };
+const PAL = { face: 0x151c44, side: 0x4a5aa8, navy: 0x10162f, pearl: 0xf4f6fb, accent: 0x5a6dcd, soft: 0xa9bcff };
+const DPR_CAP = 2;
 const CAP = 0.73;          // Inter Tight cap height, in em
 const FOV = 30, CAM_Z = 10;
 const BEAT = 0.42;         // one countdown number
@@ -64,6 +67,33 @@ function chevronShape(w = 0.62, h = 0.36, t = 0.13) {
   return s;
 }
 
+// A spanner: a bar with an open jaw at the top and a ring at the bottom, tipped 45 degrees.
+function wrenchShape() {
+  // Open-end head (centre 0,0.3) with a notch at the top, a straight handle, a ring end.
+  const s = new THREE.Shape(), R = 0.2, yN = Math.sqrt(R * R - 0.07 * 0.07), yH = Math.sqrt(R * R - 0.065 * 0.065);
+  s.moveTo(0.07, 0.3 + yN);
+  s.lineTo(0.07, 0.33); s.lineTo(-0.07, 0.33); s.lineTo(-0.07, 0.3 + yN);
+  s.absarc(0, 0.3, R, Math.atan2(yN, -0.07), Math.atan2(-yH, -0.065) + Math.PI * 2, false);
+  s.lineTo(-0.065, -0.22);
+  s.absarc(0, -0.32, 0.13, Math.PI * 0.63, Math.PI * 2.37, false);
+  s.lineTo(0.065, 0.3 - yH);
+  s.absarc(0, 0.3, R, Math.atan2(-yH, 0.065) + Math.PI * 2, Math.atan2(yN, 0.07) + Math.PI * 2, false);
+  const eye = new THREE.Path();
+  eye.absarc(0, -0.32, 0.06, 0, Math.PI * 2, true);
+  s.holes.push(eye);
+  return s;
+}
+
+function starShape(n = 5, rO = 0.5, rI = 0.22) {
+  const s = new THREE.Shape();
+  for (let i = 0; i < n * 2; i++) {
+    const a = Math.PI / 2 + (i / (n * 2)) * Math.PI * 2, r = i % 2 ? rI : rO;
+    i ? s.lineTo(Math.cos(a) * r, Math.sin(a) * r) : s.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+  }
+  s.closePath();
+  return s;
+}
+
 function gearShape(teeth = 10, rO = 0.5, rI = 0.41, hole = 0.17) {
   const s = new THREE.Shape(), n = teeth * 2;
   for (let i = 0; i < n; i++) {
@@ -77,20 +107,24 @@ function gearShape(teeth = 10, rO = 0.5, rI = 0.41, hole = 0.17) {
   return s;
 }
 
-// Soft rounded glow, drawn once: pearl for the halo behind hints, navy for the drop shadow.
-function glowTexture(rgb) {
-  const c = document.createElement("canvas");
-  c.width = 256; c.height = 128;
-  const x = c.getContext("2d");
-  x.filter = "blur(18px)";
-  x.fillStyle = `rgba(${rgb},1)`;
-  const r = 34;
-  x.beginPath();
-  x.roundRect ? x.roundRect(40, 34, 176, 60, r) : x.rect(40, 34, 176, 60);
-  x.fill();
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  return t;
+// Soft elliptical glow computed per pixel (no texture to magnify, so no blocky steps or banding):
+// pearl for the halo behind hints, navy for the drop shadow. A one-step dither hides 8-bit banding.
+function glowMaterial(hex, opacity) {
+  return new THREE.ShaderMaterial({
+    uniforms: { uColor: { value: new THREE.Color(hex) }, uOpacity: { value: opacity } },
+    vertexShader: "varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+    fragmentShader: `uniform vec3 uColor; uniform float uOpacity; varying vec2 vUv;
+      void main(){
+        vec2 p = (vUv - 0.5) * 2.0;
+        float d = length(p * vec2(1.0, 1.15));
+        float a = 1.0 - smoothstep(0.18, 1.0, d);
+        a *= a;
+        float n = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
+        gl_FragColor = vec4(uColor, clamp(a * uOpacity + (n - 0.5) / 255.0, 0.0, 1.0));
+        #include <colorspace_fragment>
+      }`,
+    transparent: true, depthWrite: false,
+  });
 }
 
 // ExtrudeGeometry adds a face group and a side group per glyph contour, which is two draw
@@ -114,37 +148,43 @@ function twoGroups(geo) {
 }
 
 export class UI3D {
-  constructor(renderer, { still = false } = {}) {
+  constructor(renderer, { still = false, container = null } = {}) {
+    this.shared = renderer;
     this.renderer = renderer;
+    this.container = container;
     this.still = still;
+    this.drawn = false;
     this.scene = new THREE.Scene();
     this.cam = new THREE.PerspectiveCamera(FOV, 1, 0.1, 40);
     this.cam.position.set(0, 0, CAM_Z);
     this.scene.add(new THREE.HemisphereLight(0xffffff, 0x8f9bd6, 1.6));
-    const key = new THREE.DirectionalLight(0xffffff, 1.9);
+    const key = new THREE.DirectionalLight(0xffffff, 1.6);
     key.position.set(-3, 5, 8);
     const rimL = new THREE.DirectionalLight(0xdfe6ff, 0.9);
     rimL.position.set(4, -2, 3);
     this.scene.add(key, rimL);
 
-    // Metallic look on cheap materials: a strong white specular over the periwinkle face.
+    // Deep navy face, lighter navy-periwinkle sides for depth.
     const fade = { transparent: true, opacity: 1 };
     this.M = {
-      face: new THREE.MeshPhongMaterial({ color: PAL.face, specular: 0xffffff, shininess: 90, emissive: 0x4f63c4, emissiveIntensity: 0.22, ...fade }),
-      side: new THREE.MeshPhongMaterial({ color: PAL.side, specular: 0xa9bcff, shininess: 40, emissive: 0x10162f, emissiveIntensity: 0.3, ...fade }),
-      halo: new THREE.MeshBasicMaterial({ map: glowTexture("244,246,251"), transparent: true, opacity: 0.85, depthWrite: false }),
-      shadow: new THREE.MeshBasicMaterial({ map: glowTexture("16,22,47"), transparent: true, opacity: 0.12, depthWrite: false }),
+      // The face holds one deep navy whatever the sway does to the light; the sides take the shading.
+      face: new THREE.MeshBasicMaterial({ color: PAL.face, ...fade }),
+      side: new THREE.MeshPhongMaterial({ color: PAL.side, specular: 0xa9bcff, shininess: 24, emissive: 0x253070, emissiveIntensity: 0.4, ...fade }),
+      halo: glowMaterial(PAL.pearl, 0.92),
+      shadow: glowMaterial(PAL.navy, 0.14),
       ring: new THREE.MeshBasicMaterial({ color: PAL.accent, transparent: true, opacity: 0.6, depthWrite: false, side: THREE.DoubleSide }),
-      gear: new THREE.MeshPhongMaterial({ color: PAL.accent, specular: 0xffffff, shininess: 60, transparent: true, opacity: 0.22, depthWrite: false }),
+      gear: new THREE.MeshPhongMaterial({ color: PAL.soft, specular: 0xffffff, shininess: 60, transparent: true, opacity: 0.22, depthWrite: false }),
     };
     this.mats = [this.M.face, this.M.side];
     this.cache = new Map();
     const plane = new THREE.PlaneGeometry(1, 1);
     this.geo = {
       plane,
-      chevron: new THREE.ExtrudeGeometry(chevronShape(), { depth: 0.14, bevelEnabled: true, bevelThickness: 0.025, bevelSize: 0.018, bevelSegments: 1 }),
-      gear: new THREE.ExtrudeGeometry(gearShape(), { depth: 0.14, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.015, bevelSegments: 1, curveSegments: 10 }).translate(0, 0, -0.07),
-      ring: new THREE.RingGeometry(0.9, 1, 56),
+      chevron: new THREE.ExtrudeGeometry(chevronShape(), { depth: 0.14, bevelEnabled: false }),
+      gear: new THREE.ExtrudeGeometry(gearShape(), { depth: 0.14, bevelEnabled: false, curveSegments: 24 }).translate(0, 0, -0.07),
+      ring: new THREE.RingGeometry(0.9, 1, 96),
+      tool: new THREE.ExtrudeGeometry(wrenchShape(), { depth: 0.14, bevelEnabled: false, curveSegments: 16 }).translate(0, 0, -0.07).rotateZ(-Math.PI / 4),
+      star: new THREE.ExtrudeGeometry(starShape(), { depth: 0.14, bevelEnabled: false }).translate(0, 0, -0.07),
     };
     this.geo.chevron.translate(0, 0, -0.07);
 
@@ -157,7 +197,9 @@ export class UI3D {
     H.icon = new THREE.Group();
     H.chev = [0, 1].map(() => new THREE.Mesh(this.geo.chevron, this.mats));
     H.wheel = new THREE.Mesh(this.geo.gear, this.mats);
-    H.icon.add(...H.chev, H.wheel);
+    H.tool = new THREE.Mesh(this.geo.tool, this.mats);
+    H.star = new THREE.Mesh(this.geo.star, this.mats);
+    H.icon.add(...H.chev, H.wheel, H.tool, H.star);
     H.g.add(H.halo, H.shadow, H.icon, H.title);
     H.g.visible = false;
     this.scene.add(H.g);
@@ -183,10 +225,10 @@ export class UI3D {
     let e = this.cache.get(str);
     if (!e) {
       const { shapes, width } = textShapes(str);
-      const geo = new THREE.ExtrudeGeometry(shapes, {
-        depth: 0.16, curveSegments: 4, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.014, bevelSegments: 1,
-      });
-      geo.translate(-width / 2, -CAP / 2, -0.08);
+      // Enough curve steps that bowls read round at 230 px, no bevel: an outward bevel on thin
+      // counters (e, a, g) folds into the face and showed as light seams across the letters.
+      const geo = new THREE.ExtrudeGeometry(shapes, { depth: 0.2, curveSegments: 10, bevelEnabled: false });
+      geo.translate(-width / 2, -CAP / 2, -0.1);
       e = { geo: twoGroups(geo), width };
       this.cache.set(str, e);
     }
@@ -196,8 +238,35 @@ export class UI3D {
   // World units per CSS pixel at the text plane (z = 0).
   get unit() { return (2 * CAM_Z * Math.tan((FOV * Math.PI) / 360)) / this.h; }
 
+  // Our own transparent canvas over the hall, created the first time something shows.
+  // Falls back to drawing into the hall's renderer if a second WebGL context isn't available.
+  surface() {
+    if (this.own !== undefined || !this.container) return;
+    this.own = null;
+    try {
+      const c = document.createElement("canvas");
+      c.className = "fr__ui3d";
+      c.setAttribute("aria-hidden", "true");
+      const r = new THREE.WebGLRenderer({ canvas: c, antialias: true, alpha: true, powerPreference: "high-performance" });
+      r.setClearColor(0x000000, 0);
+      const base = this.shared.domElement;
+      base.parentNode === this.container ? base.after(c) : this.container.prepend(c);
+      this.own = r;
+      this.renderer = r;
+      this.fit();
+    } catch (e) { this.own = null; this.renderer = this.shared; }
+  }
+
+  fit() {
+    if (!this.own) return;
+    this.own.setPixelRatio(Math.min(window.devicePixelRatio || 1, DPR_CAP));
+    this.own.setSize(this.w, this.h, false);
+    this.drawn = true; // a resize clears the buffer; draw (or clear) again next frame
+  }
+
   resize(w, h) {
     this.w = w; this.h = h;
+    this.fit();
     this.cam.aspect = w / h;
     this.cam.updateProjectionMatrix();
     if (this.hint.on) this.layoutHint();
@@ -213,6 +282,7 @@ export class UI3D {
   }
 
   showHint(id, title, icon) {
+    this.surface();
     const H = this.hint;
     H.id = id; H.icon_ = icon; H.on = true; H.t = 0; H.out = -1;
     H.g.visible = true;
@@ -221,6 +291,8 @@ export class UI3D {
     H.width = e.width;
     H.chev.forEach((c) => (c.visible = icon === "lr" || icon === "up" || icon === "down"));
     H.wheel.visible = icon === "wheel";
+    H.tool.visible = icon === "tool";
+    H.star.visible = icon === "star";
     if (icon === "lr") { H.chev[0].rotation.z = Math.PI / 2; H.chev[1].rotation.z = -Math.PI / 2; }
     else if (icon === "down") { H.chev[0].rotation.z = H.chev[1].rotation.z = Math.PI; }
     else { H.chev[0].rotation.z = H.chev[1].rotation.z = 0; }
@@ -254,10 +326,12 @@ export class UI3D {
     if (H.on && H.out < 0) H.out = 0;
   }
 
+  fadeText(a) { this.M.face.opacity = this.M.side.opacity = a; }
+
   setOpacity(a) {
-    this.M.face.opacity = this.M.side.opacity = a;
-    this.M.halo.opacity = 0.94 * a;
-    this.M.shadow.opacity = 0.12 * a;
+    this.fadeText(a);
+    this.M.halo.uniforms.uOpacity.value = 0.92 * a;
+    this.M.shadow.uniforms.uOpacity.value = 0.14 * a;
   }
 
   updateHint(dt) {
@@ -278,7 +352,8 @@ export class UI3D {
     const bob = this.still ? 0 : Math.sin(t * 2.2) * 0.06 * H.em;
     H.g.position.y = H.baseY + bob;
     H.g.rotation.y = this.still ? 0 : Math.sin(t * 1.3) * 0.08;
-    H.g.rotation.x = this.still ? 0 : -0.06 + Math.sin(t * 1.7) * 0.03;
+    // Tipped back a little so the lighter extrusion shows under the navy face as depth.
+    H.g.rotation.x = -0.2 + (this.still ? 0 : Math.sin(t * 1.7) * 0.03);
     // Gesture icon: the chevrons move the way the swipe does, the wheel spins.
     const ic = H.icon_, c = H.chev;
     const p = this.still ? 0.5 : (t * 1.4) % 1, e = smooth(p);
@@ -290,11 +365,14 @@ export class UI3D {
       c[0].scale.setScalar(1); c[1].scale.setScalar(0.8);
     }
     if (ic === "wheel" && !this.still) H.wheel.rotation.z = -t * 3;
+    if (ic === "tool" && !this.still) H.tool.rotation.z = Math.sin(t * 5) * 0.35;
+    if (ic === "star" && !this.still) { H.star.rotation.y = t * 2.5; H.star.scale.setScalar(1 + Math.sin(t * 8) * 0.06); }
   }
 
   /* ---------- countdown ---------- */
   // seq: ["3","2","1","GO"] for a resume or a fresh start, ["GO"] for a quick retry.
   startCount(seq) {
+    this.surface();
     const C = this.count;
     C.seq = seq; C.t = 0; C.on = true; C.idx = -1;
     C.g.visible = true;
@@ -335,7 +413,7 @@ export class UI3D {
     }
     const go = label === "GO", em = C.em * (go ? 0.82 : 1);
     const a = go ? 1 - smooth((u - 0.45) / 0.55) : 1 - smooth((u - 0.78) / 0.22);
-    this.M.face.opacity = this.M.side.opacity = this.still ? Math.min(smooth(u / 0.2), a) : a;
+    this.fadeText(this.still ? Math.min(smooth(u / 0.2), a) : a);
     if (this.still) {
       // Reduced motion: a plain fade, nothing moves.
       C.num.scale.setScalar(em);
@@ -363,7 +441,7 @@ export class UI3D {
     C.shadow.visible = true;
     C.shadow.position.set(C.em * 0.05, -C.em * 0.5, -0.5);
     C.shadow.scale.set(C.w * C.em * 1.4, C.em * 0.5, 1);
-    this.M.shadow.opacity = 0.1 * a;
+    this.M.shadow.uniforms.uOpacity.value = 0.1 * a;
     return label;
   }
 
@@ -376,6 +454,12 @@ export class UI3D {
   }
 
   render() {
+    if (this.own) {
+      // Own canvas: draw while active, clear once when the last thing leaves.
+      if (this.active) { this.own.render(this.scene, this.cam); this.drawn = true; }
+      else if (this.drawn) { this.own.clear(); this.drawn = false; }
+      return;
+    }
     if (!this.active) return;
     const r = this.renderer, ac = r.autoClear;
     r.autoClear = false;
@@ -387,8 +471,13 @@ export class UI3D {
   dispose() {
     for (const e of this.cache.values()) e.geo.dispose();
     Object.values(this.geo).forEach((g) => g.dispose());
-    this.M.halo.map.dispose(); this.M.shadow.map.dispose();
     Object.values(this.M).forEach((m) => m.dispose());
     this.count.ring2.material.dispose();
+    if (this.own) {
+      this.own.dispose();
+      this.own.forceContextLoss?.();
+      this.own.domElement.remove();
+      this.own = null;
+    }
   }
 }

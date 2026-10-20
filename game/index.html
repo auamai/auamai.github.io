@@ -29,7 +29,7 @@
   <noscript>Factory run needs JavaScript.</noscript>
   <script type="module">
     const boot = document.getElementById("fr-boot");
-    import("./game.js?v=20261020r5")
+    import("./game.js?v=20261020r6")
       .then(({ openGame }) => openGame({ standalone: true, exitUrl: "../" }))
       .then(() => boot.remove())
       .catch((err) => {

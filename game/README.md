@@ -1,0 +1,99 @@
+# Factory Run
+
+The portfolio's three.js runner. Opens as an overlay from the site (`script.js`) or on its own at `/game/`.
+Everything is procedural: geometry, the robot's animation, the music and sound. No third-party assets.
+
+## Files
+
+| File | What it is |
+| --- | --- |
+| `game.js` | The game: state, spawning, collisions, scoring, HUD, menus, boards |
+| `ui3d.js` | 3D hints and countdown, drawn on their own transparent canvas at the screen's pixel ratio (cap 2) |
+| `tools.js` | Tool pickups (screws, wrench, drill, hammer, golden torque wrench), held props, particle bursts |
+| `audio.js` | WebAudio music and sound, synthesised at run time |
+| `meta.js` | Daily Run, streaks, missions, gear shop, near-miss nudges, share card, challenge links, teaser summary |
+| `profile.js` | Local save, leaderboard API calls, passkeys |
+| `factory.js`, `ceiling.js` | The hall around the line |
+| `robots/` | UL-H1 runner and UL-W1 roller (procedural models and procedural animation) |
+| `glyphs.js` | Inter Tight outlines for the 3D text (SIL OFL 1.1, see `OFL-InterTight.txt`) |
+
+## Licences
+
+- **Music and sound:** composed in code (`audio.js`), generated live with the Web Audio API. No samples, no recordings,
+  nothing licensed in. Original work, same licence as the rest of the site.
+- **Robot animation:** procedural (phase-driven run cycle with two-bone IK feet, blended poses). No motion capture,
+  no Mixamo or other third-party clips.
+- **Font outlines:** Inter Tight, SIL Open Font License 1.1 (`OFL-InterTight.txt`).
+- **three.js:** MIT, loaded from jsDelivr.
+
+## Scoring
+
+| Source | Points |
+| --- | --- |
+| Distance | 0.5 per unit |
+| Gear | 10 |
+| Screw | 25 |
+| Drill: machine (arm) bored through | 50 |
+| Hammer: crate, stack or robot smashed | 75 |
+
+Multipliers multiply and cap at ×6: rolling ×1.5, golden torque wrench ×2 → ×5 (one step a second, ends early on any
+contact), Overdrive ×2 (8 s, when the toolbox meter's five segments fill: a tool fills one, smashes half).
+
+Caps, held by the game and checked the same way by the Worker:
+
+- no one-second window over 1,200 points;
+- total never over `allowedScore(s) = 180·s + 50 + min(8000, max(0, s − 10)·800)` for a run of `s` seconds.
+
+A perfect bot (collects everything, never dies) averaged ~112/s with a best one-second window of 1,014, so honest
+runs never touch either line. Every score the round-5 game could post (≤ 140/s) still passes.
+
+## For the site teaser (read-only)
+
+Read these; never write them.
+
+### `localStorage["au_factory_public_v1"]` (written by the game after each run)
+
+```json
+{
+  "v": 1,
+  "name": "robot_fan",          // player name ("" if none)
+  "best": 2410,                 // personal best (all modes)
+  "rank": 7,                    // last all-time rank the board returned, or null
+  "streak": 3,                  // live Daily Run streak (0 if broken)
+  "dailyDay": "2026-10-20",     // Vancouver date this was written
+  "dailyResetAt": 1792566000000,// next Daily Run reset, epoch ms (midnight America/Vancouver)
+  "dailyBest": 1180,            // best Daily Run score today (0 if not played today)
+  "weeklyResetAt": 1792911600000,// next weekly board reset, epoch ms (Monday 00:00 America/Vancouver)
+  "updatedAt": 1792540000000
+}
+```
+
+`dailyResetAt` goes stale after midnight; if `Date.now() > dailyResetAt`, treat `dailyBest` and the reset time as
+yesterday's.
+
+### Other keys the game owns
+
+| Key | Contents |
+| --- | --- |
+| `au_factory_profile_v1` | `{ username, best, games, gears, lastPlayed, code?, token?, passkey, claimed, held, cos }` (`cos`: `{ spent, owned[], eq{trim,trail,hammer} }`) |
+| `au_factory_settings_v1` | Settings bag: `pad`, `lefty`, `haptics`, `music`, `sfx`, `musicVol`, `sfxVol`, `tips`, `trim`, `missions[]`, `streak{n,last,freeWeek}`, `dailyBest{day,score}`, `pbStreak`, `rank` |
+
+The save code and session token in the profile key are secrets: the teaser must not read or display them.
+
+### API (`https://api.auamai.dev`, CORS for the site's origins)
+
+| Call | Returns |
+| --- | --- |
+| `GET /scores` | `{ board: "all", scores: [{ username, score }] }` top 10, best per name |
+| `GET /scores?board=daily` | today's Daily Run top 10, plus `resetAt`, `day`, `week` |
+| `GET /scores?board=weekly` | this week's top 10 (all modes), plus `resetAt`, `day`, `week` |
+| `POST /score` | `{ username, score, durationMs, mode?: "free"\|"daily"\|"challenge", day?, seed? }` → `{ ok, rank, dailyRank?, day? }` |
+
+A Daily Run must carry today's Vancouver date (or the day it started, across midnight) and that day's seed
+(`FNV-1a("factory-run-daily:YYYY-MM-DD")`). The private `GET /stats` (Cloudflare Access) now includes `retention`:
+day-1 and day-7 return, runs per session, and Daily Run participation per day.
+
+## Links
+
+- Daily Run: `https://auamai.dev/game/?daily=1`
+- Beat my run: `https://auamai.dev/game/?c=<seed base36>&s=<score>&n=<name>`: the same course, with the score to beat.

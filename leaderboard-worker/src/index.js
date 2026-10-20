@@ -40,8 +40,13 @@ const BLOCKLIST = [
 
 const MIN_DURATION_MS = 3000;
 const MAX_DURATION_MS = 3 * 60 * 60 * 1000;
-const MAX_SCORE_PER_SEC = 150; // the game tops out well below this
+// Same line the game holds itself to (game.js allowedScore): 180 per second of run, plus a
+// burst allowance for one multiplier streak that opens at 800/s after 10 s, capped at 8,000.
+// Every score the r5 game could post (<= 140/s) still passes.
+const MAX_SCORE_PER_SEC = 180;
 const SCORE_GRACE = 50;
+const BURST = 8000, BURST_FROM_S = 10, BURST_RATE = 800;
+const allowedScore = (secs) => secs * MAX_SCORE_PER_SEC + SCORE_GRACE + Math.min(BURST, Math.max(0, secs - BURST_FROM_S) * BURST_RATE);
 const STAT_CAP = 100_000_000;
 const VISIT_RETENTION_DAYS = 30;
 
@@ -77,7 +82,7 @@ export default {
       const route = `${request.method} ${url.pathname.replace(/\/+$/, "") || "/"}`;
 
       if (route === "GET /stats") return await handleStats(request, env);
-      if (route === "GET /scores") return await handleTop(env, cors);
+      if (route === "GET /scores") return await handleTop(env, cors, url.searchParams.get("board") || "all");
 
       if (request.method === "POST") {
         // Browser-only API: reject other origins outright.
@@ -132,12 +137,38 @@ export default {
 
 /* ---------- leaderboard ---------- */
 
-async function handleTop(env, cors) {
-  const { results } = await env.DB.prepare(
-    `SELECT username, MAX(score) AS score FROM scores
-     GROUP BY username ORDER BY score DESC, MIN(created_at) ASC LIMIT 10`
-  ).all();
-  return json({ scores: results.map((r) => ({ username: r.username, score: r.score })) }, 200, {
+/* ---------- Vancouver calendar (Daily Run and weekly board, round 6) ---------- */
+const TZ = "America/Vancouver";
+const fmtDay = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" });
+const fmtWk = new Intl.DateTimeFormat("en-US", { timeZone: TZ, weekday: "short", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" });
+const vanDay = (ms = Date.now()) => fmtDay.format(new Date(ms));
+const dayNum = (d) => Math.round(Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10)) / 864e5);
+const addDays = (d, n) => new Date((dayNum(d) + n) * 864e5).toISOString().slice(0, 10);
+function vanWeek(ms = Date.now()) {
+  const wd = Object.fromEntries(fmtWk.formatToParts(new Date(ms)).map((x) => [x.type, x.value])).weekday;
+  return addDays(vanDay(ms), -({ Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6 }[wd] || 0));
+}
+function nextMidnight(ms = Date.now()) {
+  const p = Object.fromEntries(fmtWk.formatToParts(new Date(ms)).map((x) => [x.type, x.value]));
+  let t = ms + ((24 - +p.hour) * 3600 - +p.minute * 60 - +p.second) * 1000;
+  t -= t % 1000;
+  const today = vanDay(ms);
+  while (vanDay(t - 1) !== today && t > ms) t -= 3600e3;
+  while (vanDay(t) === today) t += 3600e3;
+  return t;
+}
+function nextMonday(ms = Date.now()) { let t = nextMidnight(ms); for (let i = 0; i < 7 && vanWeek(t) === vanWeek(ms); i++) t = nextMidnight(t + 1000); return t; }
+// Same FNV-1a as game/meta.js: the Daily Run's seed for a day.
+function hash32(str) { let h = 0x811c9dc5; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; } return h >>> 0; }
+const dailySeed = (day) => hash32(`factory-run-daily:${day}`);
+
+async function handleTop(env, cors, board = "all") {
+  let sql = `SELECT username, MAX(score) AS score FROM scores GROUP BY username ORDER BY score DESC, MIN(created_at) ASC LIMIT 10`;
+  let bind = [], resetAt = null;
+  if (board === "daily") { sql = `SELECT username, MAX(score) AS score FROM scores WHERE mode = 'daily' AND day = ?1 GROUP BY username ORDER BY score DESC, MIN(created_at) ASC LIMIT 10`; bind = [vanDay()]; resetAt = nextMidnight(); }
+  else if (board === "weekly") { sql = `SELECT username, MAX(score) AS score FROM scores WHERE week = ?1 GROUP BY username ORDER BY score DESC, MIN(created_at) ASC LIMIT 10`; bind = [vanWeek()]; resetAt = nextMonday(); }
+  const { results } = await env.DB.prepare(sql).bind(...bind).all();
+  return json({ board, ...(resetAt ? { resetAt, day: vanDay(), week: vanWeek() } : {}), scores: results.map((r) => ({ username: r.username, score: r.score })) }, 200, {
     ...cors,
     "Cache-Control": "public, max-age=15",
   });
@@ -156,7 +187,7 @@ async function handleScore(request, env, cors) {
   if (!Number.isInteger(durationMs)) return json({ error: "invalid duration" }, 400, cors);
   if (durationMs < MIN_DURATION_MS) return json({ error: "run too short" }, 400, cors);
   if (durationMs > MAX_DURATION_MS) return json({ error: "run too long" }, 400, cors);
-  if (score > (durationMs / 1000) * MAX_SCORE_PER_SEC + SCORE_GRACE) return json({ error: "implausible score" }, 400, cors);
+  if (score > allowedScore(durationMs / 1000)) return json({ error: "implausible score" }, 400, cors);
 
   // A claimed name only accepts runs that carry its save code or a passkey session token.
   const profile = await env.DB.prepare("SELECT username, code_hash FROM profiles WHERE username = ?1").bind(username).first();
@@ -166,13 +197,32 @@ async function handleScore(request, env, cors) {
     }
   }
 
-  await env.DB.prepare("INSERT INTO scores (username, score, duration_ms, created_at) VALUES (?1, ?2, ?3, ?4)")
-    .bind(username, score, durationMs, Date.now()).run();
+  // Run mode (round 6). A Daily Run must carry today's date in Vancouver (or yesterday's, for a
+  // run that started before midnight and ended after it) and that day's seed.
+  const now = Date.now();
+  const mode = body.mode === "daily" || body.mode === "challenge" ? body.mode : "free";
+  let day = vanDay(now);
+  if (mode === "daily") {
+    const started = vanDay(now - durationMs - 60_000);
+    if (body.day !== day && body.day !== started) return json({ error: "daily run is over" }, 400, cors);
+    if (body.seed !== dailySeed(body.day)) return json({ error: "wrong daily seed" }, 400, cors);
+    day = body.day;
+  }
+  await env.DB.prepare("INSERT INTO scores (username, score, duration_ms, created_at, mode, day, week) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)")
+    .bind(username, score, durationMs, now, mode, day, vanWeek(now)).run();
 
   const better = await env.DB.prepare(
     `SELECT COUNT(*) AS n FROM (SELECT MAX(score) AS s FROM scores GROUP BY username) WHERE s > ?1`
   ).bind(score).first();
-  return json({ ok: true, rank: (better ? better.n : 0) + 1 }, 200, cors);
+  const out = { ok: true, rank: (better ? better.n : 0) + 1 };
+  if (mode === "daily") {
+    const d = await env.DB.prepare(
+      `SELECT COUNT(*) AS n FROM (SELECT MAX(score) AS s FROM scores WHERE mode = 'daily' AND day = ?2 GROUP BY username) WHERE s > ?1`
+    ).bind(score, day).first();
+    out.dailyRank = (d ? d.n : 0) + 1;
+    out.day = day;
+  }
+  return json(out, 200, cors);
 }
 
 /* ---------- profiles ---------- */
@@ -219,6 +269,13 @@ async function handleSync(request, env, cors) {
     `UPDATE profiles SET best = MAX(best, ?2), games = MAX(games, ?3), gears = MAX(gears, ?4),
        last_played = MAX(last_played, ?5), updated_at = ?6 WHERE username = ?1`
   ).bind(row.username, s.best, s.games, s.gears, s.lastPlayed, Date.now()).run();
+  // Gear shop (round 6): owned items only grow, spent only grows and never past the gears earned.
+  if (body.cos && typeof body.cos === "object") {
+    const cur = parseCos(row.cosmetics), inc = parseCos(JSON.stringify(body.cos));
+    const gears = Math.max(row.gears || 0, s.gears);
+    const merged = { spent: Math.min(gears, Math.max(cur.spent, inc.spent)), owned: [...new Set([...cur.owned, ...inc.owned])], eq: { ...cur.eq, ...inc.eq } };
+    await env.DB.prepare("UPDATE profiles SET cosmetics = ?2 WHERE username = ?1").bind(row.username, JSON.stringify(merged)).run();
+  }
   const updated = await env.DB.prepare("SELECT * FROM profiles WHERE username = ?1").bind(row.username).first();
   return json({ ok: true, profile: publicProfile(updated) }, 200, cors);
 }
@@ -233,7 +290,18 @@ async function authProfile(env, body) {
 }
 
 function publicProfile(r) {
-  return { username: r.username, best: r.best, games: r.games, gears: r.gears, lastPlayed: r.last_played };
+  return { username: r.username, best: r.best, games: r.games, gears: r.gears, lastPlayed: r.last_played, cos: parseCos(r.cosmetics) };
+}
+
+const SHOP_IDS = new Set(["trim-navy", "trim-ice", "trail-ribbon", "trail-navy", "trail-pearl", "hammer-navy", "hammer-pearl"]);
+function parseCos(text) {
+  let c = {};
+  try { c = JSON.parse(text || "{}") || {}; } catch { c = {}; }
+  const owned = Array.isArray(c.owned) ? [...new Set(c.owned.filter((x) => SHOP_IDS.has(x)))] : [];
+  const eq = {};
+  for (const k of ["trim", "trail", "hammer"]) if (c.eq && typeof c.eq[k] === "string" && (c.eq[k] === "" || SHOP_IDS.has(c.eq[k]) || /^(pearl|deep|star)$/.test(c.eq[k]))) eq[k] = c.eq[k];
+  const spent = Number.isFinite(c.spent) ? Math.max(0, Math.min(STAT_CAP, Math.floor(c.spent))) : 0;
+  return { spent, owned, eq };
 }
 
 function cleanStats(b) {
@@ -475,7 +543,48 @@ async function handleStats(request, env) {
     allTimeTotal: all.total,
     daysTracked: all.days,
     note: "Daily uniques; the same visitor on two days counts twice.",
+    retention: await retentionStats(env),
   }, 200, { "Cache-Control": "no-store" });
+}
+
+// Round 6, from the runs table only (names, never IPs), last 30 Vancouver days:
+// day-1 / day-7 return (of names whose first run was on day D, how many ran on D+1 / D+7),
+// runs per session (a session ends after 30 minutes without a run), Daily Run participation.
+async function retentionStats(env) {
+  const since = addDays(vanDay(), -37);
+  const { results } = await env.DB.prepare(
+    "SELECT username, created_at, day, mode FROM scores WHERE day IS NOT NULL AND day >= ?1 ORDER BY username, created_at"
+  ).bind(since).all();
+  const first = new Map(), days = new Map();
+  let sessions = 0, runs = 0, prevU = "", prevT = 0;
+  const perDay = new Map();
+  for (const r of results) {
+    const u = r.username.toLowerCase();
+    if (!days.has(u)) days.set(u, new Set());
+    days.get(u).add(r.day);
+    runs++;
+    if (u !== prevU || r.created_at - prevT > 30 * 60_000) sessions++;
+    prevU = u; prevT = r.created_at;
+    const pd = perDay.get(r.day) || { players: new Set(), daily: new Set() };
+    pd.players.add(u); if (r.mode === "daily") pd.daily.add(u);
+    perDay.set(r.day, pd);
+  }
+  // First day seen: the earliest day in range (names first seen before the range are skipped).
+  const all = await env.DB.prepare("SELECT username, MIN(created_at) AS t FROM scores GROUP BY username").all();
+  for (const r of all.results) first.set(r.username.toLowerCase(), vanDay(r.t));
+  const today = vanDay();
+  const ret = (n) => {
+    let base = 0, back = 0;
+    for (const [u, d0] of first) {
+      if (d0 < addDays(today, -30) || addDays(d0, n) > addDays(today, -1)) continue;
+      base++;
+      if (days.get(u) && days.get(u).has(addDays(d0, n))) back++;
+    }
+    return { cohort: base, returned: back, rate: base ? +(back / base).toFixed(3) : null };
+  };
+  const daily = [...perDay.entries()].sort((a, b) => (a[0] < b[0] ? 1 : -1)).slice(0, 30)
+    .map(([day, v]) => ({ day, players: v.players.size, dailyRunPlayers: v.daily.size, share: v.players.size ? +(v.daily.size / v.players.size).toFixed(3) : 0 }));
+  return { day1: ret(1), day7: ret(7), runsPerSession: sessions ? +(runs / sessions).toFixed(2) : null, runs, sessions, dailyRun: daily, since };
 }
 
 /* ---------- Cloudflare Access JWT ---------- */

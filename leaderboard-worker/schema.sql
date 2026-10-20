@@ -80,3 +80,13 @@ CREATE TABLE IF NOT EXISTS webauthn_challenges (
   username    TEXT,
   expires_at  INTEGER NOT NULL
 );
+
+-- Round 6 (additive): run mode, Vancouver day and week on each run; gear-shop state per profile.
+-- Existing rows keep mode 'free' and no day/week, so they stay on the all-time board only.
+-- ALTER TABLE scores ADD COLUMN mode TEXT NOT NULL DEFAULT 'free';
+-- ALTER TABLE scores ADD COLUMN day TEXT;
+-- ALTER TABLE scores ADD COLUMN week TEXT;
+-- CREATE INDEX IF NOT EXISTS idx_scores_daily ON scores (mode, day, score DESC);
+-- CREATE INDEX IF NOT EXISTS idx_scores_week ON scores (week, score DESC);
+-- ALTER TABLE profiles ADD COLUMN cosmetics TEXT;
+-- (applied by migrate_r6.sql; ALTER is not idempotent in SQLite, so it lives there)
