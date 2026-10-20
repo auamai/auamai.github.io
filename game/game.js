@@ -16,15 +16,19 @@ const GEAR_POINTS = 10;
 const DIST_POINTS = 0.5;     // per unit travelled
 const PERIOD = 12;           // scenery repeat length
 
-// Cool palette only: navy, slate, white, periwinkle.
+// Light factory built from the portfolio's own palette (styles.css):
+// --ink #f4f6fb is the white of the hall, the page navy #10162f is the ink,
+// --accent #a9bcff is the periwinkle. Cool tones only, no orange.
+const SITE = { paper: 0xf4f6fb, navy: 0x10162f, accent: 0xa9bcff };
 const COL = {
-  bg: 0x10162f, fog: 0x141b3a,
-  floor: 0x161d3d, lane: 0x1c2449, dash: 0x56649e,
-  wall: 0x141a38, pillar: 0x222b58, beam: 0x1e2752, light: 0xdde4ff,
-  rail: 0x232c5a, roller: 0x3a4678,
-  robot: 0xe9ecf6, robotMid: 0xb9c1dc, robotDark: 0x4a5584, accent: 0xa9bcff,
-  crate: 0x34407a, crateTop: 0x45528f, arm: 0x9aa4cc, armDark: 0x3b4572,
-  gap: 0x04060d, gear: 0xdfe5ff,
+  bg: SITE.paper, fog: SITE.paper,
+  floor: 0xe9ecf4, lane: 0xdfe3ee, dash: SITE.accent,
+  wall: 0xf1f3f9, ceiling: 0xe8ebf3, pillar: 0xe2e6f0, beam: 0xe6e9f2, light: SITE.accent,
+  rail: 0xd5dae6, roller: 0xbcc3d5,
+  robot: 0x5a6488, robotMid: 0x454e72, robotDark: 0x262d4d, accent: SITE.accent,
+  crate: 0xa4aaba, crateTop: 0xb9bfcc, arm: 0x949bad, armDark: 0x6c7389,
+  gap: 0x262d4d, gear: 0x8fa2f0, edge: 0x262d4d,
+  bot: 0xb0b6c5, botTop: 0xc9ced9, botDark: 0x3a4262,
 };
 
 const ICON = {
@@ -50,7 +54,7 @@ function loadCss() {
     cssLoaded = new Promise((resolve) => {
       const link = document.createElement("link");
       link.rel = "stylesheet";
-      link.href = new URL("./game.css?v=20261020", import.meta.url).href;
+      link.href = new URL("./game.css?v=20261020b", import.meta.url).href;
       link.onload = link.onerror = () => resolve();
       document.head.appendChild(link);
     });
@@ -67,6 +71,13 @@ export async function openGame(opts = {}) {
 
 /* ---------- geometry ---------- */
 const BOX = new THREE.BoxGeometry(1, 1, 1);
+const BOX_EDGES = new THREE.EdgesGeometry(BOX);
+const CYL = new THREE.CylinderGeometry(0.5, 0.5, 1, 10);
+const CYL_EDGES = new THREE.EdgesGeometry(CYL, 30);
+const BOT_SPEED = 3.2;       // own speed of mobile robots, on top of the belt
+const BOT_FROM = 20;         // seconds into a run before mobile robots appear
+const BOT_TURN_T = 0.6;      // telegraph before a lane change
+const BOT_TURN_MIN_Z = -46;  // never start a lane change closer than this
 
 function gearGeometry() {
   const s = new THREE.Shape();
@@ -100,12 +111,13 @@ class Game {
     this.coarse = matchMedia("(pointer: coarse)").matches;
     this.obstacles = [];
     this.gears = [];
-    this.pools = { crate: [], stack: [], arm: [], gap: [], gear: [] };
+    this.pools = { crate: [], stack: [], arm: [], gap: [], bot: [], gear: [] };
     this.r = { lane: 1, x: 0, y: 0, vy: 0, ground: true, slideT: 0, queueSlide: false };
     this.shake = 0;
     this.fps = { frames: 0, acc: 0 };
     this.quality = 0;
     this.prevFocus = document.activeElement;
+    if (window.__frDebug) window.__frGame = this;
 
     this.buildDom();
     this.buildScene();
@@ -163,26 +175,28 @@ class Game {
 
   /* ---------- scene ---------- */
   buildScene() {
-    const renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: !this.coarse, powerPreference: "high-performance" });
+    const renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true, powerPreference: "high-performance" });
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFShadowMap;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer = renderer;
-    this.dprCap = this.coarse ? 1.75 : 2;
+    this.dprCap = this.coarse ? 2 : 2.5;
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(COL.bg);
-    scene.fog = new THREE.Fog(COL.fog, 24, 108);
+    scene.fog = new THREE.Fog(COL.fog, 46, 150); // fades into the page white, far enough to stay crisp
     this.scene = scene;
 
     this.camera = new THREE.PerspectiveCamera(58, 1, 0.1, 170);
     this.camBase = new THREE.Vector3(0, 4.4, 8);
 
-    scene.add(new THREE.HemisphereLight(0xcdd6ff, 0x141a38, 1.6));
-    const sun = new THREE.DirectionalLight(0xeef1ff, 2.2);
+    scene.add(new THREE.HemisphereLight(0xffffff, 0xdde2ec, 1.9));
+    const sun = new THREE.DirectionalLight(0xffffff, 1.5);
     sun.position.set(4, 11, 6);
     sun.castShadow = true;
-    const sm = this.coarse ? 512 : 1024;
+    const sm = this.coarse ? 1024 : 2048;
     sun.shadow.mapSize.set(sm, sm);
+    sun.shadow.radius = 4;
+    sun.shadow.bias = -0.0005;
     Object.assign(sun.shadow.camera, { left: -6, right: 6, top: 14, bottom: -14, near: 1, far: 40 });
     sun.target.position.set(0, 0, -6);
     scene.add(sun, sun.target);
@@ -192,14 +206,20 @@ class Game {
       new THREE.MeshLambertMaterial({ color, emissive, emissiveIntensity: ei, flatShading: true });
     this.M = {
       floor: lam(COL.floor), lane: lam(COL.lane), dash: lam(COL.dash, COL.accent, 0.35),
-      wall: lam(COL.wall), pillar: lam(COL.pillar), beam: lam(COL.beam), light: lam(COL.light, COL.light, 0.9),
+      // A little self-light keeps the white hall white instead of grey in its shaded faces.
+      wall: lam(COL.wall, COL.wall, 0.4), ceiling: lam(COL.ceiling, COL.ceiling, 0.42),
+      pillar: lam(COL.pillar, COL.pillar, 0.25), beam: lam(COL.beam, COL.beam, 0.3), light: lam(COL.light, COL.light, 0.9),
       strip: lam(COL.accent, COL.accent, 0.8), rail: lam(COL.rail), roller: lam(COL.roller),
       robot: lam(COL.robot), robotMid: lam(COL.robotMid), robotDark: lam(COL.robotDark), accent: lam(COL.accent, COL.accent, 0.9),
       crate: lam(COL.crate), crateTop: lam(COL.crateTop), crateBand: lam(COL.accent, COL.accent, 0.25),
-      arm: lam(COL.arm), armDark: lam(COL.armDark), laser: new THREE.MeshBasicMaterial({ color: COL.accent }),
+      arm: lam(COL.arm), armDark: lam(COL.armDark), laser: new THREE.MeshBasicMaterial({ color: 0x7d90ea }),
+      bot: lam(COL.bot), botTop: lam(COL.botTop), botDark: lam(COL.botDark),
+      blinkOn: new THREE.MeshBasicMaterial({ color: 0x8297f2 }), blinkOff: lam(COL.botDark),
       gap: new THREE.MeshBasicMaterial({ color: COL.gap }),
-      gear: lam(COL.gear, 0x6f80d8, 0.45),
-      blob: new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.32, depthWrite: false }),
+      gear: lam(COL.gear, 0x6f80d8, 0.35),
+      blob: new THREE.MeshBasicMaterial({ color: COL.edge, transparent: true, opacity: 0.18, depthWrite: false }),
+      edge: new THREE.LineBasicMaterial({ color: COL.edge, transparent: true, opacity: 0.55 }),
+      edgeSoft: new THREE.LineBasicMaterial({ color: COL.edge, transparent: true, opacity: 0.3 }),
     };
     this.gearGeo = gearGeometry();
 
@@ -208,11 +228,22 @@ class Game {
     this.applyQuality();
   }
 
-  mesh(mat, sx, sy, sz, x = 0, y = 0, z = 0, shadow = true) {
+  mesh(mat, sx, sy, sz, x = 0, y = 0, z = 0, shadow = true, edge = this.edgeMat) {
     const m = new THREE.Mesh(BOX, mat);
     m.scale.set(sx, sy, sz);
     m.position.set(x, y, z);
     m.castShadow = shadow;
+    if (edge) m.add(new THREE.LineSegments(BOX_EDGES, edge)); // thin crisp outline
+    return m;
+  }
+
+  cyl(mat, r, len, x, y, z, edge = this.edgeMat) {
+    const m = new THREE.Mesh(CYL, mat);
+    m.scale.set(r * 2, len, r * 2);
+    m.rotation.z = Math.PI / 2;
+    m.position.set(x, y, z);
+    m.castShadow = true;
+    if (edge) m.add(new THREE.LineSegments(CYL_EDGES, edge));
     return m;
   }
 
@@ -230,9 +261,15 @@ class Game {
       lane.receiveShadow = true;
       scene.add(lane);
     }
+    // Closed ceiling: tall portrait views look up into it instead of empty sky.
+    const ceil = new THREE.Mesh(new THREE.PlaneGeometry(12, 170), M.ceiling);
+    ceil.rotation.x = Math.PI / 2;
+    ceil.position.set(0, 7.4, -70);
+    scene.add(ceil);
+    for (const s of [-1, 1]) scene.add(this.mesh(M.strip, 0.1, 0.03, 170, 2.2 * s, 7.37, -70, false)); // ceiling light lines
     for (const s of [-1, 1]) {
-      const wall = new THREE.Mesh(new THREE.PlaneGeometry(170, 9), M.wall);
-      wall.position.set(6 * s, 4.5, -70);
+      const wall = new THREE.Mesh(new THREE.PlaneGeometry(170, 7.4), M.wall);
+      wall.position.set(6 * s, 3.7, -70);
       wall.rotation.y = -s * Math.PI / 2;
       scene.add(wall);
       scene.add(this.mesh(M.rail, 1.3, 0.55, 170, 4.45 * s, 0.275, -70, false));
@@ -271,6 +308,7 @@ class Game {
 
   buildRobot() {
     const { M } = this;
+    this.edgeMat = new THREE.LineBasicMaterial({ color: 0x0c1024, transparent: true, opacity: 0.6 });
     const root = new THREE.Group();
     const body = new THREE.Group();
     body.position.y = 0.95;
@@ -313,6 +351,7 @@ class Game {
 
     this.scene.add(root, blob);
     this.robot = { root, body, head, armL, armR, legL, legR, blob };
+    this.edgeMat = M.edge; // obstacles and mobile robots
   }
 
   /* ---------- pooled obstacles ---------- */
@@ -352,6 +391,22 @@ class Game {
       g.add(pivot);
       parts.pivot = pivot;
       parts.elbow = elbow;
+    } else if (type === "bot") {
+      // Low wheeled AMR: flat chassis, four wheels, a small sensor mast.
+      h = 0.7;
+      g.add(this.mesh(M.bot, 1.3, 0.36, 1.4, 0, 0.36, 0));
+      g.add(this.mesh(M.botTop, 1.14, 0.06, 1.2, 0, 0.57, 0, false));
+      g.add(this.mesh(M.botDark, 1.32, 0.07, 1.42, 0, 0.21, 0, false, M.edgeSoft)); // bumper band
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) g.add(this.cyl(M.botDark, 0.17, 0.14, 0.66 * sx, 0.17, 0.45 * sz));
+      g.add(this.mesh(M.botDark, 0.08, 0.26, 0.08, -0.32, 0.73, -0.3));                 // mast
+      g.add(this.mesh(M.botDark, 0.24, 0.1, 0.16, -0.32, 0.88, -0.3));                  // lidar head
+      g.add(this.mesh(M.accent, 0.62, 0.05, 0.03, 0, 0.42, 0.71, false));                // face light (toward player)
+      const blink = [];
+      for (const s of [-1, 1]) {
+        const b = this.mesh(M.blinkOff, 0.12, 0.1, 0.12, 0.58 * s, 0.62, 0.62, false);
+        b.visible = true; g.add(b); blink.push(b);
+      }
+      parts.blink = blink;
     } else if (type === "gap") {
       h = 1.5;
       const hole = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 3.0), M.gap);
@@ -369,7 +424,55 @@ class Game {
     const g = this.pools[type].pop() || this.make(type);
     g.visible = true;
     g.position.set(LANES[lane], 0, z);
-    this.obstacles.push({ g, type, lane, x: LANES[lane], z, h: g.userData.h, parts: g.userData.parts, phase: Math.random() * 6.28, passed: false });
+    g.rotation.y = 0;
+    const o = { g, type, lane, x: LANES[lane], z, h: g.userData.h, parts: g.userData.parts, phase: Math.random() * 6.28, passed: false };
+    if (type === "bot") {
+      o.bv = BOT_SPEED; o.turn = 0; o.to = lane; o.turnIn = 0.6 + Math.random() * 1.6; o.turned = 0;
+      for (const b of o.parts.blink) b.material = this.M.blinkOff;
+    }
+    this.obstacles.push(o);
+  }
+
+  // A lane is free for a bot when nothing else sits near that stretch of it.
+  laneFree(lane, z, self) {
+    for (const o of this.obstacles) {
+      if (o === self) continue;
+      const occ = o.type === "bot" ? [o.lane, o.to] : [o.lane];
+      if (occ.includes(lane) && Math.abs(o.z - z) < 9) return false;
+    }
+    return true;
+  }
+
+  updateBot(o, dt, v) {
+    // Slow to belt speed rather than drive through something ahead in its lane.
+    let blocked = false;
+    for (const q of this.obstacles) {
+      if (q === o || q.lane !== o.lane && (q.type !== "bot" || q.to !== o.lane)) continue;
+      const dz = q.z - o.z;
+      if (dz > 0 && dz < 4.5) { blocked = true; break; }
+    }
+    const want = blocked ? 0 : BOT_SPEED;
+    o.bv += (want - o.bv) * Math.min(1, dt * 4);
+    o.z += o.bv * dt;
+
+    if (o.turn > 0) {
+      o.turn -= dt;
+      const on = Math.floor(o.turn / 0.1) % 2 === 0;
+      const side = o.to > o.lane ? 1 : 0;
+      o.parts.blink[side].material = on ? this.M.blinkOn : this.M.blinkOff;
+      if (o.turn <= 0) { for (const b of o.parts.blink) b.material = this.M.blinkOff; o.lane = o.to; o.turned++; }
+    } else {
+      o.turnIn -= dt;
+      if (o.turnIn <= 0 && o.turned < 2 && o.z < BOT_TURN_MIN_Z) {
+        o.turnIn = 1 + Math.random() * 1.5;
+        const opts = [o.lane - 1, o.lane + 1].filter((l) => l >= 0 && l <= 2 && this.laneFree(l, o.z, o));
+        if (opts.length && Math.random() < 0.7) { o.to = pick(opts); o.turn = BOT_TURN_T; }
+      }
+    }
+    const tx = LANES[o.lane];
+    o.x += (tx - o.x) * Math.min(1, dt * 5);
+    o.g.position.x = o.x;
+    o.g.rotation.y = (o.x - tx) * 0.18; // a slight yaw while it steers
   }
 
   spawnGear(lane, z, y) {
@@ -384,6 +487,16 @@ class Game {
   spawnRow() {
     const z = SPAWN_Z;
     const diff = (this.speed - START_SPEED) / (MAX_SPEED - START_SPEED);
+    // Mobile robots get their own row so they never close the last open lane:
+    // at most two, and every bot is low enough to jump.
+    if (this.runTime >= BOT_FROM && Math.random() < 0.18 + diff * 0.32) {
+      const lanes = shuffle([0, 1, 2]);
+      const n = diff > 0.45 && Math.random() < 0.4 ? 2 : 1;
+      for (const ln of lanes.slice(0, n)) this.spawnObstacle("bot", ln, z - Math.random() * 3);
+      if (Math.random() < 0.6) { const ln = lanes[2]; for (let i = 0; i < 5; i++) this.spawnGear(ln, z + 4.8 - i * 2.4, 1.0); }
+      this.toNext = Math.max(16, this.speed * 0.7) + Math.random() * 10;
+      return;
+    }
     const n = Math.random() < 0.35 + diff * 0.35 ? 2 : 1; // never all three lanes
     const lanes = shuffle([0, 1, 2]);
     const types = diff < 0.15 ? ["crate", "gap", "arm"] : ["crate", "gap", "arm", "stack", "stack"];
@@ -414,9 +527,9 @@ class Game {
   applyQuality() {
     const levels = [
       { dpr: this.dprCap, shadow: true },
-      { dpr: Math.min(this.dprCap, 1.5), shadow: false },
+      { dpr: Math.min(this.dprCap, 1.75), shadow: true },
+      { dpr: 1.25, shadow: false },
       { dpr: 1, shadow: false },
-      { dpr: 0.75, shadow: false },
     ];
     const q = levels[this.quality];
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, q.dpr));
@@ -435,19 +548,23 @@ class Game {
       const k = Math.max(0, Math.min(1, (a - 0.45) / 0.55));
       this.camera.fov = 78 - k * 18;
       this.camBase.set(0, 5.2 - k * 0.8, 9.2 - k * 1.2);
+      this.lookY = 0.9 + (1 - k) * 1.1; // aim a little higher so the runner sits in the lower third
     } else {
       this.camera.fov = 58;
       this.camBase.set(0, 4.4, 8);
+      this.lookY = 0.9;
     }
     this.camera.updateProjectionMatrix();
   }
 
   measure(dt) {
-    if (this.state !== "play" || this.runTime < 2 || this.quality >= 3) return;
+    if (this.state !== "play" || this.runTime < 2 || this.quality >= 3 || window.__frLockQuality) return;
     const f = this.fps;
     f.frames++; f.acc += dt;
     if (f.acc >= 2) {
-      if (f.frames / f.acc < 45) { this.quality++; this.applyQuality(); }
+      // Step down only on a real, sustained drop: two slow windows in a row.
+      f.slow = f.frames / f.acc < 40 ? (f.slow || 0) + 1 : 0;
+      if (f.slow >= 2) { this.quality++; f.slow = 0; this.applyQuality(); }
       f.frames = 0; f.acc = 0;
     }
   }
@@ -931,6 +1048,7 @@ class Game {
       const o = this.obstacles[i];
       const zPrev = o.z;
       o.z += v * dt;
+      if (o.type === "bot" && st !== "menu") this.updateBot(o, st === "play" ? dt : 0, v);
       o.g.position.z = o.z;
       if (o.parts.pivot) {
         o.parts.pivot.rotation.z = Math.sin(this.t * 2.4 + o.phase) * 0.5;
@@ -941,6 +1059,7 @@ class Game {
         if (zPrev - h <= 0 && o.z + h >= 0) {
           if (o.type === "crate" && r.y < 1.05) this.die("crash");
           else if (o.type === "stack") this.die("crash");
+          else if (o.type === "bot" && r.y < 0.95) this.die("crash");
           else if (o.type === "arm" && !sliding) this.die("crash");
           else if (o.type === "gap" && r.y < 0.06 && Math.abs(o.z) < o.h - 0.35) this.die("fall");
         }
@@ -1060,7 +1179,7 @@ class Game {
       c.position.x += (Math.random() - 0.5) * this.shake * 0.6;
       c.position.y += (Math.random() - 0.5) * this.shake * 0.6;
     }
-    c.lookAt(this.r.x * 0.3, 0.9, -10);
+    c.lookAt(this.r.x * 0.3, this.lookY ?? 0.9, -10);
   }
 
   /* ---------- teardown ---------- */
