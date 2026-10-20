@@ -33,7 +33,7 @@
     "sameAs": ["https://github.com/auamai", "https://linkedin.com/in/alex-uamai"]
   }
   </script>
-  <link rel="stylesheet" href="teaser.css?v=20261020t1" />
+  <link rel="stylesheet" href="teaser.css?v=20261020l1" />
 </head>
 <body>
   <div class="sky" aria-hidden="true"></div>
@@ -95,22 +95,24 @@
         </div>
       </div>
 
-      <!-- Factory Run teaser (teaser.css / teaser.js) -->
-      <a class="teaser" href="/game/" data-teaser>
-        <span class="teaser__clip" aria-hidden="true">
-          <video muted loop playsinline preload="none" disablepictureinpicture disableremoteplayback poster="assets/teaser/factory-run-poster.webp" width="384" height="216">
-            <source data-src="assets/teaser/factory-run.webm?v=1" type="video/webm" />
-            <source data-src="assets/teaser/factory-run.mp4?v=1" type="video/mp4" />
-          </video>
+      <!-- Factory Run teaser: "the line" (teaser.css / teaser.js) -->
+      <a class="line" href="/game/" data-line aria-label="Play Factory Run, a 60-second robot runner, in your browser">
+        <canvas class="line__stage" aria-hidden="true"></canvas>
+        <span class="line__copy" aria-hidden="true">
+          <span class="line__head">
+            <span class="line__title" data-line-title>Factory Run</span>
+            <span class="odo" data-line-odo hidden></span>
+            <span class="line__rank" data-line-rank hidden></span>
+          </span>
+          <span class="line__cap" data-line-cap>Play in your browser</span>
+          <span class="line__daily" data-line-daily hidden>
+            <span class="line__streak" data-line-streak hidden><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M7 1.2h2l.35 1.75 1.3.54 1.49-.99 1.41 1.41-.99 1.49.54 1.3 1.75.35v2l-1.75.35-.54 1.3.99 1.49-1.41 1.41-1.49-.99-1.3.54L9 14.8H7l-.35-1.75-1.3-.54-1.49.99-1.41-1.41.99-1.49-.54-1.3L1.2 9V7l1.75-.35.54-1.3-.99-1.49 1.41-1.41 1.49.99 1.3-.54Z"/><circle cx="8" cy="8" r="2.2"/></svg><b data-line-streak-n></b></span>
+            <span data-line-daily-text></span>
+          </span>
         </span>
-        <span class="teaser__text">
-          <span class="teaser__label">Play Factory Run</span>
-          <span class="teaser__line">60 seconds, no install</span>
-        </span>
-        <span class="teaser__score" data-teaser-score hidden><span class="teaser__k">Top score</span> <span class="teaser__v" data-teaser-top></span></span>
-        <span class="teaser__go" aria-hidden="true">&#8599;</span>
+        <span class="line__end" aria-hidden="true"><span class="line__gears" data-line-gears></span><span class="line__go">Play <i>&#8599;</i></span></span>
       </a>
-      <script src="teaser.js?v=20261020t1" defer></script>
+      <script src="teaser.js?v=20261020l1" defer></script>
     </section>
 
 
