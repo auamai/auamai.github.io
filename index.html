@@ -33,6 +33,7 @@
     "sameAs": ["https://github.com/auamai", "https://linkedin.com/in/alex-uamai"]
   }
   </script>
+  <link rel="stylesheet" href="teaser.css?v=20261020t1" />
 </head>
 <body>
   <div class="sky" aria-hidden="true"></div>
@@ -47,6 +48,7 @@
         <a href="#media" class="tab">Media</a>
         <a href="#skills" class="tab">Skills</a>
         <a href="#contact" class="tab">Contact</a>
+        <a href="/game/" class="tab-play">Play</a>
       </div>
       <a class="pill pill--ghost nav__cta" href="pdf-files/Alex%20Uamai%20Resume.pdf?v=20261020r5" target="_blank" rel="noopener">Resume</a>
     </nav>
@@ -92,6 +94,23 @@
           </a>
         </div>
       </div>
+
+      <!-- Factory Run teaser (teaser.css / teaser.js) -->
+      <a class="teaser" href="/game/" data-teaser>
+        <span class="teaser__clip" aria-hidden="true">
+          <video muted loop playsinline preload="none" disablepictureinpicture disableremoteplayback poster="assets/teaser/factory-run-poster.webp" width="384" height="216">
+            <source data-src="assets/teaser/factory-run.webm?v=1" type="video/webm" />
+            <source data-src="assets/teaser/factory-run.mp4?v=1" type="video/mp4" />
+          </video>
+        </span>
+        <span class="teaser__text">
+          <span class="teaser__label">Play Factory Run</span>
+          <span class="teaser__line">60 seconds, no install</span>
+        </span>
+        <span class="teaser__score" data-teaser-score hidden><span class="teaser__k">Top score</span> <span class="teaser__v" data-teaser-top></span></span>
+        <span class="teaser__go" aria-hidden="true">&#8599;</span>
+      </a>
+      <script src="teaser.js?v=20261020t1" defer></script>
     </section>
 
 
