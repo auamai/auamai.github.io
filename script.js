@@ -56,7 +56,7 @@
       // three.js is a few hundred kB: say so if it takes more than a moment.
       const slow = setTimeout(() => { playBtn.textContent = "Loading…"; }, 250);
       try {
-        const { openGame } = await import("./game/game.js?v=20261020r4");
+        const { openGame } = await import("./game/game.js?v=20261020r5");
         await openGame();
       } catch (err) {
         console.error(err);
