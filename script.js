@@ -20,7 +20,7 @@
     window.addEventListener("scroll", () => { if (window.scrollY < 200) setActive(""); }, { passive: true });
 
     // Gentle reveal
-    const items = document.querySelectorAll(".section .card, .fact");
+    const items = document.querySelectorAll(".section .card, .entry");
     const io = new IntersectionObserver((entries) => {
       entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("is-in"); io.unobserve(e.target); } });
     }, { rootMargin: "0px 0px -8% 0px" });
