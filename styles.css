@@ -307,7 +307,10 @@ main { width: min(var(--wrap), calc(100% - 40px)); margin: 0 auto; }
   .nav__cta { display: none; }
   .tabs { overflow-x: auto; scrollbar-width: none; max-width: 100%; }
   .tab { padding: 8px 11px; font-size: 13.5px; white-space: nowrap; }
-  .project { grid-template-columns: 96px 1fr; gap: 14px; }
+  .project, .project--text { grid-template-columns: 1fr; gap: 14px; }
+  .project__shot { aspect-ratio: 16 / 10; }
+  .project__body { padding: 0 8px 8px; }
+  .project--text .project__body { padding: 4px 4px 4px 0; }
   .entry__top { flex-direction: column; gap: 6px; }
 }
 @media (prefers-reduced-motion: reduce) {
