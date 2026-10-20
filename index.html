@@ -40,6 +40,7 @@
     "sameAs": ["https://github.com/auamai", "https://linkedin.com/in/alex-uamai"]
   }
   </script>
+  <link rel="stylesheet" href="teaser.css?v=20261020l1" />
 </head>
 <body>
   <a class="skip" href="#research">Skip to content</a>
@@ -58,6 +59,7 @@
         <a href="#media" class="tab">Media</a>
         <a href="#skills" class="tab">Skills</a>
         <a href="#contact" class="tab">Contact</a>
+        <a href="/game/" class="tab-play">Play</a>
       </div>
       <a class="pill pill--ghost nav__cta" href="pdf-files/Alex%20Uamai%20Resume.pdf?v=20261020r5" target="_blank" rel="noopener">Resume</a>
     </nav>
@@ -103,6 +105,25 @@
           </a>
         </div>
       </div>
+
+      <!-- Factory Run teaser: "the line" (teaser.css / teaser.js) -->
+      <a class="line" href="/game/" data-line aria-label="Play Factory Run, a 60-second robot runner, in your browser">
+        <canvas class="line__stage" aria-hidden="true"></canvas>
+        <span class="line__copy" aria-hidden="true">
+          <span class="line__head">
+            <span class="line__title" data-line-title>Factory Run</span>
+            <span class="odo" data-line-odo hidden></span>
+            <span class="line__rank" data-line-rank hidden></span>
+          </span>
+          <span class="line__cap" data-line-cap>Play in your browser</span>
+          <span class="line__daily" data-line-daily hidden>
+            <span class="line__streak" data-line-streak hidden><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M7 1.2h2l.35 1.75 1.3.54 1.49-.99 1.41 1.41-.99 1.49.54 1.3 1.75.35v2l-1.75.35-.54 1.3.99 1.49-1.41 1.41-1.49-.99-1.3.54L9 14.8H7l-.35-1.75-1.3-.54-1.49.99-1.41-1.41.99-1.49-.54-1.3L1.2 9V7l1.75-.35.54-1.3-.99-1.49 1.41-1.41 1.49.99 1.3-.54Z"/><circle cx="8" cy="8" r="2.2"/></svg><b data-line-streak-n></b></span>
+            <span data-line-daily-text></span>
+          </span>
+        </span>
+        <span class="line__end" aria-hidden="true"><span class="line__gears" data-line-gears></span><span class="line__go">Play <i>&#8599;</i></span></span>
+      </a>
+      <script src="teaser.js?v=20261020l1" defer></script>
     </section>
 
 
