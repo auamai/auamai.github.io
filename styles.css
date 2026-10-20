@@ -44,6 +44,30 @@ ul { margin: 0; padding: 0; list-style: none; }
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
+
+/* Breathing background: slow, calm pulse */
+.sky { animation: sky-drift 28s ease-in-out infinite alternate; background-size: 140% 140%, 140% 140%, 100% 100%; }
+.sky::before {
+  content: ""; position: absolute; inset: -20%;
+  background:
+    radial-gradient(38% 34% at 30% 70%, rgba(120, 140, 214, 0.38), transparent 70%),
+    radial-gradient(34% 30% at 72% 30%, rgba(86, 100, 190, 0.30), transparent 70%);
+  filter: blur(40px);
+  animation: sky-breathe 14s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+@keyframes sky-breathe {
+  0%, 100% { opacity: .35; transform: scale(1) translate3d(0, 0, 0); }
+  50%      { opacity: .9;  transform: scale(1.08) translate3d(1.5%, -1.5%, 0); }
+}
+@keyframes sky-drift {
+  0%   { background-position: 0% 100%, 100% 0%, 0 0; filter: hue-rotate(0deg); }
+  100% { background-position: 30% 70%, 70% 30%, 0 0; filter: hue-rotate(-14deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sky, .sky::before { animation: none; }
+}
+
 /* Top bar */
 .bar {
   position: fixed; top: 0; left: 0; right: 0; z-index: 10;
