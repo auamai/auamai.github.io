@@ -46,4 +46,32 @@
     }, { rootMargin: "0px 0px -8% 0px" });
     items.forEach((el) => { el.classList.add("reveal"); io.observe(el); });
   }
+  // Play: three.js and the game load only when asked for
+  const playBtn = document.getElementById("play-btn");
+  if (playBtn) {
+    playBtn.addEventListener("click", async () => {
+      if (playBtn.getAttribute("aria-busy") === "true") return;
+      playBtn.setAttribute("aria-busy", "true");
+      const label = playBtn.innerHTML;
+      // three.js is a few hundred kB: say so if it takes more than a moment.
+      const slow = setTimeout(() => { playBtn.textContent = "Loading…"; }, 250);
+      try {
+        const { openGame } = await import("./game/game.js?v=20261020r4");
+        await openGame();
+      } catch (err) {
+        console.error(err);
+        window.location.href = "game/";
+      } finally {
+        clearTimeout(slow);
+        playBtn.innerHTML = label;
+        playBtn.removeAttribute("aria-busy");
+      }
+    });
+  }
+
+  // Private visit count: one tiny POST per page load, no cookies, skipped until the API exists
+  import("./game/config.js").then(({ API_BASE }) => {
+    if (!API_BASE) return;
+    fetch(API_BASE.replace(/\/+$/, "") + "/hit", { method: "POST", credentials: "omit", keepalive: true }).catch(() => {});
+  }).catch(() => {});
 })();

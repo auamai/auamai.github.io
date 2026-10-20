@@ -362,3 +362,18 @@ main { width: min(var(--wrap), calc(100% - 40px)); margin: 0 auto; }
 .creed__quote { margin: 0; font: 400 clamp(34px, 5vw, 52px)/1.1 var(--display); letter-spacing: -0.01em; color: var(--ink); }
 .creed__quote::before { content: ""; display: block; width: 28px; height: 1px; margin-bottom: 22px; background: var(--accent); }
 .creed__note { margin-top: 18px; font-size: 16px; font-weight: 300; line-height: 1.7; color: var(--ink-2); }
+
+/* Play: a quiet row; the game itself loads on demand */
+.play__row {
+  display: flex; align-items: center; justify-content: space-between; gap: 24px;
+  padding: 26px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+}
+.play__text h2 { font-size: clamp(28px, 3vw, 40px); font-weight: 300; }
+.play__text .section__aside { margin-top: 8px; }
+.play__btn { flex: none; gap: 10px; min-width: 120px; cursor: pointer; font-family: inherit; }
+.play__btn[aria-busy="true"] { opacity: .6; cursor: progress; }
+.play__arrow { color: var(--accent); font-size: 14px; }
+@media (max-width: 640px) {
+  .play__row { flex-direction: column; align-items: flex-start; gap: 18px; }
+  .play__btn { width: 100%; height: 52px; }
+}
