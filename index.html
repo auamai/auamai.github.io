@@ -4,23 +4,30 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Alex Uamai | Mechatronics Engineer</title>
-  <meta name="description" content="Alex Uamai is a mechatronics engineer in R&amp;D at Unifiller, building industrial robotic food automation: mechanical design, motion systems and embedded hardware." />
+  <meta name="description" content="Alex Uamai is a mechatronics engineer in R&amp;D at Unifiller, building industrial robotic food automation, and researching whether a robot can learn to make food from human video." />
   <meta name="author" content="Alex Uamai" />
   <link rel="canonical" href="https://auamai.dev/" />
   <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Alex Uamai" />
   <meta property="og:url" content="https://auamai.dev/" />
   <meta property="og:title" content="Alex Uamai | Mechatronics Engineer" />
-  <meta property="og:description" content="Mechatronics engineer in R&amp;D at Unifiller. Mechanical design, motion systems, embedded hardware, robots." />
-  <meta property="og:image" content="https://auamai.dev/Images/Two-wheel%20Robot%20Simscape%20Model.jpg" />
+  <meta property="og:description" content="Mechatronics engineer in R&amp;D at Unifiller. Mechanical design, motion systems, embedded hardware, and robots that learn from human video." />
+  <meta property="og:image" content="https://auamai.dev/Images/og-card.jpg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Alex Uamai, Mechatronics Engineer, R&amp;D at Unifiller" />
   <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Alex Uamai | Mechatronics Engineer" />
+  <meta name="twitter:description" content="Mechatronics engineer in R&amp;D at Unifiller. Mechanical design, motion systems, embedded hardware, and robots that learn from human video." />
+  <meta name="twitter:image" content="https://auamai.dev/Images/og-card.jpg" />
   <link rel="icon" href="favicon.svg?v=2" type="image/svg+xml" />
   <link rel="icon" href="favicon-32.png?v=2" sizes="32x32" type="image/png" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png?v=2" />
   <meta name="theme-color" content="#121a38" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=20261020clk1" />
+  <link rel="preload" href="fonts/inter-tight-var.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="fonts/instrument-serif.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="styles.css?v=20261020ux1" />
+  <script>document.documentElement.classList.add("js");</script>
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -35,15 +42,19 @@
   </script>
 </head>
 <body>
+  <a class="skip" href="#research">Skip to content</a>
   <div class="sky" aria-hidden="true"></div>
 
   <header class="bar">
-    <a class="mark" href="#top" aria-label="Back to top">AU</a>
+    <a class="mark" href="#top" aria-label="AU, back to top">AU</a>
     <nav class="nav" aria-label="Sections">
-      <div class="tabs">
+      <span class="nav__now" aria-hidden="true"></span>
+      <button class="nav__menu" type="button" aria-expanded="false" aria-controls="nav-tabs"><span class="nav__menu-label">Menu</span><span class="nav__menu-icon" aria-hidden="true"></span></button>
+      <div class="tabs" id="nav-tabs">
+        <a href="#research" class="tab">Research</a>
+        <a href="#projects" class="tab">Projects</a>
         <a href="#experience" class="tab">Experience</a>
         <a href="#education" class="tab">Education</a>
-        <a href="#projects" class="tab">Projects</a>
         <a href="#media" class="tab">Media</a>
         <a href="#skills" class="tab">Skills</a>
         <a href="#contact" class="tab">Contact</a>
@@ -102,10 +113,153 @@
     </section>
 
 
+    <!-- Research -->
+    <section class="section research" id="research" tabindex="-1">
+      <header class="section__head">
+        <span class="kicker">01</span>
+        <h2>Research</h2>
+      </header>
+      <div class="research__body">
+        <p class="status"><i aria-hidden="true"></i>In progress · Poundo Robot · started Oct 2026</p>
+        <p class="research__q">Can a robot learn to make food from human video, and adapt to uncertain food properties like poundo&rsquo;s consistency, without a force sensor?</p>
+        <div class="explain">
+          <div class="explain__photos">
+            <figure><img src="Images/thumbs/pounded-yam-egusi.webp" width="800" height="600" alt="A plate of pounded yam, smooth and white, beside egusi soup" loading="lazy" decoding="async" /><figcaption>Pounded yam with egusi soup</figcaption></figure>
+            <figure><img src="Images/thumbs/pounding-yam-mortar.webp" width="800" height="600" alt="Two people pounding boiled yam in a wooden mortar with a long pestle" loading="lazy" decoding="async" /><figcaption>Made by hand</figcaption></figure>
+          </div>
+          <div class="explain__text">
+            <h3>First, what&rsquo;s poundo?</h3>
+            <p>Pounded yam is a smooth, stretchy West African staple, eaten with soups like egusi. Boiled yam is pounded in a mortar and turned until smooth; poundo is the everyday version, yam flour stirred into hot water and turned hard with a wooden stick.</p>
+            <p>Either way it&rsquo;s hot, heavy, repetitive work. That&rsquo;s why I&rsquo;m teaching a robot to do it.</p>
+            <p class="credit">Photos: <a href="https://commons.wikimedia.org/wiki/File:Pounded_yam_and_egusi_soup.jpg" target="_blank" rel="noopener">Kambai Akau</a>, <a href="https://commons.wikimedia.org/wiki/File:Pounding_of_boiled_yam_into_pounded_yam_food.jpg" target="_blank" rel="noopener">HarunaSylvester</a>, <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>, via Wikimedia Commons, cropped.</p>
+          </div>
+        </div>
+        <ol class="research__parts">
+          <li>
+            <span class="research__n">01</span>
+            <h3>Learn from video</h3>
+            <p>The motion comes from clips of people turning poundo. The stick-tip path is tracked and retargeted to an SO-101 arm.</p>
+          </li>
+          <li>
+            <span class="research__n">02</span>
+            <h3>Handle uncertainty</h3>
+            <p>The dough goes from loose flour and water to a thick, sticky mass, and no two pots behave the same. The robot has to adapt as the resistance changes.</p>
+          </li>
+          <li>
+            <span class="research__n">03</span>
+            <h3>No force sensor</h3>
+            <p>The robot that runs has none. A load-cell stick is used only in training, to measure what a real turn takes.</p>
+          </li>
+        </ol>
+        <a class="link-arrow" href="poundo/"><span>Read the case study</span> <b aria-hidden="true">&rarr;</b></a>
+      </div>
+    </section>
+
+    <!-- Projects -->
+    <section class="section" id="projects">
+      <header class="section__head">
+        <span class="kicker">02</span>
+        <h2>Projects</h2>
+      </header>
+
+      <div class="projects">
+        <article class="card project">
+          <figure class="project__shot">
+            <img src="Images/thumbs/so101-mujoco.webp" width="720" height="424" alt="SO-101 robot arm in the MuJoCo simulator with its joint control panel" loading="lazy" decoding="async" />
+          </figure>
+          <div class="project__body">
+            <p class="project__meta"><span class="status"><i aria-hidden="true"></i>In progress</span> · Solo · Research</p>
+            <h3>Poundo Robot</h3>
+            <p>A robot arm learning to turn poundo yam, a West African staple, from videos of people making it. Right now: an SO-101 arm in MuJoCo with Jacobian IK, PD control and contact sensing.</p>
+            <ul class="chips chips--sm" aria-label="Tools"><li>MuJoCo</li><li>LeRobot</li><li>SO-101</li><li>Jacobian IK</li><li>Contact sensing</li></ul>
+            <div class="project__links">
+              <a class="link-arrow" href="poundo/"><span>Read the case study</span> <b aria-hidden="true">&rarr;</b></a>
+            </div>
+          </div>
+        </article>
+
+        <article class="card project">
+          <figure class="project__shot">
+            <img src="Images/thumbs/factory-run.webp" width="720" height="720" alt="UL-H1 humanoid running down a car-plant floor in Factory Run" loading="lazy" decoding="async" />
+          </figure>
+          <div class="project__body">
+            <p class="project__meta">Solo · Shipped</p>
+            <h3>Factory Run &amp; auamai.dev</h3>
+            <p>A 3D robot runner in three.js with a Cloudflare Workers + D1 leaderboard, shipped by running AI coding agents like a dev team: specs, build reviews, versioned releases. I rebuilt auamai.dev from scratch around it.</p>
+            <ul class="chips chips--sm" aria-label="Tools"><li>three.js</li><li>Cloudflare Workers</li><li>D1</li><li>AI coding agents</li></ul>
+            <div class="project__links">
+              <a class="link-arrow" href="/game/"><span>Play Factory Run</span> <b aria-hidden="true">&rarr;</b></a>
+            </div>
+          </div>
+        </article>
+
+        <article class="card project">
+          <figure class="project__shot">
+            <img src="Images/thumbs/two-wheel-simscape.webp" width="720" height="438" alt="Simscape model of a two-wheel self-balancing robot" loading="lazy" decoding="async" />
+          </figure>
+          <div class="project__body">
+            <p class="project__meta">Course project · Modern control</p>
+            <h3>Two-wheel self-balancing robot</h3>
+            <p>Stable balance in simulation from a state-space controller I designed. Modelled the dynamics in MATLAB and Simulink, checked controllability and observability, then built a 3D Simscape model.</p>
+            <ul class="chips chips--sm" aria-label="Tools"><li>MATLAB</li><li>Simulink</li><li>Simscape</li><li>State-space control</li></ul>
+            <div class="project__links">
+              <a class="link-arrow" href="https://github.com/auamai/Modern-Control/tree/main/Final%20Project" target="_blank" rel="noopener"><span>Model on GitHub</span> <b aria-hidden="true">&#8599;</b></a>
+            </div>
+          </div>
+        </article>
+
+        <article class="card project">
+          <figure class="project__shot">
+            <img src="Images/thumbs/foot-wearable.webp" width="720" height="475" alt="Lief foot wearable prototype for dystonia" loading="lazy" decoding="async" />
+          </figure>
+          <div class="project__body">
+            <p class="project__meta">SFU capstone · Controls lead</p>
+            <h3>Lief: foot wearable for dystonia pain</h3>
+            <p>A foot wrap that eases dystonia pain with PWM-controlled vibration. I led controls: firmware for two coin vibration motors, the protoboard circuit, and a desktop GUI for tracking sessions.</p>
+            <ul class="chips chips--sm" aria-label="Tools"><li>C</li><li>Arduino</li><li>Python</li><li>PySide</li></ul>
+          </div>
+        </article>
+
+        <article class="card project">
+          <figure class="project__shot project__shot--contain">
+            <img src="Images/thumbs/stm32f407.webp" width="504" height="768" alt="STM32F407 Discovery board used as a motion game controller" loading="lazy" decoding="async" />
+          </figure>
+          <div class="project__body">
+            <p class="project__meta">SFU coursework · Embedded</p>
+            <h3>Tilt game controller on STM32</h3>
+            <p>Tilt the board to steer a Python 2D shooter. I wrote the SPI driver for its accelerometer and used timers and interrupts to stream motion over USB.</p>
+            <ul class="chips chips--sm" aria-label="Tools"><li>STM32F407</li><li>C</li><li>SPI</li><li>Interrupts</li></ul>
+            <div class="project__links">
+              <a class="link-arrow" href="https://github.com/auamai/Game-Controller" target="_blank" rel="noopener"><span>Code</span> <b aria-hidden="true">&#8599;</b></a>
+              <a class="link-arrow" href="https://youtube.com/shorts/vIUqMxIppMc?feature=share" target="_blank" rel="noopener"><span>Demo video</span> <b aria-hidden="true">&#8599;</b></a>
+            </div>
+          </div>
+        </article>
+
+        <article class="card project project--text">
+          <div class="project__body">
+            <p class="project__meta">SFU coursework · Hardware</p>
+            <h3>BLE embedded controller</h3>
+            <p>A Bluetooth Low Energy control board, designed, brought up and debugged with a SEGGER J-Link, Tag-Connect and Code Composer Studio.</p>
+            <ul class="chips chips--sm" aria-label="Tools"><li>BLE</li><li>PCB</li><li>Firmware</li></ul>
+          </div>
+        </article>
+
+        <article class="card project project--text">
+          <div class="project__body">
+            <p class="project__meta">SFU coursework · Embedded</p>
+            <h3>DC motor controller</h3>
+            <p>PWM motor control with encoder feedback and embedded firmware on an 8051 platform.</p>
+            <ul class="chips chips--sm" aria-label="Tools"><li>8051</li><li>PWM</li><li>Encoders</li></ul>
+          </div>
+        </article>
+      </div>
+    </section>
+
     <!-- Experience -->
     <section class="section" id="experience">
       <header class="section__head">
-          <span class="kicker">01</span>
+          <span class="kicker">03</span>
           <h2>Experience</h2>
       </header>
         <ol class="entries">
@@ -197,7 +351,7 @@
     <!-- Education -->
     <section class="section" id="education">
       <header class="section__head">
-          <span class="kicker">02</span>
+          <span class="kicker">04</span>
           <h2>Education</h2>
       </header>
         <ol class="entries">
@@ -230,104 +384,10 @@
         </ol>
     </section>
 
-    <!-- Projects -->
-    <section class="section" id="projects">
-      <header class="section__head">
-        <span class="kicker">03</span>
-        <h2>Projects</h2>
-      </header>
-
-      <div class="projects">
-        <article class="card project">
-          <figure class="project__shot">
-            <img src="Images/so101-mujoco-control.webp" alt="SO-101 robot arm in the MuJoCo simulator with its joint control panel" loading="lazy" decoding="async" />
-          </figure>
-          <div class="project__body">
-            <h3>Poundo Robot <span class="skillset__tag">In progress</span></h3>
-            <p>Poundo yam is a West African staple and my favourite food. It's also tedious to make: you stir yam flour into hot water and keep turning it hard with a wooden stick until it's smooth and stretchy. I'm building a robot arm that learns that turning motion from videos of people making it. Right now I'm simulating an SO-101 arm in MuJoCo with Jacobian IK, PD control and contact-force sensing.</p>
-            <ul class="chips chips--sm"><li>MuJoCo</li><li>LeRobot</li><li>SO-101</li><li>Jacobian IK</li><li>Contact sensing</li></ul>
-            <div class="project__links">
-              <a class="pill pill--ghost pill--sm" href="poundo/">Read the build log</a>
-            </div>
-          </div>
-        </article>
-
-        <article class="card project">
-          <figure class="project__shot">
-            <img src="Images/factory-run.webp" alt="UL-H1 humanoid running down a car-plant floor in Factory Run" loading="lazy" decoding="async" />
-          </figure>
-          <div class="project__body">
-            <h3>Factory Run &amp; auamai.dev</h3>
-            <p>Ran AI coding agents like a dev team to ship a 3D robot runner in three.js: specs, build reviews, five releases. Shipped a Cloudflare Workers + D1 leaderboard, and rebuilt auamai.dev from scratch around it.</p>
-            <ul class="chips chips--sm"><li>three.js</li><li>Cloudflare Workers</li><li>D1</li><li>AI coding agents</li></ul>
-            <div class="project__links">
-              <a class="pill pill--ghost pill--sm" href="/game/">Play</a>
-            </div>
-          </div>
-        </article>
-
-        <article class="card project">
-          <figure class="project__shot">
-            <img src="Images/Two-wheel%20Robot%20Simscape%20Model.jpg" alt="Simscape model of a two-wheel self-balancing robot" loading="lazy" decoding="async" />
-          </figure>
-          <div class="project__body">
-            <h3>Two-wheel self-balancing robot</h3>
-            <p>Modeled the dynamics and designed the feedback controller in MATLAB and Simulink, using state-space analysis of controllability and observability to reach stable balance, then built a 3D Simscape simulation.</p>
-            <ul class="chips chips--sm"><li>MATLAB</li><li>Simulink</li><li>Simscape</li><li>State-space control</li></ul>
-            <div class="project__links">
-              <a class="pill pill--ghost pill--sm" href="https://github.com/auamai/Modern-Control/tree/main/Final%20Project" target="_blank" rel="noopener">Model on GitHub</a>
-            </div>
-          </div>
-        </article>
-
-        <article class="card project">
-          <figure class="project__shot">
-            <img src="Images/Foot%20Wearable.jpg" alt="Lief foot wearable prototype for dystonia" loading="lazy" decoding="async" />
-          </figure>
-          <div class="project__body">
-            <h3>Lief: foot wearable for dystonia pain</h3>
-            <p>Capstone. Led controls: firmware driving two coin vibration motors in a foot wrap with PWM intensity, the protoboard circuit, and a desktop GUI for tracking sessions.</p>
-            <ul class="chips chips--sm"><li>C</li><li>Arduino</li><li>Python</li><li>PySide</li></ul>
-          </div>
-        </article>
-
-        <article class="card project">
-          <figure class="project__shot project__shot--contain">
-            <img src="Images/STM32F407VG.jpg" alt="STM32F407 Discovery board used as a motion game controller" loading="lazy" decoding="async" />
-          </figure>
-          <div class="project__body">
-            <h3>Tilt game controller on STM32</h3>
-            <p>Wrote the SPI driver for the board's accelerometer and used timers and interrupts to stream motion over USB into a Python 2D shooter.</p>
-            <ul class="chips chips--sm"><li>STM32F407</li><li>C</li><li>SPI</li><li>Interrupts</li></ul>
-            <div class="project__links">
-              <a class="pill pill--ghost pill--sm" href="https://github.com/auamai/Game-Controller" target="_blank" rel="noopener">Code</a>
-              <a class="pill pill--ghost pill--sm" href="https://youtube.com/shorts/vIUqMxIppMc?feature=share" target="_blank" rel="noopener">Demo</a>
-            </div>
-          </div>
-        </article>
-
-        <article class="card project project--text">
-          <div class="project__body">
-            <h3>BLE embedded controller</h3>
-            <p>Designed and debugged a Bluetooth Low Energy control board, bringing it up with a SEGGER J-Link, Tag-Connect and Code Composer Studio.</p>
-            <ul class="chips chips--sm"><li>BLE</li><li>PCB</li><li>Firmware</li></ul>
-          </div>
-        </article>
-
-        <article class="card project project--text">
-          <div class="project__body">
-            <h3>DC motor controller</h3>
-            <p>PWM motor control with encoder feedback and embedded firmware on an 8051 platform.</p>
-            <ul class="chips chips--sm"><li>8051</li><li>PWM</li><li>Encoders</li></ul>
-          </div>
-        </article>
-      </div>
-    </section>
-
     <!-- Media -->
     <section class="section" id="media">
       <header class="section__head section__head--media">
-        <span class="kicker">04</span>
+        <span class="kicker">05</span>
         <h2>Media</h2>
         <p class="section__aside">A couple of times someone handed me a mic. Here's what I said.</p>
       </header>
@@ -335,12 +395,14 @@
       <div class="media">
         <a class="card clip clip--tv" href="https://www.youtube.com/watch?v=j5SjESfddJ0" target="_blank" rel="noopener">
           <figure class="clip__frame">
-            <img src="Images/channels-tv.jpg" alt="Alex speaking in the Channels Television studio" loading="lazy" decoding="async" />
-            <span class="clip__onair"><i></i>On air</span>
-            <span class="clip__play" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></svg></span>
+            <img src="Images/channels-tv.jpg" width="960" height="540" alt="Alex speaking as a guest in the Channels Television studio" loading="lazy" decoding="async" />
+            <figcaption class="lower3">
+              <span class="lower3__tally" aria-hidden="true"></span>
+              <span class="lower3__text"><span class="lower3__src">Channels Television</span><span class="lower3__sep" aria-hidden="true"> · </span><span class="lower3__role">Guest <span aria-hidden="true">·</span> Sep 2025</span></span>
+              <span class="lower3__play" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></svg></span>
+            </figcaption>
           </figure>
           <div class="clip__body">
-            <p class="clip__meta">Channels Television <span>·</span> TV guest <span>·</span> Sep 2025</p>
             <h3>How politicians can be held accountable using blockchain</h3>
             <p class="clip__note">I joined the studio in Nigeria to talk through whether a public ledger can make public money easier to follow.</p>
             <span class="clip__cta">Watch on YouTube <b aria-hidden="true">&#8599;</b></span>
@@ -348,12 +410,12 @@
         </a>
 
         <a class="card clip clip--print" href="https://vantechjournal.com/p/the-fire-that-web-summit-vancouver-lit-won-t-burn-out-4f81" target="_blank" rel="noopener">
-          <div class="clip__paper" role="img" aria-label="Vancouver's Coal Harbour skyline at blue hour" >
+          <div class="clip__paper" role="img" aria-label="Vancouver's Coal Harbour skyline at blue hour, with a quote from the op-ed">
             <span class="clip__mark" aria-hidden="true">&ldquo;</span>
             <blockquote>For four days, Vancouver felt like a city that expected to win. That&rsquo;s a feeling worth protecting.</blockquote>
           </div>
           <div class="clip__body">
-            <p class="clip__meta">Vancouver Tech Journal <span>·</span> Op-ed <span>·</span> Jun 5, 2025</p>
+            <p class="clip__meta">Vancouver Tech Journal <span aria-hidden="true">·</span> Op-ed <span aria-hidden="true">·</span> Jun 5, 2025</p>
             <h3>The fire that Web Summit Vancouver lit won&rsquo;t burn out</h3>
             <p class="clip__note">A few thoughts after Web Summit on turning one good week into lasting momentum for local builders.</p>
             <span class="clip__cta">Read the op-ed <b aria-hidden="true">&#8599;</b></span>
@@ -365,12 +427,12 @@
     <!-- Skills -->
     <section class="section" id="skills">
       <header class="section__head">
-        <span class="kicker">05</span>
+        <span class="kicker">06</span>
         <h2>Skills</h2>
       </header>
       <div class="skills">
         <div class="card skillset skillset--new">
-          <h3>Robotics &amp; simulation <span class="skillset__tag">Now learning</span></h3>
+          <h3>Robotics &amp; simulation <span class="status"><i aria-hidden="true"></i>Now learning</span></h3>
           <ul class="chips"><li>MuJoCo</li><li>LeRobot</li><li>SO-101 arm</li><li>Jacobian IK</li><li>PD &amp; gravity compensation</li><li>Contact &amp; force sensing</li><li>PyTorch</li><li>Franka &amp; UR5e models</li></ul>
         </div>
         <div class="card skillset">
@@ -403,11 +465,11 @@
     <!-- Contact -->
     <section class="section contact" id="contact">
       <div class="card contact__card">
-        <span class="kicker">06</span>
+        <span class="kicker">07</span>
         <h2>Building something with moving parts?</h2>
-        <p>I'm always up for talking robotics, mechanical design, or hardware that has to work on a factory floor. Grab 30 minutes on Meet, weekday evenings or weekend days, Pacific time.</p>
+        <p>I'm always up for talking robotics, mechanical design, or hardware that has to work on a factory floor. Book 30 minutes on Meet, weekday evenings or weekend days, Pacific time.</p>
         <div class="hero__actions">
-          <a class="pill pill--solid" href="https://calendar.app.google/bqcfSxu2rGQ8mgnq5" target="_blank" rel="noopener">Grab a virtual coffee</a>
+          <a class="pill pill--solid" href="https://calendar.app.google/bqcfSxu2rGQ8mgnq5" target="_blank" rel="noopener">Book a virtual coffee</a>
           <a class="pill pill--ghost" href="mailto:ighodarouamai@gmail.com">ighodarouamai@gmail.com</a>
           <a class="pill pill--ghost" href="https://linkedin.com/in/alex-uamai" target="_blank" rel="noopener">LinkedIn</a>
         </div>
@@ -416,11 +478,20 @@
   </main>
 
   <footer class="foot">
-    <span>Alex Uamai</span>
-    <span class="foot__mono">Vancouver, BC · <a href="https://github.com/auamai" rel="noopener">github.com/auamai</a></span>
+    <div class="foot__id">
+      <span class="foot__name">Alex Uamai</span>
+      <span>Mechatronics Engineer · Vancouver, BC</span>
+    </div>
+    <ul class="foot__links">
+      <li><a href="https://calendar.app.google/bqcfSxu2rGQ8mgnq5" target="_blank" rel="noopener">Book a virtual coffee</a></li>
+      <li><a href="mailto:ighodarouamai@gmail.com">Email</a></li>
+      <li><a href="https://linkedin.com/in/alex-uamai" target="_blank" rel="noopener">LinkedIn</a></li>
+      <li><a href="https://github.com/auamai" target="_blank" rel="noopener">GitHub</a></li>
+      <li><a href="pdf-files/Alex%20Uamai%20Resume.pdf?v=20261020r5" target="_blank" rel="noopener">Resume</a></li>
+    </ul>
   </footer>
 
-  <script src="script.js?v=20261020clk1" defer></script>
+  <script src="script.js?v=20261020ux1" defer></script>
 
   <!-- Cloudflare Web Analytics: add the beacon here once the site token exists. No other tracking.
   <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": ""}'></script>
