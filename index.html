@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=20261019e" />
+  <link rel="stylesheet" href="styles.css?v=20261019f" />
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -52,8 +52,15 @@
     <!-- Hero -->
     <section class="hero">
       <div class="hero__clock" aria-hidden="true">
-        <span class="clock__place">Vancouver, BC</span>
-        <span class="clock__time" id="clock">--:--</span>
+        <div class="dial">
+          <svg class="dial__ticks" viewBox="0 0 200 200" id="dial-ticks"></svg>
+          <div class="dial__sweep"></div>
+          <div class="dial__face">
+            <span class="clock__place">Vancouver</span>
+            <span class="clock__time" id="clock">--:--</span>
+            <span class="clock__date" id="clock-date"></span>
+          </div>
+        </div>
       </div>
 
       <div class="hero__body">
@@ -296,6 +303,6 @@
     <span class="foot__mono">Vancouver, BC · <a href="https://github.com/auamai" rel="noopener">github.com/auamai</a></span>
   </footer>
 
-  <script src="script.js?v=20261019e" defer></script>
+  <script src="script.js?v=20261019f" defer></script>
 </body>
 </html>
