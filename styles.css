@@ -331,17 +331,18 @@ main { width: min(var(--wrap), calc(100% - 40px)); margin: 0 auto; }
 .clip__frame::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 55%, rgba(10, 14, 32, .55)); }
 .clip:hover .clip__frame img { transform: scale(1.03); }
 .clip__onair { position: absolute; top: 12px; right: 12px; z-index: 1; display: inline-flex; align-items: center; gap: 7px; padding: 5px 10px; border-radius: 999px; background: rgba(10, 14, 32, .6); backdrop-filter: blur(6px); font: 400 11px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
-.clip__onair i { width: 6px; height: 6px; border-radius: 50%; background: #ff6b6b; box-shadow: 0 0 0 0 rgba(255, 107, 107, .6); animation: onair 2.4s ease-out infinite; }
-@keyframes onair { 0% { box-shadow: 0 0 0 0 rgba(255,107,107,.55); } 70%, 100% { box-shadow: 0 0 0 7px rgba(255,107,107,0); } }
+.clip__onair i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 0 rgba(169, 188, 255, .6); animation: onair 2.4s ease-out infinite; }
+@keyframes onair { 0% { box-shadow: 0 0 0 0 rgba(169,188,255,.55); } 70%, 100% { box-shadow: 0 0 0 7px rgba(169,188,255,0); } }
 .clip__play { position: absolute; left: 14px; bottom: 14px; z-index: 1; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: rgba(244, 245, 248, .92); transition: transform .25s; }
 .clip__play svg { width: 18px; height: 18px; fill: #111526; margin-left: 2px; }
 .clip:hover .clip__play { transform: scale(1.08); }
-.clip__paper { position: relative; border-radius: 16px; padding: 26px 24px 24px; min-height: 0; flex: 1; display: flex; align-items: flex-end;
+.clip__paper { position: relative; border-radius: 16px; overflow: hidden; padding: 26px 24px 24px; min-height: 0; flex: 1; display: flex; align-items: flex-end;
   background:
-    repeating-linear-gradient(180deg, transparent 0 27px, rgba(255,255,255,.035) 27px 28px),
-    linear-gradient(160deg, rgba(169, 188, 255, .10), rgba(169, 188, 255, .02)); }
-.clip__mark { position: absolute; top: -6px; left: 18px; font: 400 110px/1 var(--display); color: var(--accent); opacity: .5; }
-.clip__paper blockquote { margin: 0; padding-top: 48px; font: italic 400 clamp(24px, 2.3vw, 30px)/1.18 var(--display); color: var(--ink); letter-spacing: -0.01em; }
+    linear-gradient(180deg, rgba(10, 14, 32, .15) 0%, rgba(10, 14, 32, .55) 45%, rgba(10, 14, 32, .9) 100%),
+    url("Images/vancouver-coal-harbour.jpg") center 40% / cover no-repeat, #0c1128; }
+.clip__paper > * { position: relative; }
+.clip__mark { position: absolute; top: -6px; left: 18px; font: 400 110px/1 var(--display); color: var(--accent); opacity: .75; }
+.clip__paper blockquote { margin: 0; padding-top: 120px; text-shadow: 0 1px 18px rgba(8, 12, 30, .6); font: italic 400 clamp(24px, 2.3vw, 30px)/1.18 var(--display); color: var(--ink); letter-spacing: -0.01em; }
 .clip__body { display: flex; flex-direction: column; gap: 8px; padding: 0 8px 8px; }
 .clip__meta { font: 400 12px/1.4 var(--mono); color: var(--ink-3); letter-spacing: .02em; }
 .clip__meta span { margin: 0 4px; opacity: .6; }
@@ -350,5 +351,5 @@ main { width: min(var(--wrap), calc(100% - 40px)); margin: 0 auto; }
 .clip__cta { margin-top: 4px; font-size: 14px; color: var(--accent); }
 .clip__cta b { font-weight: 400; display: inline-block; transition: transform .25s; }
 .clip:hover .clip__cta b { transform: translate(2px, -2px); }
-@media (max-width: 820px) { .media { grid-template-columns: 1fr; } .clip__paper { min-height: 220px; } }
+@media (max-width: 820px) { .media { grid-template-columns: 1fr; } .clip__paper { min-height: 300px; } }
 @media (prefers-reduced-motion: reduce) { .clip__onair i { animation: none; } .clip, .clip__frame img, .clip__play { transition: none; } }
