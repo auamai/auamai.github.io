@@ -411,3 +411,7 @@ main {
     display: none;
   }
 }
+
+.about__desc + .about__desc {
+  margin-top: 1em;
+}
