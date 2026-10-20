@@ -140,11 +140,12 @@ main { width: min(var(--wrap), calc(100% - 40px)); margin: 0 auto; }
 /* Hero */
 .hero {
   min-height: min(88vh, 860px); min-height: min(88svh, 860px);
-  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+  display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
   grid-template-rows: 1fr auto; column-gap: 64px;
   padding: 112px 0 24px; align-items: center;
 }
-.hero__clock { display: flex; align-self: center; justify-content: center; }
+.hero__clock { display: flex; align-self: center; justify-content: center; grid-column: 2; grid-row: 1; }
+.hero__body { grid-column: 1; grid-row: 1; }
 /* Watch dial wrapped around the clock */
 .dial { position: relative; width: clamp(260px, 27vw, 360px); aspect-ratio: 1; border-radius: 50%; }
 .dial::before { content: ""; position: absolute; inset: 9%; border-radius: 50%; background: radial-gradient(circle at 50% 35%, rgba(255,255,255,.035), transparent 70%); border: 1px solid var(--line); }
