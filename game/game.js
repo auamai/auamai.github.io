@@ -1,8 +1,9 @@
 // Factory run: a small endless runner. Loaded only when someone presses Play.
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
-import * as P from "./profile.js";
-import { Factory, ROOF } from "./factory.js?v=20261020r3";
-import { createKit, RUNNERS, ROLLERS } from "./robots/index.js?v=20261020r3";
+import * as P from "./profile.js?v=20261020r4";
+import { Factory } from "./factory.js?v=20261020r4";
+import { Ceiling } from "./ceiling.js?v=20261020r4";
+import { createKit, RUNNERS, ROLLERS } from "./robots/index.js?v=20261020r4";
 
 /* ---------- tuning ---------- */
 const LANES = [-2.2, 0, 2.2];
@@ -27,6 +28,9 @@ const DRIVE_T = 8;           // total time as the roller, morph-in included
 const GRACE_T = 1.2;         // blinking grace after changing back
 const DRIVE_MULT = 1.5;      // score multiplier while rolling
 const RATE_CAP = 140;        // points in any one-second window, under the server's 150/s
+const JUMP_BUF = 0.16;       // a jump pressed this close before landing still fires on landing
+const OVER_LOCK = 450;       // ms after game over before a key or tap can restart
+const COUNT_T = 1.5;         // resume countdown, seconds (three beats)
 
 // Light factory built from the portfolio's own palette (styles.css):
 // --ink #f4f6fb is the white of the hall, the page navy #10162f is the ink,
@@ -50,7 +54,18 @@ const ICON = {
   right: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 6l6 6-6 6"/></svg>',
   up: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 14.5l6-6 6 6"/></svg>',
   down: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9.5l6 6 6-6"/></svg>',
+  wheel: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="1.6"/><path d="M12 4.5v5.9M12 13.6v5.9M5.5 15.8l5.1-2.9M13.4 11.1l5.1-2.9M5.5 8.2l5.1 2.9M13.4 12.9l5.1 2.9"/></svg>',
 };
+
+// Short, in-context first-run tips. Touch copy, key copy.
+const TIPS = {
+  lanes: { icon: "lr", touch: "Swipe left or right to change lanes", keys: "← →  or  A D  to change lanes" },
+  jump: { icon: "up", touch: "Swipe up to jump", keys: "↑  or  Space  to jump" },
+  slide: { icon: "down", touch: "Swipe down to slide under", keys: "↓  or  S  to slide under" },
+  wheel: { icon: "wheel", all: "Grab the wheel: roll for 8 s at ×1.5" },
+  rolling: { icon: "wheel", all: "Rolling. Points ×1.5, jump still works" },
+};
+const CAUSE = { crate: "Hit a crate", stack: "Hit a stack", arm: "Caught by the arm", bot: "Ran into a robot", gap: "Fell through the line" };
 
 const fmt = (n) => Math.floor(n).toLocaleString("en-US");
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -66,7 +81,7 @@ function loadCss() {
     cssLoaded = new Promise((resolve) => {
       const link = document.createElement("link");
       link.rel = "stylesheet";
-      link.href = new URL("./game.css?v=20261020r3", import.meta.url).href;
+      link.href = new URL("./game.css?v=20261020r4", import.meta.url).href;
       link.onload = link.onerror = () => resolve();
       document.head.appendChild(link);
     });
@@ -119,12 +134,17 @@ class Game {
     this.profile = P.load();
     this.board = { status: P.online() ? "loading" : "soon", rows: [] };
     this.settings = P.settings();
+    this.tips = Object.assign({}, this.settings.tips);
     this.reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
     this.coarse = matchMedia("(pointer: coarse)").matches;
+    this.canBuzz = typeof navigator.vibrate === "function" && this.coarse;
+    // Lighter robot shaders from the start on small, low-memory phones; others switch when quality drops.
+    this.lite = this.coarse && ((navigator.deviceMemory || 8) <= 3 || (navigator.hardwareConcurrency || 8) <= 4);
+    this.view = "menu";
     this.obstacles = [];
     this.gears = [];
     this.pools = { crate: [], stack: [], arm: [], gap: [], bot: [], gear: [] };
-    this.r = { lane: 1, x: 0, y: 0, vy: 0, ground: true, slideT: 0, queueSlide: false };
+    this.r = { lane: 1, x: 0, y: 0, vy: 0, ground: true, slideT: 0, queueSlide: false, jumpBuf: 0 };
     this.pw = { phase: "none", t: 0 };
     this.token = null;
     this.rate = { b: new Float32Array(11), i: -1 };
@@ -172,8 +192,11 @@ class Game {
         <button type="button" data-move="slide" aria-label="Slide">${ICON.down}</button>
         <button type="button" data-move="right" aria-label="Move right">${ICON.right}</button>
       </div>
-      <div class="fr__layer"><div class="fr__panel"></div></div>
-      <div class="fr__toast" role="status" aria-live="polite"></div>`;
+      <div class="fr__tip" aria-hidden="true"><span class="fr__tip-icon"></span><span class="fr__tip-text"></span></div>
+      <div class="fr__count" aria-hidden="true"></div>
+      <div class="fr__layer"><div class="fr__panel" role="document"></div></div>
+      <div class="fr__toast" role="status" aria-live="polite"></div>
+      <div class="fr__sr" role="status" aria-live="polite"></div>`;
     document.body.appendChild(root);
     this.root = root;
     this.canvas = root.querySelector(".fr__canvas");
@@ -188,11 +211,19 @@ class Game {
     this.layer = root.querySelector(".fr__layer");
     this.panel = root.querySelector(".fr__panel");
     this.toastEl = root.querySelector(".fr__toast");
+    this.srEl = root.querySelector(".fr__sr");
+    this.tipEl = root.querySelector(".fr__tip");
+    this.countEl = root.querySelector(".fr__count");
+    if (this.reduceMotion) root.classList.add("is-still");
+    if (this.coarse) root.classList.add("is-touch");
 
     this.savedOverflow = [document.documentElement.style.overflow, document.body.style.overflow];
     document.documentElement.style.overflow = "hidden";
     document.body.style.overflow = "hidden";
     document.documentElement.classList.add("fr-open");
+    // Everything behind the overlay is out of reach for focus and screen readers.
+    this.inerted = [...document.body.children].filter((el) => el !== root && !el.inert && el.tagName !== "SCRIPT");
+    for (const el of this.inerted) el.inert = true;
   }
 
   /* ---------- scene ---------- */
@@ -248,7 +279,7 @@ class Game {
       edgeSoft: new THREE.LineBasicMaterial({ color: COL.edge, transparent: true, opacity: 0.3 }),
     };
     this.gearGeo = gearGeometry();
-    this.kit = createKit(renderer);
+    this.kit = createKit(renderer, { lite: this.lite });
 
     this.buildWorld();
     this.buildRobot();
@@ -291,7 +322,8 @@ class Game {
     bed.position.set(0, 0.002, -78);
     bed.receiveShadow = true;
     scene.add(bed);
-    for (const s of [-1, 1]) scene.add(this.mesh(M.strip, 0.1, 0.03, 190, 2.2 * s, ROOF - 0.03, -78, false)); // ceiling light lines
+    // Roof trusses, cranes and the body conveyors overhead (ceiling.js). They replace round 3's flat light strips.
+    this.ceiling = new Ceiling(scene);
     for (const s of [-1, 1]) scene.add(this.mesh(M.rail, 1.3, 0.55, 190, 4.45 * s, 0.275, -78, false));
 
     // Line furniture repeats every PERIOD units and slides as one group.
@@ -303,14 +335,12 @@ class Game {
       im.castShadow = shadow;
       scen.add(im);
     };
-    const dashes = [], lights = [], rollers = [];
+    const dashes = [], rollers = [];
     for (let z = 12; z >= -168; z -= 1) {
       if (z % 4 === 0) for (const x of [-1.1, 1.1]) dashes.push([x, 0.012, z]);
-      if (z % PERIOD === 0) lights.push([0, ROOF - 0.1, z]);
     }
     for (let z = 12; z >= -168; z -= 1.5) for (const s of [-1, 1]) rollers.push([4.45 * s, 0.58, z]);
     inst(M.dash, 0.06, 0.02, 1.5, dashes);
-    inst(M.light, 3.2, 0.06, 0.5, lights);
     inst(M.roller, 1.25, 0.1, 0.22, rollers);
     scene.add(scen);
     this.scenery = scen;
@@ -569,7 +599,28 @@ class Game {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, q.dpr));
     this.sun.castShadow = q.shadow;
     this.factory.setQuality(this.quality);
+    this.ceiling.setQuality(this.quality);
+    if (this.quality >= 2 && !this.lite) this.useLiteKit();
     this.resize();
+  }
+
+  // Swap both robot forms onto the lighter kit (standard instead of physical shells).
+  useLiteKit() {
+    this.lite = true;
+    const R = this.robot, old = [R.runner, R.roller], oldKit = this.kit;
+    this.kit = createKit(this.renderer, { lite: true });
+    const runner = this.kit.build(RUNNERS, this.settings.robot);
+    const roller = this.kit.build(ROLLERS, this.settings.roller);
+    for (const [o, n] of [[R.runner, runner], [R.roller, roller]]) {
+      n.root.visible = o.root.visible;
+      n.root.scale.copy(o.root.scale);
+      n.root.rotation.copy(o.root.rotation);
+      R.root.remove(o.root);
+      R.root.add(n.root);
+    }
+    R.runner = runner; R.roller = roller;
+    for (const o of old) o.dispose();
+    oldKit.dispose();
   }
 
   resize() {
@@ -606,57 +657,82 @@ class Game {
 
   /* ---------- input ---------- */
   bind() {
+    const MOVES = { arrowleft: "left", a: "left", arrowright: "right", d: "right", arrowup: "jump", w: "jump", " ": "jump", arrowdown: "slide", s: "slide" };
     this.onKey = (e) => {
-      const typing = e.target && /^(INPUT|TEXTAREA)$/.test(e.target.tagName);
+      const t = e.target;
+      const typing = t && /^(INPUT|TEXTAREA)$/.test(t.tagName);
+      const onControl = t && t.closest && t.closest("button, a, input");
+      const k = e.key.toLowerCase();
+      if (e.key === "Tab") return this.trapFocus(e);
       if (e.key === "Escape") {
         e.preventDefault();
-        if (this.state === "play") this.pause();
+        if (typing) { t.blur(); return; }
+        if (this.state === "play" || this.state === "count") this.pause();
         else if (this.state === "pause") this.resume();
-        else this.close();
+        else if (this.view === "restore" || this.view === "claim" || this.view === "code") this.backFromSub();
+        else if (!this.opts.standalone) this.close();
         return;
       }
       if (typing) return;
-      const k = e.key.toLowerCase();
       if (this.state === "play") {
-        const map = { arrowleft: "left", a: "left", arrowright: "right", d: "right", arrowup: "jump", w: "jump", " ": "jump", arrowdown: "slide", s: "slide" };
-        if (map[k]) { e.preventDefault(); if (!e.repeat) this.act(map[k]); }
+        if (MOVES[k]) { e.preventDefault(); if (!e.repeat) this.act(MOVES[k]); }
         else if (k === "p") this.pause();
-      } else if (this.state === "pause" && k === "p") {
-        this.resume();
-      } else if (this.state === "over" && (k === "enter" || k === " ") && !(e.target && e.target.closest && e.target.closest("button"))) {
+      } else if (this.state === "count") {
+        if (MOVES[k]) e.preventDefault();
+        if (k === "p") this.pause();
+      } else if (this.state === "pause") {
+        if (k === "p" || (k === " " && !onControl)) { e.preventDefault(); this.resume(); }
+      } else if ((this.view === "over" || (this.view === "menu" && this.profile && !this.switching)) && (k === "enter" || k === " ") && !onControl) {
         e.preventDefault();
-        this.startRun();
+        if (!e.repeat) this.tryStart();
+      } else if (MOVES[k]) {
+        e.preventDefault(); // arrows and space never scroll the page behind
       }
     };
     window.addEventListener("keydown", this.onKey);
 
-    // Swipes: fire as soon as the finger has moved far enough.
+    // Swipes fire as soon as the finger has moved far enough; a short, quick flick
+    // that ends before the threshold still counts on release.
     this.onDown = (e) => {
       if (this.state !== "play" || e.target.closest("button, .fr__panel")) return;
-      this.swipe = { x: e.clientX, y: e.clientY, id: e.pointerId, done: false };
+      if (this.swipe && this.swipe.id !== e.pointerId && !this.swipe.done) return; // ignore a second finger
+      this.swipe = { x: e.clientX, y: e.clientY, id: e.pointerId, t: performance.now(), done: false };
     };
-    this.onMove = (e) => {
-      const s = this.swipe;
-      if (!s || s.done || e.pointerId !== s.id) return;
-      const dx = e.clientX - s.x, dy = e.clientY - s.y;
-      const th = Math.max(22, Math.min(window.innerWidth, window.innerHeight) * 0.045);
-      if (Math.abs(dx) < th && Math.abs(dy) < th) return;
-      s.done = true;
+    const fire = (dx, dy) => {
       if (Math.abs(dx) > Math.abs(dy)) this.act(dx < 0 ? "left" : "right");
       else this.act(dy < 0 ? "jump" : "slide");
     };
-    this.onUp = () => { this.swipe = null; };
+    this.onMove = (e) => {
+      const s = this.swipe;
+      if (!s || s.done || e.pointerId !== s.id || this.state !== "play") return;
+      const dx = e.clientX - s.x, dy = e.clientY - s.y;
+      const th = Math.max(18, Math.min(window.innerWidth, window.innerHeight) * 0.04);
+      if (Math.abs(dx) < th && Math.abs(dy) < th) return;
+      s.done = true;
+      fire(dx, dy);
+    };
+    this.onUp = (e) => {
+      const s = this.swipe;
+      if (s && !s.done && e && e.type === "pointerup" && e.pointerId === s.id && this.state === "play") {
+        const dx = e.clientX - s.x, dy = e.clientY - s.y;
+        if (Math.max(Math.abs(dx), Math.abs(dy)) >= 10 && performance.now() - s.t < 180) fire(dx, dy);
+      }
+      if (!e || !s || e.pointerId === s.id) this.swipe = null;
+    };
     this.root.addEventListener("pointerdown", this.onDown);
     this.root.addEventListener("pointermove", this.onMove);
     this.root.addEventListener("pointerup", this.onUp);
     this.root.addEventListener("pointercancel", this.onUp);
 
-    // No page scroll, pull-to-refresh or pinch zoom while the game is open.
-    this.onTouchMove = (e) => { if (!e.target.closest(".fr__panel")) e.preventDefault(); };
+    // No page scroll, pull-to-refresh, pinch zoom, long-press menus or stray text selection.
+    const free = (t) => t.closest && t.closest("input, .fr__code");
+    this.onTouchMove = (e) => { if (!e.target.closest(".fr__panel") || e.touches.length > 1) e.preventDefault(); };
     this.root.addEventListener("touchmove", this.onTouchMove, { passive: false });
     this.onGesture = (e) => e.preventDefault();
     document.addEventListener("gesturestart", this.onGesture);
     this.root.addEventListener("dblclick", this.onGesture);
+    this.root.addEventListener("contextmenu", (e) => { if (!free(e.target)) e.preventDefault(); });
+    this.root.addEventListener("selectstart", (e) => { if (!free(e.target)) e.preventDefault(); });
 
     this.pad.addEventListener("pointerdown", (e) => {
       const b = e.target.closest("[data-move]");
@@ -664,27 +740,36 @@ class Game {
       e.preventDefault();
       if (this.state === "play") this.act(b.dataset.move);
     });
+    this.pad.addEventListener("click", (e) => e.preventDefault());
     this.root.querySelector(".fr__corner").addEventListener("click", (e) => {
       const b = e.target.closest("[data-act]");
       if (!b) return;
       if (b.dataset.act === "close") this.close();
       if (b.dataset.act === "pause") this.state === "pause" ? this.resume() : this.pause();
     });
+    // A tap anywhere on the game-over screen (outside its buttons) runs again.
+    this.layer.addEventListener("click", (e) => {
+      if (this.view === "over" && !e.target.closest("button, a, input, .fr__board")) this.tryStart();
+    });
     this.panel.addEventListener("click", (e) => this.onPanelClick(e));
     this.panel.addEventListener("submit", (e) => this.onPanelSubmit(e));
+    this.panel.addEventListener("input", (e) => this.onPanelInput(e));
     this.panel.addEventListener("focusin", (e) => {
-      if (e.target.tagName === "INPUT") setTimeout(() => e.target.scrollIntoView({ block: "center", behavior: "smooth" }), 300);
+      if (e.target.tagName === "INPUT") setTimeout(() => e.target.scrollIntoView({ block: "center", behavior: this.reduceMotion ? "auto" : "smooth" }), 300);
     });
 
-    this.onVis = () => { if (document.hidden && this.state === "play") this.pause(); };
+    this.onVis = () => { if (document.hidden) this.autoPause(); };
     document.addEventListener("visibilitychange", this.onVis);
-    this.onBlur = () => { if (this.state === "play") this.pause(); };
+    this.onBlur = () => this.autoPause();
     window.addEventListener("blur", this.onBlur);
     window.addEventListener("pagehide", this.onBlur);
+    this.onOnline = () => { if (this.board.status !== "ok") this.refreshBoard(); };
+    window.addEventListener("online", this.onOnline);
 
-    this.onResize = () => this.resize();
+    this.onResize = () => { this.resize(); this.drawn = false; };
+    this.onTurn = () => { this.autoPause(); this.onResize(); };
     window.addEventListener("resize", this.onResize);
-    window.addEventListener("orientationchange", this.onResize);
+    window.addEventListener("orientationchange", this.onTurn);
     if (window.visualViewport) window.visualViewport.addEventListener("resize", this.onResize);
     if ("ResizeObserver" in window) { this.ro = new ResizeObserver(this.onResize); this.ro.observe(this.root); }
 
@@ -696,23 +781,102 @@ class Game {
     }
   }
 
+  // Keep Tab inside the game while it is open.
+  trapFocus(e) {
+    const els = [...this.root.querySelectorAll("button, input, a[href]")].filter((el) => !el.disabled && el.offsetParent !== null);
+    if (!els.length) return;
+    const first = els[0], last = els[els.length - 1], a = document.activeElement;
+    if (!this.root.contains(a)) { e.preventDefault(); first.focus(); }
+    else if (e.shiftKey && a === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && a === last) { e.preventDefault(); first.focus(); }
+  }
+
+  autoPause() {
+    if (this.state === "play" || this.state === "count") this.pause();
+  }
+
+  buzz(ms) {
+    if (this.settings.haptics && this.canBuzz) { try { navigator.vibrate(ms); } catch { /* ignore */ } }
+  }
+
   act(move) {
     const r = this.r;
-    if (move === "left") r.lane = Math.max(0, r.lane - 1);
-    else if (move === "right") r.lane = Math.min(2, r.lane + 1);
-    else if (move === "jump") {
-      if (r.ground) { r.vy = JUMP_V; r.ground = false; r.slideT = 0; }
+    if (move === "left" || move === "right") {
+      const to = move === "left" ? Math.max(0, r.lane - 1) : Math.min(2, r.lane + 1);
+      if (to !== r.lane) { r.lane = to; this.buzz(8); }
+      this.learned("lanes");
+    } else if (move === "jump") {
+      if (r.ground) { r.vy = JUMP_V; r.ground = false; r.slideT = 0; r.jumpBuf = 0; this.buzz(10); }
+      else { r.jumpBuf = JUMP_BUF; r.queueSlide = false; } // buffered: fires on landing
+      this.learned("jump");
     } else if (move === "slide") {
       if (r.ground) r.slideT = SLIDE_T;
-      else { r.vy = Math.min(r.vy, -16); r.queueSlide = true; }
+      else { r.vy = Math.min(r.vy, -16); r.queueSlide = true; r.jumpBuf = 0; }
+      this.learned("slide");
     }
   }
 
+  /* ---------- first-run tips ---------- */
+  tipText(id) {
+    const t = TIPS[id];
+    return t.all || (this.coarse ? t.touch : t.keys);
+  }
+
+  showTip(id, secs = 2.6) {
+    if (this.tips[id] || this.tipNow === id) return;
+    this.tipNow = id;
+    this.tipLeft = secs;
+    const ic = TIPS[id].icon;
+    this.tipEl.querySelector(".fr__tip-icon").innerHTML = ic === "lr" ? ICON.left + ICON.right : ic === "wheel" ? ICON.wheel : ICON[ic];
+    this.tipEl.querySelector(".fr__tip-text").textContent = this.tipText(id);
+    this.tipEl.dataset.tip = id;
+    this.tipEl.classList.add("is-on");
+    this.sr(this.tipText(id));
+  }
+
+  hideTip() {
+    this.tipNow = null;
+    this.tipEl.classList.remove("is-on");
+  }
+
+  // A tip is done once the player has done the thing it teaches.
+  learned(id) {
+    if (this.tips[id]) return;
+    this.tips[id] = 1;
+    P.setSetting("tips", this.tips);
+    if (this.tipNow === id) this.tipLeft = Math.min(this.tipLeft, 0.5);
+  }
+
+  updateTips(dt) {
+    if (this.tipNow) {
+      this.tipLeft -= dt;
+      if (this.tipLeft <= 0) this.hideTip();
+    }
+    if (this.tipNow) return;
+    if (!this.tips.lanes && this.runTime > 0.8 && this.runTime < 30) return this.showTip("lanes", 3);
+    // The first time something needs a jump or a slide, say so while it's still well ahead.
+    for (const o of this.obstacles) {
+      if (o.passed || o.z < -30 || o.z > -11 || Math.abs(o.x - this.r.x) > 1.2) continue;
+      const need = o.type === "arm" ? "slide" : o.type === "stack" ? null : "jump";
+      if (need && !this.tips[need]) return this.showTip(need, 2.2);
+    }
+    const tk = this.token;
+    if (tk && !tk.taken && tk.z > -42 && tk.z < -8 && !this.tips.wheel) this.showTip("wheel", 2.6);
+  }
+
   /* ---------- run lifecycle ---------- */
+  // Keys and taps on the game-over screen wait a beat, so a last frantic swipe can't restart by accident.
+  tryStart() {
+    if (this.view === "over" && performance.now() - (this.overAt || 0) < OVER_LOCK) return;
+    if (this.view === "menu" && !this.profile) return;
+    this.startRun();
+  }
+
   startRun() {
     if (!this.profile) return this.showMenu();
     this.clearWorld();
-    Object.assign(this.r, { lane: 1, x: 0, y: 0, vy: 0, ground: true, slideT: 0, queueSlide: false });
+    this.hideTip();
+    Object.assign(this.r, { lane: 1, x: 0, y: 0, vy: 0, ground: true, slideT: 0, queueSlide: false, jumpBuf: 0 });
     const R = this.robot;
     R.root.rotation.set(0, 0, 0);
     R.root.position.set(0, 0, 0);
@@ -729,10 +893,16 @@ class Game {
     this.shown = { score: -1, gears: -1 };
     this.elBest.textContent = fmt(this.profile.best);
     this.state = "play";
+    this.view = "play";
+    this.deathKind = null;
     this.hidePanel();
     this.hud.hidden = false;
     this.btnPause.hidden = false;
+    this.btnPause.setAttribute("aria-label", "Pause");
     this.pad.hidden = !this.settings.pad;
+    this.elPower.classList.remove("is-ending");
+    this.root.classList.add("is-playing");
+    if (document.activeElement && this.root.contains(document.activeElement)) document.activeElement.blur();
   }
 
   /* ---------- wheel power-up ---------- */
@@ -750,8 +920,16 @@ class Game {
   startDrive() {
     this.pw = { phase: "in", t: 0 };
     this.elPower.hidden = false;
+    this.elPower.classList.remove("is-ending");
     this.shownRing = -1;
-    navigator.vibrate?.(25);
+    this.buzz(25);
+    if (this.tipNow === "wheel") this.hideTip();
+    this.learned("wheel");
+    if (!this.tips.rolling && this.state === "play") {
+      this.showTip("rolling", 2.4);
+      this.tips.rolling = 1;
+      P.setSetting("tips", this.tips);
+    }
   }
 
   // in -> drive -> out -> grace -> none. Morphs and grace are invulnerable.
@@ -767,6 +945,7 @@ class Game {
       const left = Math.max(0, 1 - pw.t / DRIVE_T);
       const q = Math.round(left * 200);
       if (q !== this.shownRing) { this.shownRing = q; this.elRing.style.strokeDashoffset = ((1 - left) * 119.38).toFixed(2); }
+      this.elPower.classList.toggle("is-ending", pw.t > DRIVE_T - 1.6);
     }
   }
 
@@ -788,37 +967,69 @@ class Game {
   }
 
   pause() {
-    if (this.state !== "play") return;
+    if (this.state !== "play" && this.state !== "count") return;
     this.state = "pause";
+    this.view = "pause";
+    this.swipe = null;
+    this.drawn = false;
+    this.countEl.classList.remove("is-on");
     this.btnPause.setAttribute("aria-label", "Resume");
     this.pad.hidden = true;
+    this.root.classList.remove("is-playing");
     this.renderPanel(`
       <h2 class="fr__title">Paused</h2>
+      <p class="fr__muted">${fmt(this.score)} points · ${clock(this.runTime)}</p>
       <div class="fr__actions">
-        <button class="fr__btn fr__btn--solid" type="button" data-panel="resume">Resume</button>
+        <button class="fr__btn fr__btn--solid fr__btn--wide" type="button" data-panel="resume">Resume</button>
+        <button class="fr__btn" type="button" data-panel="restart">Restart</button>
         <button class="fr__btn" type="button" data-panel="menu">Quit run</button>
-      </div>`);
+      </div>
+      ${this.settingsHtml()}`);
   }
 
+  // Resume after a short 3-2-1 so nobody comes back straight into a crate.
   resume() {
     if (this.state !== "pause") return;
-    this.state = "play";
+    this.state = "count";
+    this.view = "play";
+    this.countT = COUNT_T;
+    this.shownCount = 0;
     this.btnPause.setAttribute("aria-label", "Pause");
     this.pad.hidden = !this.settings.pad;
+    this.root.classList.add("is-playing");
     this.hidePanel();
     this.last = performance.now();
   }
 
-  die(kind) {
+  updateCount(dt) {
+    this.countT -= dt;
+    const n = Math.ceil((this.countT / COUNT_T) * 3);
+    if (n !== this.shownCount && n > 0) {
+      this.shownCount = n;
+      this.countEl.textContent = n;
+      this.countEl.classList.remove("is-on");
+      void this.countEl.offsetWidth; // restart the little pop
+      this.countEl.classList.add("is-on");
+    }
+    if (this.countT <= 0) {
+      this.countEl.classList.remove("is-on");
+      this.state = "play";
+    }
+  }
+
+  die(kind, type) {
     if (this.state !== "play") return;
     this.state = "dying";
     this.deathKind = kind;
+    this.deathType = type;
     this.deathT = 0;
     this.deathSpeed = this.speed;
     this.shake = this.reduceMotion ? 0 : 0.35;
     this.btnPause.hidden = true;
     this.pad.hidden = true;
-    navigator.vibrate?.(60);
+    this.hideTip();
+    this.root.classList.remove("is-playing");
+    this.buzz(60);
   }
 
   endRun() {
@@ -827,21 +1038,22 @@ class Game {
     const score = Math.floor(this.score);
     const prevBest = this.profile.best;
     P.recordRun(this.profile, score, this.gearsRun);
-    this.lastRun = { score, gears: this.gearsRun, time: this.runTime, best: score > prevBest && score > 0, rank: null };
+    const durationMs = Math.round(this.runTime * 1000);
+    const post = !P.online() ? "local" : durationMs < 3000 || score <= 0 ? "short" : "posting";
+    this.lastRun = { score, gears: this.gearsRun, time: this.runTime, best: score > prevBest && score > 0, prevBest, rank: null, post, cause: CAUSE[this.deathType] || "Run over" };
     this.showOver();
-    this.submitRun(score, Math.round(this.runTime * 1000));
+    this.sr(`Run over. ${fmt(score)} points.${this.lastRun.best ? " New best." : ""}`);
+    this.submitRun(score, durationMs);
   }
 
   async submitRun(score, durationMs) {
     if (!P.online()) return;
-    if (durationMs >= 3000 && score > 0) {
+    if (this.lastRun.post === "posting") {
+      const run = this.lastRun;
       const res = await P.postScore(this.profile, score, durationMs);
-      if (res.ok && res.data && res.data.rank && this.state === "over" && this.lastRun) {
-        this.lastRun.rank = res.data.rank;
-        this.showOver();
-      } else if (res.status === 403) {
-        this.toast("That name is claimed. Load its save code to post scores.");
-      }
+      run.post = res.ok ? "ok" : res.status === 403 ? "claimed" : res.status === 429 ? "busy" : res.offline && navigator.onLine === false ? "offline" : "error";
+      if (res.ok && res.data && res.data.rank) run.rank = res.data.rank;
+      if (run === this.lastRun) this.updateOverStatus();
     }
     if (this.profile.code) {
       const s = await P.sync(this.profile);
@@ -852,63 +1064,90 @@ class Game {
 
   async refreshBoard() {
     if (!P.online()) { this.board = { status: "soon", rows: [] }; return; }
+    if (this.board.status !== "ok") { this.board = { status: "loading", rows: [] }; this.paintBoard(); }
     const res = await P.topScores();
     this.board = res.ok && res.data && Array.isArray(res.data.scores)
       ? { status: "ok", rows: res.data.scores.slice(0, 10) }
-      : { status: "soon", rows: [] };
+      : { status: "error", rows: this.board.rows || [] };
+    this.paintBoard();
+  }
+
+  paintBoard() {
     const b = this.panel.querySelector(".fr__board");
     if (b) b.outerHTML = this.boardHtml();
   }
 
   /* ---------- panels ---------- */
-  renderPanel(html) {
+  renderPanel(html, view) {
+    if (view) this.view = view;
     this.layer.hidden = false;
     this.panel.innerHTML = html;
     this.panel.scrollTop = 0;
+    this.panel.dataset.view = this.view;
+    this.layer.dataset.view = this.view;
     const f = this.panel.querySelector("[autofocus], .fr__btn--solid");
     if (f && !(this.coarse && f.tagName === "INPUT")) f.focus({ preventScroll: true });
   }
 
   hidePanel() {
     this.layer.hidden = true;
+    this.layer.dataset.view = "";
+    this.layer.classList.remove("is-arming");
     this.panel.innerHTML = "";
   }
 
+  sr(msg) {
+    this.srEl.textContent = "";
+    setTimeout(() => { this.srEl.textContent = msg; }, 30);
+  }
+
   boardHtml() {
-    if (this.board.status === "loading") return `<div class="fr__board"><p class="fr__muted">Loading board…</p></div>`;
-    if (this.board.status !== "ok") return `<div class="fr__board"><p class="fr__muted">Global leaderboard coming soon</p></div>`;
+    const s = this.board.status;
+    if (s === "loading") return `<div class="fr__board" aria-busy="true"><p class="fr__label">Top 10</p><p class="fr__muted">Loading the board…</p></div>`;
+    if (s === "soon") return `<div class="fr__board"><p class="fr__muted">Global leaderboard coming soon. Runs are saved on this device.</p></div>`;
+    if (s === "error") return `<div class="fr__board"><p class="fr__label">Top 10</p><p class="fr__muted">${navigator.onLine === false ? "You're offline." : "Couldn't reach the board."} Runs are saved on this device.</p><div class="fr__links"><button class="fr__link" type="button" data-panel="retryboard">Try again</button></div></div>`;
     if (!this.board.rows.length) return `<div class="fr__board"><p class="fr__label">Top 10</p><p class="fr__muted">No runs yet. Yours could be first.</p></div>`;
     const me = this.profile && this.profile.username.toLowerCase();
     return `<div class="fr__board"><p class="fr__label">Top 10</p><ol>${this.board.rows.map((r, i) =>
-      `<li${me && r.username.toLowerCase() === me ? ' class="is-me"' : ""}><span>${i + 1}</span><span>${esc(r.username)}</span><span>${fmt(r.score)}</span></li>`).join("")}</ol></div>`;
+      `<li${me && r.username.toLowerCase() === me ? ' class="is-me" aria-current="true"' : ""}><span>${i + 1}</span><span>${esc(r.username)}</span><span>${fmt(r.score)}</span></li>`).join("")}</ol></div>`;
   }
 
-  controlsHint() {
-    return (this.coarse
-      ? "Swipe left or right to switch lanes, up to jump, down to slide."
-      : "Arrow keys or WASD. Space jumps, down slides.") + " Catch a wheel token to roll for a few seconds.";
+  controlsHtml() {
+    const row = (keys, what) => `<li><span class="fr__keys">${keys}</span><span>${what}</span></li>`;
+    const list = this.coarse
+      ? [row("Swipe ‹ ›", "lanes"), row("Swipe up", "jump"), row("Swipe down", "slide")]
+      : [row("<kbd>←</kbd><kbd>→</kbd>", "lanes"), row("<kbd>↑</kbd><kbd>Space</kbd>", "jump"), row("<kbd>↓</kbd>", "slide"), row("<kbd>P</kbd>", "pause")];
+    return `<ul class="fr__controls" aria-label="Controls">${list.join("")}</ul>
+      <p class="fr__muted fr__wheel-note"><span class="fr__mini-wheel">${ICON.wheel}</span>Wheel tokens turn you into a roller for 8&nbsp;s at ×${DRIVE_MULT}.</p>`;
   }
 
-  padToggleHtml() {
-    return `<button class="fr__link" type="button" data-panel="pad">On-screen buttons: ${this.settings.pad ? "on" : "off"}</button>`;
+  settingsHtml() {
+    const t = (key, label) => `<button class="fr__toggle" type="button" data-panel="toggle" data-key="${key}" aria-pressed="${this.settings[key] ? "true" : "false"}"><span class="fr__switch" aria-hidden="true"></span>${label}</button>`;
+    const items = [t("pad", "On-screen buttons")];
+    if (this.canBuzz) items.push(t("haptics", "Vibration"));
+    return `<div class="fr__settings">${items.join("")}</div>`;
   }
 
   showMenu(error = "") {
     this.state = "menu";
+    this.view = "menu";
     this.hud.hidden = true;
     this.btnPause.hidden = true;
     this.pad.hidden = true;
+    this.root.classList.remove("is-playing");
+    this.countEl.classList.remove("is-on");
+    this.hideTip();
     this.clearWorld();
-    Object.assign(this.r, { lane: 1, x: 0, y: 0, vy: 0, ground: true, slideT: 0, queueSlide: false });
+    Object.assign(this.r, { lane: 1, x: 0, y: 0, vy: 0, ground: true, slideT: 0, queueSlide: false, jumpBuf: 0 });
     this.resetPower();
     const p = this.profile;
     const links = [];
     let body;
     if (p && !this.switching) {
       body = `
-        <p class="fr__lede">Welcome back, ${esc(p.username)}.</p>
+        <p class="fr__lede">Welcome back, <b class="fr__name">${esc(p.username)}</b>.</p>
         <p class="fr__muted">Best ${fmt(p.best)} · ${fmt(p.games)} ${p.games === 1 ? "run" : "runs"} · ${fmt(p.gears)} gears</p>
-        <div class="fr__actions"><button class="fr__btn fr__btn--solid" type="button" data-panel="start">Start</button></div>`;
+        <div class="fr__actions"><button class="fr__btn fr__btn--solid fr__btn--wide" type="button" data-panel="start">Start</button></div>`;
       links.push(`<button class="fr__link" type="button" data-panel="switch">Not you?</button>`);
       if (P.online()) {
         links.push(p.code
@@ -921,42 +1160,70 @@ class Game {
           <label class="fr__label" for="fr-name">Pick a name</label>
           <input id="fr-name" class="fr__input" name="username" type="text" inputmode="text" autocomplete="nickname"
             autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go" minlength="3" maxlength="16"
-            pattern="[A-Za-z0-9_]{3,16}" placeholder="robot_fan" value="${esc(this.switching ? "" : (p ? p.username : ""))}" autofocus />
-          <p class="fr__hint${error ? " is-error" : ""}">${esc(error || (this.switching ? "A new name starts a new save on this device." : "3 to 16 letters, numbers or _"))}</p>
+            pattern="[A-Za-z0-9_]{3,16}" placeholder="robot_fan" aria-describedby="fr-name-hint"${error ? ' aria-invalid="true"' : ""}
+            value="${esc(this.switching ? "" : (p ? p.username : ""))}" autofocus />
+          <p class="fr__hint${error ? " is-error" : ""}" id="fr-name-hint">${esc(error || (this.switching ? "A new name starts a new save on this device." : "3 to 16 letters, numbers or _. Shown on the board."))}</p>
           <div class="fr__actions">
-            <button class="fr__btn fr__btn--solid" type="submit">Start</button>
+            <button class="fr__btn fr__btn--solid fr__btn--wide" type="submit">Start</button>
             ${this.switching ? '<button class="fr__btn" type="button" data-panel="unswitch">Back</button>' : ""}
           </div>
         </form>`;
     }
     if (P.online()) links.push(`<button class="fr__link" type="button" data-panel="restore">Load a save code</button>`);
-    links.push(this.padToggleHtml());
     this.renderPanel(`
       <h2 class="fr__title">Factory run</h2>
       <p class="fr__sub">Run the floor, collect gears, stay clear of the machines.</p>
       ${body}
-      <p class="fr__muted fr__controls">${this.controlsHint()}</p>
       <div class="fr__links">${links.join("")}</div>
-      ${this.boardHtml()}`);
+      ${this.controlsHtml()}
+      ${this.settingsHtml()}
+      ${this.boardHtml()}`, "menu");
+    if (error) this.panel.querySelector("#fr-name")?.focus({ preventScroll: true });
+  }
+
+  overStatusHtml() {
+    const r = this.lastRun;
+    const best = r.best
+      ? `<span class="fr__badge">New best</span>${r.prevBest > 0 ? `<span class="fr__muted"> was ${fmt(r.prevBest)}</span>` : ""}`
+      : `Best ${fmt(this.profile.best)}`;
+    const post = {
+      posting: "Posting to the board…",
+      ok: r.rank ? `#${r.rank} on the board` : "Posted to the board",
+      claimed: "Not posted: that name is claimed. Load its save code to post.",
+      offline: "Not posted: you're offline. Saved on this device.",
+      busy: "Not posted: too many runs at once. Saved on this device.",
+      error: "Not posted: the board didn't answer. Saved on this device.",
+      short: "", local: "",
+    }[r.post] || "";
+    return `<p class="fr__lede">${best}</p>${post ? `<p class="fr__post${r.post === "ok" ? " is-ok" : ""}" data-slot="post">${post}</p>` : ""}`;
+  }
+
+  updateOverStatus() {
+    if (this.view !== "over") return;
+    const s = this.panel.querySelector('[data-slot="status"]');
+    if (s) s.innerHTML = this.overStatusHtml();
   }
 
   showOver() {
     const r = this.lastRun;
-    const head = this.deathKind === "fall" ? "Fell through the line" : "Run over";
     const links = [];
     if (P.online() && !this.profile.code) links.push(`<button class="fr__link" type="button" data-panel="claim">Save across devices</button>`);
-    links.push(this.padToggleHtml());
     this.renderPanel(`
-      <p class="fr__label">${head}</p>
+      <p class="fr__label">${esc(r.cause)}</p>
       <p class="fr__big">${fmt(r.score)}</p>
-      <p class="fr__lede">${r.best ? "New best." : `Best ${fmt(this.profile.best)}`}${r.rank ? ` · #${r.rank} on the board` : ""}</p>
+      <div class="fr__status" data-slot="status">${this.overStatusHtml()}</div>
       <p class="fr__muted">${fmt(r.gears)} gears · ${clock(r.time)}</p>
       <div class="fr__actions">
-        <button class="fr__btn fr__btn--solid" type="button" data-panel="start">Run again</button>
+        <button class="fr__btn fr__btn--solid fr__btn--wide" type="button" data-panel="start">Run again</button>
         <button class="fr__btn" type="button" data-panel="menu">Menu</button>
       </div>
-      <div class="fr__links">${links.join("")}</div>
-      ${this.boardHtml()}`);
+      <p class="fr__muted fr__again">${this.coarse ? "Tap anywhere to run again" : "Space or Enter to run again"}</p>
+      ${links.length ? `<div class="fr__links">${links.join("")}</div>` : ""}
+      ${this.boardHtml()}`, "over");
+    this.overAt = performance.now();
+    this.layer.classList.add("is-arming");
+    clearTimeout(this.armT);
+    this.armT = setTimeout(() => this.layer.classList.remove("is-arming"), OVER_LOCK);
   }
 
   showRestore(error = "") {
@@ -967,29 +1234,28 @@ class Game {
       <form class="fr__form" data-form="restore" novalidate>
         <label class="fr__label" for="fr-rname">Name</label>
         <input id="fr-rname" class="fr__input" name="username" type="text" autocomplete="username" autocapitalize="off"
-          autocorrect="off" spellcheck="false" enterkeyhint="next" maxlength="16" />
+          autocorrect="off" spellcheck="false" enterkeyhint="next" maxlength="16" autofocus />
         <label class="fr__label" for="fr-code">Save code</label>
         <input id="fr-code" class="fr__input fr__input--code" name="code" type="text" autocomplete="off" autocapitalize="characters"
-          autocorrect="off" spellcheck="false" enterkeyhint="go" maxlength="12" placeholder="ABCDE23456" />
-        <p class="fr__hint${error ? " is-error" : ""}">${esc(error || "Letters and numbers, no spaces needed.")}</p>
+          autocorrect="off" spellcheck="false" enterkeyhint="go" maxlength="11" placeholder="ABCDE 23456" aria-describedby="fr-code-hint" />
+        <p class="fr__hint${error ? " is-error" : ""}" id="fr-code-hint" role="${error ? "alert" : "note"}">${esc(error || "Letters and numbers. Spaces don't matter.")}</p>
         <div class="fr__actions">
           <button class="fr__btn fr__btn--solid" type="submit">Load</button>
           <button class="fr__btn" type="button" data-panel="menu">Back</button>
         </div>
-      </form>`);
+      </form>`, "restore");
   }
 
   showClaim(error = "") {
-    const from = this.state;
-    this.claimFrom = from === "over" ? "over" : "menu";
+    if (this.view === "over" || this.view === "menu") this.claimFrom = this.view;
     this.renderPanel(`
       <h2 class="fr__title">Save across devices</h2>
       <p class="fr__sub">Claim <b class="fr__name">${esc(this.profile.username)}</b> and get a save code. Use it to load this profile on another device.</p>
-      <p class="fr__hint${error ? " is-error" : ""}">${esc(error || "No email or password. Just the code.")}</p>
+      <p class="fr__hint${error ? " is-error" : ""}"${error ? ' role="alert"' : ""}>${esc(error || "No email or password. Just the code.")}</p>
       <div class="fr__actions">
         <button class="fr__btn fr__btn--solid" type="button" data-panel="doclaim">Claim name</button>
         <button class="fr__btn" type="button" data-panel="back">Back</button>
-      </div>`);
+      </div>`, "claim");
   }
 
   showCode(code) {
@@ -1001,40 +1267,68 @@ class Game {
       <div class="fr__actions">
         <button class="fr__btn fr__btn--solid" type="button" data-panel="back">I've saved it</button>
         <button class="fr__btn" type="button" data-panel="copy" data-code="${esc(code)}">Copy</button>
-      </div>`);
+      </div>`, "code");
+  }
+
+  backFromSub(fromButton = false) {
+    if (this.view === "code" && !fromButton) return; // the code screen asks for an explicit "I've saved it"
+    if (this.claimFrom === "over" && this.lastRun && (this.view === "claim" || this.view === "code")) { this.state = "over"; this.showOver(); this.layer.classList.remove("is-arming"); }
+    else { this.switching = false; this.showMenu(); }
+  }
+
+  onPanelInput(e) {
+    const el = e.target;
+    if (el.id === "fr-code") {
+      // Upper-case as you type and group 5 + 5, like the code was shown.
+      const raw = el.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10);
+      const v = raw.length > 5 ? `${raw.slice(0, 5)} ${raw.slice(5)}` : raw;
+      if (v !== el.value) el.value = v;
+    } else if (el.id === "fr-name" || el.id === "fr-rname") {
+      const bad = /[^A-Za-z0-9_]/.test(el.value);
+      const hint = this.panel.querySelector(el.id === "fr-name" ? "#fr-name-hint" : "#fr-code-hint");
+      el.toggleAttribute("aria-invalid", bad);
+      if (hint && el.id === "fr-name") {
+        hint.classList.toggle("is-error", bad);
+        hint.textContent = bad ? "Only letters, numbers and _" : (this.switching ? "A new name starts a new save on this device." : "3 to 16 letters, numbers or _. Shown on the board.");
+      }
+    }
   }
 
   async onPanelClick(e) {
     const b = e.target.closest("[data-panel]");
     if (!b) return;
     const a = b.dataset.panel;
-    if (a === "start") this.startRun();
+    if (a === "start") this.tryStart();
     else if (a === "resume") this.resume();
+    else if (a === "restart") this.startRun();
     else if (a === "menu") { this.switching = false; this.showMenu(); }
     else if (a === "switch") { this.switching = true; this.showMenu(); }
     else if (a === "unswitch") { this.switching = false; this.showMenu(); }
     else if (a === "restore") this.showRestore();
-    else if (a === "claim") { if (this.state === "over") this.claimFrom = "over"; this.showClaim(); }
-    else if (a === "back") { if (this.claimFrom === "over" && this.lastRun) { this.state = "over"; this.showOver(); } else this.showMenu(); }
-    else if (a === "pad") {
-      this.settings.pad = !this.settings.pad;
-      P.setSetting("pad", this.settings.pad);
-      b.textContent = `On-screen buttons: ${this.settings.pad ? "on" : "off"}`;
+    else if (a === "claim") this.showClaim();
+    else if (a === "back") this.backFromSub(true);
+    else if (a === "retryboard") this.refreshBoard();
+    else if (a === "toggle") {
+      const k = b.dataset.key;
+      this.settings[k] = !this.settings[k];
+      P.setSetting(k, this.settings[k]);
+      b.setAttribute("aria-pressed", this.settings[k] ? "true" : "false");
+      if (k === "haptics" && this.settings[k]) this.buzz(15);
     } else if (a === "copy") {
       try { await navigator.clipboard.writeText(b.dataset.code); this.toast("Copied"); } catch { this.toast("Couldn't copy. Write it down instead."); }
     } else if (a === "doclaim") {
       b.disabled = true;
+      b.textContent = "Claiming…";
       const res = await P.claim(this.profile);
       if (res.ok && res.data && res.data.code) {
         this.profile.code = res.data.code;
         P.save(this.profile);
         this.showCode(res.data.code);
       } else {
-        b.disabled = false;
         const msg = res.status === 409 ? "That name is already claimed. Load its code, or start a new name."
           : res.status === 429 ? "Too many tries. Give it a minute."
-          : res.offline ? "Couldn't reach the server. Try again shortly."
-          : (res.data && res.data.error) || "That didn't work.";
+          : res.offline ? "Couldn't reach the server. Check your connection and try again."
+          : (res.data && res.data.error) || "That didn't work. Try again.";
         this.showClaim(msg);
       }
     }
@@ -1045,7 +1339,7 @@ class Game {
     const form = e.target;
     if (form.dataset.form === "name") {
       const name = form.username.value.trim();
-      const err = P.checkName(name);
+      const err = name ? P.checkName(name) : "Pick a name to start";
       if (err) return this.showMenu(err);
       document.activeElement?.blur?.();
       if (!this.profile || this.profile.username !== name) this.profile = P.create(name);
@@ -1054,9 +1348,10 @@ class Game {
     } else if (form.dataset.form === "restore") {
       const name = form.username.value.trim();
       const code = form.code.value;
-      if (P.checkName(name) || !P.isCode(code)) return this.showRestore("Check the name and the 10-character code.");
+      if (P.checkName(name) || !P.isCode(code)) return this.showRestore(P.checkName(name) ? "Check the name: 3 to 16 letters, numbers or _." : "The code is 10 letters and numbers.");
       const btn = form.querySelector('[type="submit"]');
       btn.disabled = true;
+      btn.textContent = "Loading…";
       const res = await P.restore(name, code);
       if (res.ok && res.data && res.data.profile) {
         const rp = res.data.profile;
@@ -1073,7 +1368,7 @@ class Game {
       } else {
         this.showRestore(res.status === 401 ? "That name and code don't match."
           : res.status === 429 ? "Too many tries. Give it a minute."
-          : "Couldn't reach the server. Try again shortly.");
+          : "Couldn't reach the server. Check your connection and try again.");
       }
     }
   }
@@ -1092,13 +1387,17 @@ class Game {
     const dt = Math.min(0.05, Math.max(0, (now - this.last) / 1000));
     this.last = now;
     this.update(dt);
+    // A paused frame doesn't change: draw it once, then let the GPU rest.
+    if (this.state === "pause" && this.drawn) return;
     this.renderer.render(this.scene, this.camera);
+    this.drawn = this.state === "pause";
     this.measure(dt);
   }
 
   update(dt) {
     const st = this.state;
     if (st === "pause") return;
+    if (st === "count") { this.updateCount(dt); return; }
     this.t += dt;
     const r = this.r, R = this.robot;
 
@@ -1118,6 +1417,7 @@ class Game {
     this.dist += v * dt;
     this.scenery.position.z = this.dist % PERIOD;
     this.factory.update(dt, v, this.t);
+    this.ceiling.update(dt, v, this.t);
     if (st === "play") this.updatePower(dt);
     const mult = this.driving ? DRIVE_MULT : 1;
     if (st === "play") this.addScore(v * dt * DIST_POINTS * mult);
@@ -1131,9 +1431,11 @@ class Game {
         r.y += r.vy * dt;
         if (r.y <= 0) {
           r.y = 0; r.vy = 0; r.ground = true;
-          if (r.queueSlide) { r.slideT = SLIDE_T; r.queueSlide = false; }
+          if (r.jumpBuf > 0) { r.jumpBuf = 0; r.queueSlide = false; r.vy = JUMP_V; r.ground = false; r.slideT = 0; }
+          else if (r.queueSlide) { r.slideT = SLIDE_T; r.queueSlide = false; }
         }
       }
+      if (r.jumpBuf > 0) r.jumpBuf = Math.max(0, r.jumpBuf - dt);
       if (r.slideT > 0) r.slideT -= dt;
     }
     const sliding = r.slideT > 0 && r.y < 0.3;
@@ -1152,11 +1454,11 @@ class Game {
       if (st === "play" && !o.passed && !this.invulnerable && Math.abs(r.x - o.x) < 0.95) {
         const h = o.h + 0.25;
         if (zPrev - h <= 0 && o.z + h >= 0) {
-          if (o.type === "crate" && r.y < 1.05) this.die("crash");
-          else if (o.type === "stack") this.die("crash");
-          else if (o.type === "bot" && r.y < 0.95) this.die("crash");
-          else if (o.type === "arm" && !sliding) this.die("crash");
-          else if (o.type === "gap" && r.y < 0.06 && Math.abs(o.z) < o.h - 0.35) this.die("fall");
+          if (o.type === "crate" && r.y < 1.05) this.die("crash", o.type);
+          else if (o.type === "stack") this.die("crash", o.type);
+          else if (o.type === "bot" && r.y < 0.95) this.die("crash", o.type);
+          else if (o.type === "arm" && !sliding) this.die("crash", o.type);
+          else if (o.type === "gap" && r.y < 0.06 && Math.abs(o.z) < o.h - 0.35) this.die("fall", o.type);
         }
       }
       if (o.z - o.h > 0.5) o.passed = true;
@@ -1210,6 +1512,7 @@ class Game {
     if (st === "play") {
       this.toNext -= v * dt;
       if (this.toNext <= 0) this.spawnRow();
+      this.updateTips(dt);
     }
 
     this.animateRobot(dt, v, sliding);
@@ -1316,7 +1619,9 @@ class Game {
     window.removeEventListener("blur", this.onBlur);
     window.removeEventListener("pagehide", this.onBlur);
     window.removeEventListener("resize", this.onResize);
-    window.removeEventListener("orientationchange", this.onResize);
+    window.removeEventListener("orientationchange", this.onTurn);
+    window.removeEventListener("online", this.onOnline);
+    clearTimeout(this.armT); clearTimeout(this.toastT);
     if (window.visualViewport) window.visualViewport.removeEventListener("resize", this.onResize);
     this.ro?.disconnect();
     if (this.onPop) window.removeEventListener("popstate", this.onPop);
@@ -1327,12 +1632,14 @@ class Game {
     this.robot.runner.dispose(); this.robot.roller.dispose();
     this.kit.dispose();
     this.factory.dispose();
+    this.ceiling.dispose();
     this.renderer.dispose();
     this.renderer.forceContextLoss?.();
     this.root.remove();
     document.documentElement.style.overflow = this.savedOverflow[0];
     document.body.style.overflow = this.savedOverflow[1];
     document.documentElement.classList.remove("fr-open");
+    for (const el of this.inerted || []) el.inert = false;
     current = null;
 
     if (this.opts.standalone) { location.href = this.opts.exitUrl || "../"; return; }
