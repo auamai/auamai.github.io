@@ -1,63 +1,29 @@
-const body = document.body
+(() => {
+  // Local time in Vancouver, BC
+  const clock = document.getElementById("clock");
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    hour: "numeric", minute: "2-digit", timeZone: "America/Vancouver",
+  });
+  const tick = () => { if (clock) clock.textContent = fmt.format(new Date()); };
+  tick();
+  setInterval(tick, 15000);
 
-const btnTheme = document.querySelector('.fa-moon')
-const btnHamburger = document.querySelector('.fa-bars')
+  // Active tab follows the section in view
+  const tabs = [...document.querySelectorAll(".tab")];
+  const sections = tabs.map((t) => document.querySelector(t.getAttribute("href"))).filter(Boolean);
+  const setActive = (id) => tabs.forEach((t) => t.classList.toggle("is-active", t.getAttribute("href") === "#" + id));
+  if ("IntersectionObserver" in window) {
+    const spy = new IntersectionObserver((entries) => {
+      entries.forEach((e) => { if (e.isIntersecting) setActive(e.target.id); });
+    }, { rootMargin: "-45% 0px -50% 0px" });
+    sections.forEach((s) => spy.observe(s));
+    window.addEventListener("scroll", () => { if (window.scrollY < 200) setActive(""); }, { passive: true });
 
-const addThemeClass = (bodyClass, btnClass) => {
-  body.classList.add(bodyClass)
-  btnTheme.classList.add(btnClass)
-}
-
-const getBodyTheme = localStorage.getItem('portfolio-theme')
-const getBtnTheme = localStorage.getItem('portfolio-btn-theme')
-
-addThemeClass(getBodyTheme, getBtnTheme)
-
-const isDark = () => body.classList.contains('dark')
-
-const setTheme = (bodyClass, btnClass) => {
-
-	body.classList.remove(localStorage.getItem('portfolio-theme'))
-	btnTheme.classList.remove(localStorage.getItem('portfolio-btn-theme'))
-
-  addThemeClass(bodyClass, btnClass)
-
-	localStorage.setItem('portfolio-theme', bodyClass)
-	localStorage.setItem('portfolio-btn-theme', btnClass)
-}
-
-const toggleTheme = () =>
-	isDark() ? setTheme('light', 'fa-moon') : setTheme('dark', 'fa-sun')
-
-btnTheme.addEventListener('click', toggleTheme)
-
-const displayList = () => {
-	const navUl = document.querySelector('.nav__list')
-
-	if (btnHamburger.classList.contains('fa-bars')) {
-		btnHamburger.classList.remove('fa-bars')
-		btnHamburger.classList.add('fa-times')
-		navUl.classList.add('display-nav-list')
-	} else {
-		btnHamburger.classList.remove('fa-times')
-		btnHamburger.classList.add('fa-bars')
-		navUl.classList.remove('display-nav-list')
-	}
-}
-
-btnHamburger.addEventListener('click', displayList)
-
-const scrollUp = () => {
-	const btnScrollTop = document.querySelector('.scroll-top')
-
-	if (
-		body.scrollTop > 500 ||
-		document.documentElement.scrollTop > 500
-	) {
-		btnScrollTop.style.display = 'block'
-	} else {
-		btnScrollTop.style.display = 'none'
-	}
-}
-
-document.addEventListener('scroll', scrollUp)
+    // Gentle reveal
+    const items = document.querySelectorAll(".section .card, .fact");
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("is-in"); io.unobserve(e.target); } });
+    }, { rootMargin: "0px 0px -8% 0px" });
+    items.forEach((el) => { el.classList.add("reveal"); io.observe(el); });
+  }
+})();
