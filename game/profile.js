@@ -1,8 +1,8 @@
 // Player profile: saved on this device, optionally linked to the Worker with a passkey
 // (Face ID / Touch ID / fingerprint, synced by iCloud Keychain or Google Password Manager)
 // or, as a fallback, a backup code.
-import { cosClean } from "./meta.js?v=20261020r6";
-import { API_BASE } from "./config.js";
+import { cosClean } from "./meta.js?v=20261020r6b";
+import { API_BASE } from "./config.js?v=20261020r6b";
 
 const KEY = "au_factory_profile_v1";
 const NAME_RE = /^[A-Za-z0-9_]{3,16}$/;

@@ -5,7 +5,7 @@
 // stays crisp when the hall drops resolution to hold frame rate. Only renders while something is on
 // screen; at the lowest quality the game uses the 2D fallback.
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
-import { GLYPHS } from "./glyphs.js?v=20261020r6";
+import { GLYPHS } from "./glyphs.js?v=20261020r6b";
 
 const PAL = { face: 0x151c44, side: 0x4a5aa8, navy: 0x10162f, pearl: 0xf4f6fb, accent: 0x5a6dcd, soft: 0xa9bcff };
 const DPR_CAP = 2;

@@ -131,7 +131,7 @@
       // three.js is a few hundred kB: say so if it takes more than a moment.
       const slow = setTimeout(() => { playBtn.textContent = "Loading…"; }, 250);
       try {
-        const { openGame } = await import("./game/game.js?v=20261020r6");
+        const { openGame } = await import("./game/game.js?v=20261020r6b");
         await openGame();
       } catch (err) {
         console.error(err);
@@ -145,7 +145,7 @@
   }
 
   // Private visit count: one tiny POST per page load, no cookies, skipped until the API exists
-  import("./game/config.js").then(({ API_BASE }) => {
+  import("./game/config.js?v=20261020r6b").then(({ API_BASE }) => {
     if (!API_BASE) return;
     fetch(API_BASE.replace(/\/+$/, "") + "/hit", { method: "POST", credentials: "omit", keepalive: true }).catch(() => {});
   }).catch(() => {});
