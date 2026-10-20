@@ -106,7 +106,16 @@
   // Active tab follows the section in view
   const tabs = [...document.querySelectorAll(".tab")];
   const sections = tabs.map((t) => document.querySelector(t.getAttribute("href"))).filter(Boolean);
-  const setActive = (id) => tabs.forEach((t) => t.classList.toggle("is-active", t.getAttribute("href") === "#" + id));
+  const now = document.querySelector(".nav__now");
+  const setActive = (id) => {
+    let label = "";
+    tabs.forEach((t) => {
+      const on = t.getAttribute("href") === "#" + id;
+      t.classList.toggle("is-active", on);
+      if (on) { t.setAttribute("aria-current", "location"); label = t.textContent; } else t.removeAttribute("aria-current");
+    });
+    if (now) now.textContent = label;
+  };
   if ("IntersectionObserver" in window) {
     const spy = new IntersectionObserver((entries) => {
       entries.forEach((e) => { if (e.isIntersecting) setActive(e.target.id); });
@@ -121,6 +130,33 @@
     }, { rootMargin: "0px 0px -8% 0px" });
     items.forEach((el) => { el.classList.add("reveal"); io.observe(el); });
   }
+  // Bar: a quiet glass strip once the page leaves the top
+  const bar = document.querySelector(".bar");
+  if (bar) {
+    const onScroll = () => bar.classList.toggle("is-scrolled", window.scrollY > 24);
+    onScroll(); window.addEventListener("scroll", onScroll, { passive: true });
+  }
+
+  // Compact menu for narrow screens: one button, every section, closes on pick, Esc or outside tap
+  const nav = document.querySelector(".nav");
+  const menu = nav && nav.querySelector(".nav__menu");
+  const panel = nav && nav.querySelector(".tabs");
+  if (menu && panel) {
+    const label = menu.querySelector(".nav__menu-label");
+    const setOpen = (open, focusBack) => {
+      nav.classList.toggle("is-open", open);
+      menu.setAttribute("aria-expanded", String(open));
+      if (label) label.textContent = open ? "Close" : "Menu";
+      if (open) { const first = panel.querySelector("a"); if (first) first.focus({ preventScroll: true }); }
+      else if (focusBack) menu.focus({ preventScroll: true });
+    };
+    menu.addEventListener("click", () => setOpen(!nav.classList.contains("is-open")));
+    panel.addEventListener("click", (e) => { if (e.target.closest("a")) setOpen(false); });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape" && nav.classList.contains("is-open")) setOpen(false, true); });
+    document.addEventListener("pointerdown", (e) => { if (nav.classList.contains("is-open") && !nav.contains(e.target)) setOpen(false); });
+    matchMedia("(min-width: 901px)").addEventListener?.("change", (m) => { if (m.matches) setOpen(false); });
+  }
+
   // Play: three.js and the game load only when asked for
   const playBtn = document.getElementById("play-btn");
   if (playBtn) {

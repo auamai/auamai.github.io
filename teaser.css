@@ -1,0 +1,120 @@
+/* Factory Run teaser, "the line": the hero's bottom edge drawn as a conveyor in profile,
+   with the UL-H1 running on it. Self-contained: delete this file, teaser.js,
+   assets/teaser/ and the .line block in index.html to remove it. */
+.line {
+  --belt: 26px;                 /* distance from the bottom edge to the belt (teaser.js reads it) */
+  position: relative; display: block;
+  grid-column: 1 / -1; grid-row: 2; align-self: end;
+  height: 150px; margin-top: 8px;
+  color: var(--ink, #f4f6fb); text-decoration: none;
+  border-radius: 18px; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.line:focus { outline: none; }
+.line:focus-visible { outline: 2px solid var(--accent, #a9bcff); outline-offset: 6px; }
+.line__stage { position: absolute; left: 0; right: 0; bottom: 0; top: -34px; width: 100%; height: calc(100% + 34px); display: block; pointer-events: none; } /* headroom for the hop */
+
+/* Copy sits on the line like a label on a drawing */
+.line__copy {
+  position: absolute; left: 0; bottom: calc(var(--belt) + 16px);
+  display: grid; gap: 5px; max-width: 46%;
+  pointer-events: none;
+}
+.line__head { display: flex; align-items: baseline; gap: 14px; white-space: nowrap; }
+.line__title {
+  font-family: var(--display, Georgia, serif); font-weight: 400;
+  font-size: 26px; line-height: 1; letter-spacing: -0.01em; color: var(--ink, #f4f6fb);
+}
+.line__cap { font-size: 13.5px; font-weight: 300; color: var(--ink-3, rgba(214,221,240,.5)); white-space: nowrap; }
+.line__rank { font: 400 12px/1 var(--mono, ui-monospace, monospace); letter-spacing: .04em; color: var(--ink-2, rgba(232,236,248,.72)); }
+.line__rank[hidden], .odo[hidden], .line__daily[hidden], .line__streak[hidden] { display: none; }
+
+/* Mechanical odometer: one drum per digit, rolled into place by teaser.js */
+.odo {
+  display: inline-flex; align-items: center; gap: 2px; align-self: center;
+  font: 400 15px/1 var(--mono, ui-monospace, monospace); color: var(--accent, #a9bcff);
+  font-variant-numeric: tabular-nums;
+}
+.odo__drum {
+  position: relative; display: inline-block; width: 0.78em; height: 1.5em; overflow: hidden;
+  border-radius: 3px;
+  background: linear-gradient(180deg, rgba(169,188,255,.02), rgba(169,188,255,.09) 50%, rgba(169,188,255,.02));
+  box-shadow: inset 0 0 0 1px rgba(169,188,255,.09);
+  -webkit-mask: linear-gradient(180deg, transparent, #000 30%, #000 70%, transparent);
+          mask: linear-gradient(180deg, transparent, #000 30%, #000 70%, transparent);
+}
+.odo__strip {
+  position: absolute; left: 0; right: 0; top: 0; display: flex; flex-direction: column; text-align: center;
+  transform: translateY(0); will-change: transform;
+}
+.odo__strip > span { height: 1.5em; line-height: 1.5em; }
+.odo__sep { width: .42em; margin: 0 -.04em; text-align: center; color: rgba(169,188,255,.55); }
+.odo--mini { font-size: 11px; gap: 1px; color: var(--ink-2, rgba(232,236,248,.72)); }
+.odo--mini .odo__drum { width: .8em; box-shadow: none; background: none; }
+
+/* Daily Run & streak slot (ROB-121): stays hidden until data exists */
+.line__daily {
+  display: inline-flex; align-items: center; gap: 10px; margin-top: 2px;
+  font: 400 11px/1 var(--mono, ui-monospace, monospace); letter-spacing: .06em; text-transform: uppercase;
+  color: var(--ink-3, rgba(214,221,240,.5)); white-space: nowrap;
+}
+.line__streak { display: inline-flex; align-items: center; gap: 5px; color: var(--accent, #a9bcff); }
+.line__streak svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1; stroke-linejoin: round; }
+.line__streak b { font-weight: 500; }
+
+/* Right end of the line: gear tally and the Play affordance */
+.line__end {
+  position: absolute; right: 0; bottom: calc(var(--belt) + 38px);
+  display: inline-flex; align-items: baseline; gap: 18px; pointer-events: none;
+}
+.line__gears { display: inline-flex; align-items: center; gap: 6px; font: 400 11px/1 var(--mono, ui-monospace, monospace); color: var(--ink-3, rgba(214,221,240,.5)); letter-spacing: .06em; text-transform: uppercase; }
+.line__gears:empty { display: none; }
+.line__gears svg { width: 11px; height: 11px; fill: none; stroke: currentColor; stroke-width: 1; stroke-linejoin: round; }
+.line__go { font-size: 14px; font-weight: 400; color: var(--ink-2, rgba(232,236,248,.72)); transition: color .25s; }
+.line__go i { display: inline-block; font-style: normal; transition: transform .25s ease; }
+.line:hover .line__go, .line:focus-visible .line__go { color: var(--ink, #f4f6fb); }
+.line:hover .line__go i, .line:focus-visible .line__go i { transform: translate(2px, -2px); }
+
+/* Nav: "Play" sits with the section tabs but leaves the page */
+.tab-play {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 18px; border-radius: 999px;
+  font-size: 15px; font-weight: 400; color: var(--accent, #a9bcff);
+  transition: color .2s, background .25s;
+}
+.tab-play:hover { color: var(--ink, #f4f6fb); }
+.tab-play:focus-visible { outline: 2px solid var(--accent, #a9bcff); outline-offset: 2px; }
+
+/* Short laptop screens: a slimmer line so the hero still fits */
+@media (min-width: 981px) and (max-height: 760px) {
+  .line { height: 128px; margin-top: 0; }
+}
+/* Stacked hero: the line sits between the buttons and the clock, full-bleed */
+@media (max-width: 980px) {
+  /* main is 100% - 40px wide here, so -20px each side reaches the screen edges */
+  .line { order: 1; align-self: stretch; height: 138px; margin: -14px -20px -6px; border-radius: 0; }
+  .line__copy { left: 20px; }
+  .line__end { right: 20px; }
+  .line:focus-visible { outline-offset: -2px; }
+}
+@media (max-width: 640px) {
+  .line { --belt: 22px; height: 124px; }
+  .line__copy { max-width: none; gap: 4px; bottom: calc(var(--belt) + 14px); }
+  .line__head { gap: 10px; }
+  .line__title { font-size: 22px; }
+  .line__cap { font-size: 12.5px; }
+  .odo { font-size: 13px; }
+  .line__gears { display: none; }
+  .line__end { bottom: auto; top: 14px; }
+}
+@media (max-width: 640px) and (max-height: 700px) {
+  .line { height: 108px; margin-top: -20px; }
+  .line__end { top: 4px; }
+  .line__go { font-size: 13.5px; }
+  .tab-play { padding: 8px 11px; font-size: 13.5px; white-space: nowrap; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .line__go, .line__go i, .tab-play { transition: none; }
+  .line:hover .line__go i { transform: none; }
+  .odo__strip { transition: none !important; }
+}
