@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Poundo Robot: build log | Alex Uamai</title>
+  <meta name="description" content="A robot arm that learns to turn poundo yam from videos of people making it. Goal, approach, roadmap, decisions and build log." />
+  <meta name="author" content="Alex Uamai" />
+  <link rel="canonical" href="https://auamai.github.io/poundo/" />
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="https://auamai.github.io/poundo/" />
+  <meta property="og:title" content="Poundo Robot: build log | Alex Uamai" />
+  <meta property="og:description" content="A robot arm that learns to turn poundo yam from videos of people making it." />
+  <meta property="og:image" content="https://auamai.github.io/Images/so101-mujoco-control.webp" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" href="../favicon.svg?v=2" type="image/svg+xml" />
+  <link rel="icon" href="../favicon-32.png?v=2" sizes="32x32" type="image/png" />
+  <link rel="apple-touch-icon" href="../apple-touch-icon.png?v=2" />
+  <meta name="theme-color" content="#121a38" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../styles.css?v=20261020d" />
+  <style>
+    /* Poundo case study: scoped to .cs */
+    .cs .bar { grid-template-columns: auto 1fr; }
+    .cs .nav { grid-column: 2; }
+    .cs__hero { padding: 132px 0 8px; max-width: 46em; display: flex; flex-direction: column; gap: 16px; }
+    .cs__hero .hero__title { font-size: clamp(46px, 5.6vw, 76px); }
+    .cs__status { font: 400 12.5px/1.4 var(--mono); color: var(--ink-3); letter-spacing: .03em; }
+    .cs__status i { display: inline-block; width: 6px; height: 6px; margin-right: 9px; border-radius: 50%; background: var(--accent); vertical-align: 1px; }
+    .cs__shot { margin: 40px 0 0; padding: 12px; }
+    .cs__shot img { width: 100%; border-radius: 16px; background: #e9ecf3; }
+    .cs__shot figcaption { padding: 12px 8px 4px; font: 400 12.5px/1.5 var(--mono); color: var(--ink-3); }
+    .prose { max-width: 42em; display: grid; gap: 16px; }
+    .prose p { font-size: 16.5px; font-weight: 300; line-height: 1.7; color: var(--ink-2); }
+    .prose p strong { font-weight: 400; color: var(--ink); }
+    .goal { padding: clamp(24px, 4vw, 40px); max-width: 46em; }
+    .goal p { font: 400 clamp(22px, 2.4vw, 30px)/1.3 var(--display); color: var(--ink); letter-spacing: -0.005em; }
+    .goal p + p { margin-top: 14px; font: 300 15.5px/1.7 var(--sans); color: var(--ink-2); }
+    .flow { padding: clamp(18px, 3vw, 32px); }
+    .flow svg { width: 100%; height: auto; display: block; }
+    .flow text { font-family: var(--sans); font-weight: 300; fill: var(--ink); }
+    .flow .sub { font-family: var(--mono); font-size: 11px; fill: rgba(214, 221, 240, 0.55); }
+    .flow .box { fill: rgba(255,255,255,.035); stroke: rgba(255,255,255,.14); }
+    .flow .box--hw { stroke: rgba(169, 188, 255, .45); fill: rgba(169, 188, 255, .06); }
+    .flow .wire { stroke: rgba(169, 188, 255, .7); stroke-width: 1.2; fill: none; }
+    .flow .wire--dash { stroke-dasharray: 4 5; }
+    .flow__mobile { display: none; }
+    .flow__note { margin-top: 18px; font-size: 14.5px; font-weight: 300; line-height: 1.6; color: var(--ink-2); max-width: 46em; }
+    .rows { list-style: none; margin: 0; padding: 0; max-width: 820px; }
+    .row { display: grid; grid-template-columns: 56px 1fr 120px; gap: 18px; padding: 18px 0; border-top: 1px solid var(--line); align-items: baseline; }
+    .row:last-child { border-bottom: 1px solid var(--line); }
+    .row__k { font: 400 12.5px/1.4 var(--mono); color: var(--ink-3); }
+    .row h3 { font-size: 17px; font-weight: 400; letter-spacing: -0.015em; }
+    .row p { margin-top: 4px; font-size: 14.5px; font-weight: 300; line-height: 1.6; color: var(--ink-2); }
+    .row__s { font: 400 12.5px/1.4 var(--mono); color: var(--ink-3); text-align: right; white-space: nowrap; }
+    .row--done .row__s { color: var(--accent); }
+    .row--done .row__s::before, .row--next .row__s::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 8px; border-radius: 50%; vertical-align: 1px; }
+    .row--done .row__s::before { background: var(--accent); }
+    .row--next .row__s { color: var(--ink-2); }
+    .row--next .row__s::before { border: 1px solid var(--accent); }
+    .decisions { display: grid; gap: 10px; max-width: 900px; }
+    .decision { padding: 22px 24px; display: grid; gap: 10px; }
+    .decision h3 { font-size: 18px; font-weight: 400; letter-spacing: -0.015em; line-height: 1.3; }
+    .decision dl { margin: 0; display: grid; grid-template-columns: 110px 1fr; gap: 6px 16px; }
+    .decision dt { font: 400 12px/1.6 var(--mono); color: var(--ink-3); letter-spacing: .03em; }
+    .decision dd { margin: 0; font-size: 14.5px; font-weight: 300; line-height: 1.6; color: var(--ink-2); }
+    .log { list-style: none; margin: 0; padding: 0; max-width: 820px; }
+    .log > li { padding: 22px 0; border-top: 1px solid var(--line); display: grid; grid-template-columns: 120px 1fr; gap: 18px; }
+    .log > li:last-child { border-bottom: 1px solid var(--line); }
+    .log time { font: 400 12.5px/1.6 var(--mono); color: var(--ink-3); }
+    .log h3 { font-size: 17px; font-weight: 400; letter-spacing: -0.015em; }
+    .log p { margin-top: 6px; font-size: 14.5px; font-weight: 300; line-height: 1.65; color: var(--ink-2); }
+    .log p b { font-weight: 400; color: var(--ink); }
+    .qs { list-style: none; margin: 0; padding: 0; max-width: 46em; display: grid; gap: 0; counter-reset: q; }
+    .qs li { counter-increment: q; position: relative; padding: 16px 0 16px 44px; border-top: 1px solid var(--line); font-size: 16px; font-weight: 300; line-height: 1.6; color: var(--ink); }
+    .qs li:last-child { border-bottom: 1px solid var(--line); }
+    .qs li::before { content: counter(q, decimal-leading-zero); position: absolute; left: 0; top: 19px; font: 400 12px/1.4 var(--mono); color: var(--ink-3); }
+    .credits { max-width: 46em; display: grid; gap: 14px; }
+    .credits p { font-size: 15px; font-weight: 300; line-height: 1.7; color: var(--ink-2); }
+    .credits a { color: var(--ink); text-decoration: underline; text-decoration-color: var(--line-2); text-underline-offset: 3px; transition: text-decoration-color .2s; }
+    .credits a:hover { text-decoration-color: var(--accent); }
+    .cs__end { padding: 84px 0 40px; display: flex; flex-wrap: wrap; gap: 10px; }
+    @media (max-width: 760px) {
+      .flow__wide { display: none; }
+      .flow__mobile { display: block; }
+      .row { grid-template-columns: 40px 1fr; gap: 6px 14px; }
+      .row__s { grid-column: 2; text-align: left; }
+      .decision dl { grid-template-columns: 1fr; gap: 2px; }
+      .decision dd + dt { margin-top: 8px; }
+      .log > li { grid-template-columns: 1fr; gap: 6px; }
+    }
+    @media (max-width: 640px) {
+      .cs .bar { grid-template-columns: auto 1fr; }
+      .cs__hero { padding-top: 104px; }
+      .cs__hero .hero__title { font-size: 46px; }
+    }
+  </style>
+</head>
+<body class="cs">
+  <div class="sky" aria-hidden="true"></div>
+
+  <header class="bar">
+    <a class="mark" href="../" aria-label="Alex Uamai, home">AU</a>
+    <nav class="nav" aria-label="Page">
+      <a class="pill pill--ghost pill--sm" href="../#projects">&larr; All projects</a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="cs__hero">
+      <p class="eyebrow">Project · Build log</p>
+      <h1 class="hero__title">Poundo Robot</h1>
+      <p class="hero__lede">A robot arm that learns to turn poundo yam from videos of people making it.</p>
+      <p class="cs__status"><i aria-hidden="true"></i>Started 19 Oct 2026 · Setup done · Next: understanding the task</p>
+    </section>
+
+    <figure class="card cs__shot">
+      <img src="../Images/so101-mujoco-control.webp" alt="SO-101 robot arm in the MuJoCo simulator with its joint control panel" decoding="async" />
+      <figcaption>The SO-101 arm running in MuJoCo on my own machine, with its joint control panel.</figcaption>
+    </figure>
+
+    <!-- 01 Poundo and the problem -->
+    <section class="section" id="problem">
+      <header class="section__head">
+        <span class="kicker">01</span>
+        <h2>Poundo, and the problem</h2>
+      </header>
+      <div class="prose">
+        <p>Poundo yam is a West African staple and my favourite food. You stir yam flour into hot water, then keep turning it hard with a wooden stick until it's smooth and stretchy. It's tedious, and it takes real effort.</p>
+        <p>For a robot it's a hard task. The dough starts as loose flour and water and turns into a thick, sticky mass, so the stick is pushing through something whose resistance keeps changing. The pot wants to move. And the only "instructions" that exist are videos of people doing it, which show how the stick moves but not how hard it's being pushed.</p>
+      </div>
+    </section>
+
+    <!-- 02 Goal -->
+    <section class="section" id="goal">
+      <header class="section__head">
+        <span class="kicker">02</span>
+        <h2>Goal</h2>
+      </header>
+      <div class="card goal">
+        <p>Design an arm and a first gripper that turn a pot of poundo from loose flour to smooth, lump-free swallow, with the motion learned from videos of people turning it.</p>
+        <p>It's also practice in building efficiently: one project, documented as it goes, failures included.</p>
+      </div>
+    </section>
+
+    <!-- 03 Approach -->
+    <section class="section" id="approach">
+      <header class="section__head">
+        <span class="kicker">03</span>
+        <h2>Approach</h2>
+      </header>
+      <div class="card flow">
+        <svg class="flow__wide" viewBox="0 0 1000 330" role="img" aria-labelledby="flow-title">
+          <title id="flow-title">System overview: videos of people turning poundo go through pose and motion extraction, then a policy and inverse kinematics, which drive the SO-101 arm, gripper and stick. A load-cell stick provides force data to the policy.</title>
+          <defs>
+            <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#a9bcff" /></marker>
+          </defs>
+          <rect class="box" x="10" y="40" width="200" height="96" rx="18" />
+          <text x="110" y="82" text-anchor="middle" font-size="17">Videos</text>
+          <text class="sub" x="110" y="106" text-anchor="middle">people turning poundo</text>
+
+          <rect class="box" x="270" y="40" width="200" height="96" rx="18" />
+          <text x="370" y="82" text-anchor="middle" font-size="17">Pose &amp; motion</text>
+          <text class="sub" x="370" y="106" text-anchor="middle">stick tip and hands</text>
+
+          <rect class="box" x="530" y="40" width="200" height="96" rx="18" />
+          <text x="630" y="82" text-anchor="middle" font-size="17">Policy / IK</text>
+          <text class="sub" x="630" y="106" text-anchor="middle">retarget to the arm</text>
+
+          <rect class="box box--hw" x="790" y="40" width="200" height="96" rx="18" />
+          <text x="890" y="76" text-anchor="middle" font-size="17">SO-101 arm</text>
+          <text class="sub" x="890" y="100" text-anchor="middle">+ gripper</text>
+          <text class="sub" x="890" y="118" text-anchor="middle">+ wooden stick</text>
+
+          <path class="wire" d="M212 88 H266" marker-end="url(#ah)" />
+          <path class="wire" d="M472 88 H526" marker-end="url(#ah)" />
+          <path class="wire" d="M732 88 H786" marker-end="url(#ah)" />
+
+          <rect class="box box--hw" x="530" y="214" width="200" height="96" rx="18" />
+          <text x="630" y="256" text-anchor="middle" font-size="17">Load-cell stick</text>
+          <text class="sub" x="630" y="280" text-anchor="middle">force and torque data</text>
+          <path class="wire wire--dash" d="M630 212 V140" marker-end="url(#ah)" />
+
+          <text class="sub" x="370" y="196" text-anchor="middle">motion</text>
+          <path class="wire" d="M300 186 H440" opacity=".5" />
+          <text class="sub" x="370" y="268" text-anchor="middle">force</text>
+          <path class="wire wire--dash" d="M300 258 H440" opacity=".5" />
+        </svg>
+
+        <svg class="flow__mobile" viewBox="0 0 320 560" role="img" aria-labelledby="flow-title-m">
+          <title id="flow-title-m">System overview: videos, then pose and motion extraction, then policy and inverse kinematics, then the SO-101 arm with gripper and stick. A load-cell stick feeds force data into the policy.</title>
+          <defs>
+            <marker id="ahm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#a9bcff" /></marker>
+          </defs>
+          <rect class="box" x="20" y="10" width="200" height="80" rx="16" />
+          <text x="120" y="45" text-anchor="middle" font-size="16">Videos</text>
+          <text class="sub" x="120" y="67" text-anchor="middle">people turning poundo</text>
+          <path class="wire" d="M120 92 V128" marker-end="url(#ahm)" />
+          <rect class="box" x="20" y="132" width="200" height="80" rx="16" />
+          <text x="120" y="167" text-anchor="middle" font-size="16">Pose &amp; motion</text>
+          <text class="sub" x="120" y="189" text-anchor="middle">stick tip and hands</text>
+          <path class="wire" d="M120 214 V250" marker-end="url(#ahm)" />
+          <rect class="box" x="20" y="254" width="200" height="80" rx="16" />
+          <text x="120" y="289" text-anchor="middle" font-size="16">Policy / IK</text>
+          <text class="sub" x="120" y="311" text-anchor="middle">retarget to the arm</text>
+          <path class="wire" d="M120 336 V372" marker-end="url(#ahm)" />
+          <rect class="box box--hw" x="20" y="376" width="200" height="96" rx="16" />
+          <text x="120" y="410" text-anchor="middle" font-size="16">SO-101 arm</text>
+          <text class="sub" x="120" y="432" text-anchor="middle">+ gripper</text>
+          <text class="sub" x="120" y="450" text-anchor="middle">+ wooden stick</text>
+          <rect class="box box--hw" x="200" y="494" width="110" height="56" rx="14" />
+          <text x="255" y="518" text-anchor="middle" font-size="13">Load-cell stick</text>
+          <text class="sub" x="255" y="536" text-anchor="middle">force data</text>
+          <path class="wire wire--dash" d="M290 492 V294 H224" marker-end="url(#ahm)" />
+        </svg>
+      </div>
+      <div class="prose" style="margin-top: 28px;">
+        <p><strong>Motion comes from video.</strong> Public clips of people turning poundo get curated in FiftyOne, broken into stages, and run through pose tracking to pull out the stick-tip path. Those paths are retargeted to the arm with inverse kinematics.</p>
+        <p><strong>Force has to be measured.</strong> Video gives kinematics only. To find out what the arm actually has to push against, I'll put a load cell in a wooden stick and log peak force and torque across the stages of a real turn. Those numbers set the requirements.</p>
+        <p><strong>The arm starts from SO-101.</strong> It's open, it ships with STEP, URDF and MuJoCo files, and it works with LeRobot. Its servos are too weak for dough, so the redesign for real loads is the mechanical half of the project. The first end effector is a gripper that holds an ordinary wooden turning stick, so what the videos show maps straight onto the robot.</p>
+        <p><strong>Simulation first.</strong> I'm working with the SO-101 in MuJoCo: Jacobian IK, PD control and contact-force sensing. The turning policy, scripted or learned, gets tested there against the original clips before anything touches a real pot.</p>
+      </div>
+    </section>
+
+    <!-- 04 Roadmap -->
+    <section class="section" id="roadmap">
+      <header class="section__head">
+        <span class="kicker">04</span>
+        <h2>Roadmap</h2>
+      </header>
+      <ol class="rows">
+        <li class="row row--done"><span class="row__k">P0</span><div><h3>Setup</h3><p>Tools installed on Windows; SO-101 sim runs locally.</p></div><span class="row__s">Done</span></li>
+        <li class="row row--next"><span class="row__k">P1</span><div><h3>Understand the task</h3><p>Stages of turning broken down; 30+ clips collected and curated.</p></div><span class="row__s">Up next</span></li>
+        <li class="row"><span class="row__k">P2</span><div><h3>Measure the dough</h3><p>Instrumented stick built; peak force and torque logged across stages.</p></div><span class="row__s">Not started</span></li>
+        <li class="row"><span class="row__k">P3</span><div><h3>Requirements</h3><p>Requirements table set from measured loads.</p></div><span class="row__s">Not started</span></li>
+        <li class="row"><span class="row__k">P4</span><div><h3>Mechanical design</h3><p>Arm redesigned from the SO-101 base; v1 stick gripper; pot fixture; torque sheet.</p></div><span class="row__s">Not started</span></li>
+        <li class="row"><span class="row__k">P5</span><div><h3>Motion from video</h3><p>Stick-tip trajectories extracted and retargeted to the arm in sim.</p></div><span class="row__s">Not started</span></li>
+        <li class="row"><span class="row__k">P6</span><div><h3>Learning and control</h3><p>A policy or scripted mapping replays turning strokes in MuJoCo.</p></div><span class="row__s">Not started</span></li>
+        <li class="row"><span class="row__k">P7</span><div><h3>Validation</h3><p>Sim beside the original clip; optional real pot test.</p></div><span class="row__s">Not started</span></li>
+        <li class="row"><span class="row__k">P8</span><div><h3>Presentation</h3><p>A short deck and a demo video.</p></div><span class="row__s">Not started</span></li>
+      </ol>
+    </section>
+
+    <!-- 05 Decisions -->
+    <section class="section" id="decisions">
+      <header class="section__head">
+        <span class="kicker">05</span>
+        <h2>Decisions</h2>
+      </header>
+      <div class="decisions">
+        <article class="card decision">
+          <h3>Build a robot that turns poundo, taught from videos</h3>
+          <dl>
+            <dt>Why</dt><dd>My own idea from an earlier post. It means something to me, it's a hard contact-rich task, and it puts physical-AI tools to real use.</dd>
+            <dt>Also considered</dt><dd>A humanoid ankle, a knee actuator, a finger, a weldment frame, a gesture-driven arm.</dd>
+          </dl>
+        </article>
+        <article class="card decision">
+          <h3>v1 end effector: a gripper holding a wooden turning stick</h3>
+          <dl>
+            <dt>Why</dt><dd>Keeping the human tool means the videos map over directly. Iterate later.</dd>
+            <dt>Also considered</dt><dd>A built-in paddle; a scoop.</dd>
+          </dl>
+        </article>
+        <article class="card decision">
+          <h3>Start from SO-101 (Apache-2.0), credited, then redesign for dough loads</h3>
+          <dl>
+            <dt>Why</dt><dd>Open STEP, URDF and MuJoCo files, and it works natively with LeRobot. Its servos are too weak, and that redesign is the design story.</dd>
+            <dt>Also considered</dt><dd>AR4 (SolidWorks files, but non-commercial with no redistribution); PAROL6 (STEP files paid, not open).</dd>
+          </dl>
+        </article>
+        <article class="card decision">
+          <h3>Instrument a stick with a load cell</h3>
+          <dl>
+            <dt>Why</dt><dd>Videos give motion but no force.</dd>
+            <dt>Also considered</dt><dd>Estimating loads from the literature.</dd>
+          </dl>
+        </article>
+        <article class="card decision">
+          <h3>Stay on Windows; use WSL2 only if ROS 2 is needed</h3>
+          <dl>
+            <dt>Why</dt><dd>SolidWorks is Windows-only, and LeRobot and MuJoCo both run on Windows.</dd>
+            <dt>Also considered</dt><dd>Switching to Linux.</dd>
+          </dl>
+        </article>
+      </div>
+    </section>
+
+    <!-- 06 Build log -->
+    <section class="section" id="log">
+      <header class="section__head">
+        <span class="kicker">06</span>
+        <h2>Build log</h2>
+      </header>
+      <ol class="log" reversed>
+        <li>
+          <time datetime="2026-10-19">19 Oct 2026</time>
+          <div>
+            <h3>SO-101 opens in the MuJoCo viewer. Setup is done.</h3>
+            <p>Cloned SO-ARM100 and opened the SO-101 model in the MuJoCo viewer on my own machine. That closes P0. <b>Next:</b> break turning into stages and start collecting clips.</p>
+          </div>
+        </li>
+        <li>
+          <time datetime="2026-10-19">19 Oct 2026</time>
+          <div>
+            <h3>Environment up</h3>
+            <p>Git, Cursor and Miniforge installed; a conda env with Python 3.12 and ffmpeg; LeRobot, MuJoCo and FiftyOne installed and importing. The SO-101 MuJoCo model loads and simulates on MuJoCo 3.16.0, with 6 joints and 6 actuators.</p>
+          </div>
+        </li>
+        <li>
+          <time datetime="2026-10-19">19 Oct 2026</time>
+          <div>
+            <h3>Kickoff</h3>
+            <p>Picked the project, wrote the brief, and compared open base arms: SO-101 (Apache-2.0), AR4 MK5 (non-commercial licence), PAROL6 (paid STEP). Chose SO-101 and decided to stay on Windows. Set up the engineering log and a task board. <b>Learned:</b> video only gives kinematics, so force has to come from my own measurements, and open-hardware licences differ a lot.</p>
+          </div>
+        </li>
+      </ol>
+    </section>
+
+    <!-- 07 Open questions -->
+    <section class="section" id="questions">
+      <header class="section__head">
+        <span class="kicker">07</span>
+        <h2>Open questions</h2>
+      </header>
+      <ol class="qs">
+        <li>Copy the human motion, or learn the goal: smooth, lump-free swallow?</li>
+        <li>How does the robot tell the dough is done: motor current, a camera, or stroke count?</li>
+        <li>What holds the pot: a fixture, a second arm, or a smarter stroke?</li>
+        <li>What breaks first under peak load: the stick, the grip, the wrist, or the fixture?</li>
+        <li>What are the real peak force and torque at the stick? That's what P2 is for.</li>
+      </ol>
+    </section>
+
+    <!-- 08 Credits -->
+    <section class="section" id="credits">
+      <header class="section__head">
+        <span class="kicker">08</span>
+        <h2>Credits</h2>
+      </header>
+      <div class="credits">
+        <p><a href="https://github.com/TheRobotStudio/SO-ARM100" target="_blank" rel="noopener">SO-ARM100 / SO-101</a> by The Robot Studio, released under the Apache-2.0 licence. The base arm and its MuJoCo model come from here; my redesign builds on it.</p>
+        <p><a href="https://github.com/google-deepmind/mujoco" target="_blank" rel="noopener">MuJoCo</a>, the physics simulator the arm runs in.</p>
+        <p><a href="https://github.com/huggingface/lerobot" target="_blank" rel="noopener">LeRobot</a> by Hugging Face, for robot learning and the SO-101 integration.</p>
+        <p><a href="https://voxel51.com" target="_blank" rel="noopener">FiftyOne</a> by Voxel51, for curating the video clips.</p>
+      </div>
+    </section>
+
+    <div class="cs__end">
+      <a class="pill pill--ghost" href="../#projects">&larr; All projects</a>
+      <a class="pill pill--ghost" href="mailto:ighodarouamai@gmail.com">Email</a>
+    </div>
+  </main>
+
+  <footer class="foot">
+    <span>Alex Uamai</span>
+    <span class="foot__mono">Vancouver, BC · <a href="https://github.com/auamai" rel="noopener">github.com/auamai</a></span>
+  </footer>
+</body>
+</html>
