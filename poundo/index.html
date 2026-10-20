@@ -39,7 +39,9 @@
     .goal p { font: 400 clamp(22px, 2.4vw, 30px)/1.3 var(--display); color: var(--ink); letter-spacing: -0.005em; }
     .goal p + p { margin-top: 14px; font: 300 15.5px/1.7 var(--sans); color: var(--ink-2); }
     .flow { padding: clamp(18px, 3vw, 32px); }
-    .flow svg { width: 100%; height: auto; display: block; }
+    .flow svg { width: 100%; height: auto; display: block; margin: 0 auto; }
+    .flow__wide { max-width: 760px; }
+    .flow__mobile { max-width: 260px; }
     .flow text { font-family: var(--sans); font-weight: 300; fill: var(--ink); }
     .flow .sub { font-family: var(--mono); font-size: 11px; fill: rgba(214, 221, 240, 0.55); }
     .flow .box { fill: rgba(255,255,255,.035); stroke: rgba(255,255,255,.14); }
@@ -152,7 +154,7 @@
         <h2>Approach</h2>
       </header>
       <div class="card flow">
-        <svg class="flow__wide" viewBox="0 0 1000 330" role="img" aria-labelledby="flow-title">
+        <svg class="flow__wide" viewBox="0 0 1000 250" role="img" aria-labelledby="flow-title">
           <title id="flow-title">System overview: videos of people turning poundo go through pose and motion extraction, then a policy and inverse kinematics, which drive the SO-101 arm, gripper and stick. A load-cell stick provides force data to the policy.</title>
           <defs>
             <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#a9bcff" /></marker>
@@ -178,15 +180,10 @@
           <path class="wire" d="M472 88 H526" marker-end="url(#ah)" />
           <path class="wire" d="M732 88 H786" marker-end="url(#ah)" />
 
-          <rect class="box box--hw" x="530" y="214" width="200" height="96" rx="18" />
-          <text x="630" y="256" text-anchor="middle" font-size="17">Load-cell stick</text>
-          <text class="sub" x="630" y="280" text-anchor="middle">force and torque data</text>
-          <path class="wire wire--dash" d="M630 212 V140" marker-end="url(#ah)" />
-
-          <text class="sub" x="370" y="196" text-anchor="middle">motion</text>
-          <path class="wire" d="M300 186 H440" opacity=".5" />
-          <text class="sub" x="370" y="268" text-anchor="middle">force</text>
-          <path class="wire wire--dash" d="M300 258 H440" opacity=".5" />
+          <rect class="box box--hw" x="530" y="170" width="200" height="72" rx="18" />
+          <text x="630" y="200" text-anchor="middle" font-size="17">Load-cell stick</text>
+          <text class="sub" x="630" y="222" text-anchor="middle">force and torque data</text>
+          <path class="wire wire--dash" d="M630 168 V140" marker-end="url(#ah)" />
         </svg>
 
         <svg class="flow__mobile" viewBox="0 0 320 560" role="img" aria-labelledby="flow-title-m">
@@ -216,11 +213,11 @@
           <path class="wire wire--dash" d="M290 492 V294 H224" marker-end="url(#ahm)" />
         </svg>
       </div>
-      <div class="prose" style="margin-top: 28px;">
-        <p><strong>Motion comes from video.</strong> Public clips of people turning poundo get curated in FiftyOne, broken into stages, and run through pose tracking to pull out the stick-tip path. Those paths are retargeted to the arm with inverse kinematics.</p>
-        <p><strong>Force has to be measured.</strong> Video gives kinematics only. To find out what the arm actually has to push against, I'll put a load cell in a wooden stick and log peak force and torque across the stages of a real turn. Those numbers set the requirements.</p>
-        <p><strong>The arm starts from SO-101.</strong> It's open, it ships with STEP, URDF and MuJoCo files, and it works with LeRobot. Its servos are too weak for dough, so the redesign for real loads is the mechanical half of the project. The first end effector is a gripper that holds an ordinary wooden turning stick, so what the videos show maps straight onto the robot.</p>
-        <p><strong>Simulation first.</strong> I'm working with the SO-101 in MuJoCo: Jacobian IK, PD control and contact-force sensing. The turning policy, scripted or learned, gets tested there against the original clips before anything touches a real pot.</p>
+      <div class="prose" style="margin-top: 24px;">
+        <p><strong>Motion from video.</strong> Clips of people turning poundo are tracked for the stick-tip path, then retargeted to the arm with IK.</p>
+        <p><strong>Force from a sensor.</strong> Video can't show force, so a load-cell stick logs what a real turn takes.</p>
+        <p><strong>SO-101 as the base,</strong> redesigned for dough loads, with a gripper holding a plain wooden stick.</p>
+        <p><strong>Simulation first,</strong> in MuJoCo, before anything touches a real pot.</p>
       </div>
     </section>
 
