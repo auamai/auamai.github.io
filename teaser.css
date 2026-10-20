@@ -1,0 +1,76 @@
+/* Factory Run teaser: a quiet strip under the hero that links to /game/.
+   Self-contained so it can be removed by deleting this file, teaser.js and the .teaser block. */
+.teaser {
+  grid-column: 1; grid-row: 2; justify-self: start; align-self: end;
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center;
+  column-gap: 18px; width: min(100%, 560px); margin-top: 28px;
+  padding: 8px 18px 8px 8px; border-radius: 20px;
+  background: rgba(16, 20, 38, .42); border: 1px solid var(--line, rgba(255,255,255,.07));
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  color: var(--ink, #f4f6fb); text-decoration: none;
+  transition: border-color .25s, background .25s;
+}
+.teaser:hover { border-color: var(--line-2, rgba(255,255,255,.12)); background: rgba(26, 32, 58, .5); }
+.teaser:focus { outline: none; }
+.teaser:focus-visible { outline: 2px solid var(--accent, #a9bcff); outline-offset: 4px; border-color: rgba(169, 188, 255, .45); }
+
+.teaser__clip {
+  position: relative; width: 120px; aspect-ratio: 16 / 9; border-radius: 13px; overflow: hidden;
+  background: #e6eaf6 url("assets/teaser/factory-run-poster.webp") center / cover no-repeat;
+}
+.teaser__clip video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.teaser__clip::after { /* hairline so the pale clip sits on the navy */
+  content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px rgba(16, 22, 47, .12); pointer-events: none;
+}
+
+.teaser__text { display: grid; gap: 3px; min-width: 0; }
+.teaser__label { font-size: 16px; font-weight: 400; letter-spacing: -0.01em; color: var(--ink, #f4f6fb); }
+.teaser__line { font-size: 14px; font-weight: 300; color: var(--ink-3, rgba(214,221,240,.5)); }
+
+.teaser__score { display: grid; gap: 3px; justify-items: end; text-align: right; white-space: nowrap; }
+.teaser__score[hidden] { display: none; }
+.teaser__k { font: 400 11px/1 var(--mono, ui-monospace, monospace); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3, rgba(214,221,240,.5)); }
+.teaser__v { font-size: 15px; font-weight: 300; font-variant-numeric: tabular-nums; color: var(--accent, #a9bcff); }
+
+.teaser__go { font-size: 15px; color: var(--ink-3, rgba(214,221,240,.5)); transition: transform .2s ease, color .2s; }
+.teaser:hover .teaser__go, .teaser:focus-visible .teaser__go { color: var(--ink, #f4f6fb); transform: translate(2px, -2px); }
+
+/* Nav: "Play" sits with the section tabs but leaves the page */
+.tab-play {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 18px; border-radius: 999px;
+  font-size: 15px; font-weight: 400; color: var(--accent, #a9bcff);
+  transition: color .2s, background .25s;
+}
+.tab-play:hover { color: var(--ink, #f4f6fb); }
+.tab-play:focus-visible { outline: 2px solid var(--accent, #a9bcff); outline-offset: 2px; }
+
+@media (max-width: 980px) {
+  .teaser { order: 1; align-self: stretch; width: 100%; max-width: 560px; margin-top: -8px; }
+}
+@media (max-width: 640px) {
+  .teaser {
+    grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "clip text go" "clip score go";
+    column-gap: 14px; row-gap: 6px; padding: 7px 14px 7px 7px; border-radius: 18px;
+  }
+  .teaser__clip { grid-area: clip; }
+  .teaser__text { grid-area: text; align-self: end; }
+  .teaser__score { grid-area: score; align-self: start; display: flex; align-items: baseline; gap: 8px; justify-items: start; text-align: left; }
+  .teaser__go { grid-area: go; }
+  .teaser__label, .teaser__line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .teaser__clip { width: 96px; border-radius: 11px; }
+  .teaser__label { font-size: 15px; }
+  .teaser__line { font-size: 13px; }
+  .teaser__v { font-size: 14px; }
+  .teaser__k { font-size: 10px; }
+  .tab-play { padding: 8px 11px; font-size: 13.5px; white-space: nowrap; }
+}
+@media (max-width: 360px) {
+  .teaser__go { display: none; }
+  .teaser { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "clip text" "clip score"; }
+  .teaser__clip { width: 84px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .teaser, .teaser__go, .tab-play { transition: none; }
+  .teaser:hover .teaser__go { transform: none; }
+}
