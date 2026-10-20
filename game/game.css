@@ -40,6 +40,22 @@ html.fr-open, html.fr-open body { overscroll-behavior: none; }
 .fr__meta { font: 400 12px/1.2 var(--fr-mono); letter-spacing: .06em; color: var(--fr-ink-3); text-transform: uppercase; }
 .fr__gears { color: var(--fr-accent-ink); }
 
+/* Wheel power-up timer */
+.fr__power {
+  display: flex; align-items: center; gap: 8px; margin-top: 10px; width: max-content;
+  padding: 3px 12px 3px 3px; border-radius: 999px;
+  background: var(--fr-card); border: 1px solid var(--fr-line);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+}
+.fr__ring { width: 40px; height: 40px; transform: rotate(-90deg); overflow: visible; }
+.fr__ring circle { fill: none; }
+.fr__ring-bg { stroke: rgba(16, 22, 47, 0.1); stroke-width: 2.5; }
+.fr__ring-fg { stroke: var(--fr-accent-ink); stroke-width: 2.5; stroke-linecap: round; stroke-dasharray: 119.38; stroke-dashoffset: 0; }
+.fr__wheel { transform: rotate(90deg); transform-origin: 22px 22px; }
+.fr__wheel circle, .fr__wheel path { fill: none; stroke: var(--fr-accent-ink); stroke-width: 1.6; stroke-linecap: round; }
+.fr__wheel circle:first-child { fill: rgba(169, 188, 255, 0.35); }
+.fr__power-label { font: 400 12px/1.2 var(--fr-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--fr-accent-ink); }
+
 .fr__corner {
   position: absolute; top: calc(var(--fr-safe-t) + 16px); right: calc(var(--fr-safe-r) + 16px);
   display: flex; gap: 10px; z-index: 3;
