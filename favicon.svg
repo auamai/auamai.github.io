@@ -1,11 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#c7d3ff"/><stop offset="1" stop-color="#7f93e6"/>
-    </linearGradient>
-  </defs>
-  <path d="M55.16,28.02 L60.82,28.82 L60.82,35.18 L55.16,35.98 L53.07,42.40 L57.19,46.37 L53.45,51.52 L48.40,48.83 L42.94,52.80 L43.94,58.43 L37.88,60.40 L35.38,55.26 L28.62,55.26 L26.12,60.40 L20.06,58.43 L21.06,52.80 L15.60,48.83 L10.55,51.52 L6.81,46.37 L10.93,42.40 L8.84,35.98 L3.18,35.18 L3.18,28.82 L8.84,28.02 L10.93,21.60 L6.81,17.63 L10.55,12.48 L15.60,15.17 L21.06,11.20 L20.06,5.57 L26.12,3.60 L28.62,8.74 L35.38,8.74 L37.88,3.60 L43.94,5.57 L42.94,11.20 L48.40,15.17 L53.45,12.48 L57.19,17.63 L53.07,21.60Z" fill="url(#g)"/>
-  <circle cx="32" cy="32" r="17.5" fill="#121a38"/>
-  <circle cx="32" cy="32" r="17.5" fill="none" stroke="#a9bcff" stroke-opacity=".35" stroke-width="1"/>
-  <text x="32" y="38.6" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="18" letter-spacing="-0.5" fill="#dfe6ff">AU</text>
+  <path d="M57.74,25.70 L63.15,27.29 L63.15,36.71 L57.74,38.30 L54.66,45.75 L57.35,50.70 L50.70,57.35 L45.75,54.66 L38.30,57.74 L36.71,63.15 L27.29,63.15 L25.70,57.74 L18.25,54.66 L13.30,57.35 L6.65,50.70 L9.34,45.75 L6.26,38.30 L0.85,36.71 L0.85,27.29 L6.26,25.70 L9.34,18.25 L6.65,13.30 L13.30,6.65 L18.25,9.34 L25.70,6.26 L27.29,0.85 L36.71,0.85 L38.30,6.26 L45.75,9.34 L50.70,6.65 L57.35,13.30 L54.66,18.25Z" fill="#a9bcff"/>
+  <circle cx="32" cy="32" r="24" fill="#121a38"/>
+  <text x="32" y="41.5" text-anchor="middle" font-family="'Arial Black', 'Helvetica Neue', Arial, sans-serif" font-weight="800" font-size="26" letter-spacing="-1.5" fill="#ffffff">AU</text>
 </svg>
