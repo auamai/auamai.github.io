@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Factory run | Alex Uamai</title>
+  <meta name="description" content="A small 3D runner by Alex Uamai. Collect gears, dodge the machines." />
+  <meta name="theme-color" content="#10162f" />
+  <link rel="icon" href="../favicon.svg?v=2" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400&family=IBM+Plex+Mono:wght@400&display=swap" rel="stylesheet" />
+  <style>html, body { margin: 0; height: 100%; background: #10162f; }</style>
+</head>
+<body>
+  <noscript>Factory run needs JavaScript.</noscript>
+  <script type="module">
+    import { openGame } from "./game.js?v=20261020";
+    openGame({ standalone: true, exitUrl: "../" });
+  </script>
+</body>
+</html>

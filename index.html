@@ -20,7 +20,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=20261020d" />
+  <link rel="stylesheet" href="styles.css?v=20261020g" />
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -365,6 +365,18 @@
       </div>
     </section>
 
+    <!-- Play: three.js and the game load only when the button is pressed -->
+    <section class="section play" id="play" aria-label="Game">
+      <div class="play__row">
+        <div class="play__text">
+          <h2>Factory run</h2>
+          <p class="section__aside">A small 3D runner I built with three.js. Collect gears, dodge the machines.</p>
+        </div>
+        <button class="pill pill--ghost play__btn" id="play-btn" type="button" aria-haspopup="dialog">Play <span class="play__arrow" aria-hidden="true">&#8599;</span></button>
+      </div>
+      <noscript><p class="section__aside">The game needs JavaScript. <a class="inline-link" href="game/">Open it on its own page</a>.</p></noscript>
+    </section>
+
     <!-- Contact -->
     <section class="section contact" id="contact">
       <div class="card contact__card">
@@ -385,6 +397,10 @@
     <span class="foot__mono">Vancouver, BC · <a href="https://github.com/auamai" rel="noopener">github.com/auamai</a></span>
   </footer>
 
-  <script src="script.js?v=20261019m" defer></script>
+  <script src="script.js?v=20261020g" defer></script>
+
+  <!-- Cloudflare Web Analytics: add the beacon here once the site token exists. No other tracking.
+  <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": ""}'></script>
+  -->
 </body>
 </html>
