@@ -20,7 +20,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=20261020g" />
+  <link rel="stylesheet" href="styles.css?v=20261020clk1" />
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -56,9 +56,18 @@
     <!-- Hero -->
     <section class="hero">
       <div class="hero__clock" aria-hidden="true">
-        <div class="dial">
-          <svg class="dial__ticks" viewBox="0 0 200 200" id="dial-ticks"></svg>
-          <div class="dial__sweep"></div>
+        <div class="dial" id="dial">
+          <div class="dial__stage">
+            <svg class="dial__ticks" viewBox="0 0 200 200" id="dial-ticks"></svg>
+            <div class="dial__sweep"></div>
+            <svg class="dial__layer dial__shadow" viewBox="0 0 200 200"></svg>
+            <svg class="dial__layer dial__pins dial__pins--base" viewBox="0 0 200 200"></svg>
+            <svg class="dial__layer dial__disc dial__disc--3" viewBox="0 0 200 200"></svg>
+            <svg class="dial__layer dial__disc dial__disc--2" viewBox="0 0 200 200"></svg>
+            <svg class="dial__layer dial__disc dial__disc--1" viewBox="0 0 200 200"></svg>
+            <svg class="dial__layer dial__disc dial__disc--top" viewBox="0 0 200 200"></svg>
+            <svg class="dial__layer dial__pins dial__pins--top" viewBox="0 0 200 200"></svg>
+          </div>
           <div class="dial__face">
             <span class="clock__place">Vancouver</span>
             <span class="clock__time" id="clock">--:--</span>
@@ -411,7 +420,7 @@
     <span class="foot__mono">Vancouver, BC · <a href="https://github.com/auamai" rel="noopener">github.com/auamai</a></span>
   </footer>
 
-  <script src="script.js?v=20261020r5" defer></script>
+  <script src="script.js?v=20261020clk1" defer></script>
 
   <!-- Cloudflare Web Analytics: add the beacon here once the site token exists. No other tracking.
   <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": ""}'></script>
