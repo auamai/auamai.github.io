@@ -344,7 +344,7 @@ main { width: min(var(--wrap), calc(100% - 40px)); margin: 0 auto; }
     linear-gradient(180deg, rgba(10, 14, 32, .15) 0%, rgba(10, 14, 32, .55) 45%, rgba(10, 14, 32, .9) 100%),
     url("Images/vancouver-coal-harbour.jpg") center 40% / cover no-repeat, #0c1128; }
 .clip__paper > * { position: relative; }
-.clip__mark { position: absolute; top: -6px; left: 18px; font: 400 110px/1 var(--display); color: var(--accent); opacity: .75; }
+.clip__mark { position: absolute; top: 16px; left: 24px; font: 400 110px/1 var(--display); color: var(--accent); opacity: .75; }
 .clip__paper blockquote { margin: 0; padding-top: 120px; text-shadow: 0 1px 18px rgba(8, 12, 30, .6); font: italic 400 clamp(24px, 2.3vw, 30px)/1.18 var(--display); color: var(--ink); letter-spacing: -0.01em; }
 .clip__body { display: flex; flex-direction: column; gap: 8px; padding: 0 8px 8px; }
 .clip__meta { font: 400 12px/1.4 var(--mono); color: var(--ink-3); letter-spacing: .02em; }
