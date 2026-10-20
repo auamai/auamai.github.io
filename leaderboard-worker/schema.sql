@@ -52,3 +52,31 @@ CREATE TABLE IF NOT EXISTS daily_uniques (
   day      TEXT PRIMARY KEY,
   uniques  INTEGER NOT NULL DEFAULT 0
 );
+
+-- Passkeys (round 5). Only the public key and signature counter of each credential.
+-- Session tokens from a passkey sign-in: only SHA-256 is stored, 400-day expiry.
+-- One-use WebAuthn challenges, 5-minute expiry.
+CREATE TABLE IF NOT EXISTS passkeys (
+  cred_id     TEXT PRIMARY KEY,
+  username    TEXT NOT NULL COLLATE NOCASE,
+  public_key  TEXT NOT NULL,
+  counter     INTEGER NOT NULL DEFAULT 0,
+  transports  TEXT,
+  created_at  INTEGER NOT NULL,
+  last_used   INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS passkeys_by_user ON passkeys (username);
+CREATE TABLE IF NOT EXISTS sessions (
+  token_hash  TEXT PRIMARY KEY,
+  username    TEXT NOT NULL COLLATE NOCASE,
+  created_at  INTEGER NOT NULL,
+  expires_at  INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS sessions_by_user ON sessions (username);
+CREATE TABLE IF NOT EXISTS webauthn_challenges (
+  id          TEXT PRIMARY KEY,
+  challenge   TEXT NOT NULL,
+  kind        TEXT NOT NULL,
+  username    TEXT,
+  expires_at  INTEGER NOT NULL
+);

@@ -2,16 +2,15 @@ name = "auamai-leaderboard"
 main = "src/index.js"
 compatibility_date = "2025-10-01"
 
-# Not deployed yet. Create the database, then paste its id here:
-#   wrangler d1 create auamai-leaderboard
+# Deployed at https://api.auamai.dev (custom domain).
 [[d1_databases]]
 binding = "DB"
 database_name = "auamai-leaderboard"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "0088edc7-5229-4028-8f3e-63b61d4160a9"
 
 [vars]
 # Comma-separated origins allowed to call the API from a browser.
-ALLOWED_ORIGINS = "https://auamai.github.io,https://auamai.dev"
+ALLOWED_ORIGINS = "https://auamai.dev,https://www.auamai.dev,https://auamai.github.io"
 # Cloudflare Access, used only by GET /stats. Not secrets, but fill them in
 # before deploying; /stats denies every request while they are empty.
 ACCESS_TEAM_DOMAIN = ""   # e.g. "yourteam.cloudflareaccess.com"
