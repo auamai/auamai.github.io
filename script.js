@@ -53,7 +53,7 @@
       if (playBtn.getAttribute("aria-busy") === "true") return;
       playBtn.setAttribute("aria-busy", "true");
       try {
-        const { openGame } = await import("./game/game.js?v=20261020b");
+        const { openGame } = await import("./game/game.js?v=20261020r3");
         await openGame();
       } catch (err) {
         console.error(err);
