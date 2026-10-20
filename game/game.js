@@ -1,6 +1,8 @@
 // Factory run: a small endless runner. Loaded only when someone presses Play.
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
 import * as P from "./profile.js";
+import { Factory, ROOF } from "./factory.js?v=20261020r3";
+import { createKit, RUNNERS, ROLLERS } from "./robots/index.js?v=20261020r3";
 
 /* ---------- tuning ---------- */
 const LANES = [-2.2, 0, 2.2];
@@ -15,6 +17,16 @@ const SLIDE_T = 0.72;
 const GEAR_POINTS = 10;
 const DIST_POINTS = 0.5;     // per unit travelled
 const PERIOD = 12;           // scenery repeat length
+
+// Wheel power-up: turns the runner into the UL-W1 roller for a few seconds.
+const WHEEL_FROM = 14;       // seconds into a run before a token can appear
+const WHEEL_GAP = 28;        // at least this long between tokens
+const WHEEL_CHANCE = 0.16;   // per eligible row
+const MORPH_T = 0.45;        // transform animation, each way (invulnerable)
+const DRIVE_T = 8;           // total time as the roller, morph-in included
+const GRACE_T = 1.2;         // blinking grace after changing back
+const DRIVE_MULT = 1.5;      // score multiplier while rolling
+const RATE_CAP = 140;        // points in any one-second window, under the server's 150/s
 
 // Light factory built from the portfolio's own palette (styles.css):
 // --ink #f4f6fb is the white of the hall, the page navy #10162f is the ink,
@@ -54,7 +66,7 @@ function loadCss() {
     cssLoaded = new Promise((resolve) => {
       const link = document.createElement("link");
       link.rel = "stylesheet";
-      link.href = new URL("./game.css?v=20261020b", import.meta.url).href;
+      link.href = new URL("./game.css?v=20261020r3", import.meta.url).href;
       link.onload = link.onerror = () => resolve();
       document.head.appendChild(link);
     });
@@ -113,6 +125,9 @@ class Game {
     this.gears = [];
     this.pools = { crate: [], stack: [], arm: [], gap: [], bot: [], gear: [] };
     this.r = { lane: 1, x: 0, y: 0, vy: 0, ground: true, slideT: 0, queueSlide: false };
+    this.pw = { phase: "none", t: 0 };
+    this.token = null;
+    this.rate = { b: new Float32Array(11), i: -1 };
     this.shake = 0;
     this.fps = { frames: 0, acc: 0 };
     this.quality = 0;
@@ -141,6 +156,11 @@ class Game {
       <div class="fr__hud" hidden>
         <span class="fr__score">0</span>
         <span class="fr__meta"><span class="fr__gears">0</span> gears · best <span class="fr__best">0</span></span>
+        <span class="fr__power" hidden>
+          <svg class="fr__ring" viewBox="0 0 44 44" aria-hidden="true"><circle class="fr__ring-bg" cx="22" cy="22" r="19"/><circle class="fr__ring-fg" cx="22" cy="22" r="19"/>
+            <g class="fr__wheel"><circle cx="22" cy="22" r="9"/><circle cx="22" cy="22" r="2.4"/><path d="M22 13.6v6M22 24.4v6M14.7 26.2l5.2-3M24.1 20.8l5.2-3M14.7 17.8l5.2 3M24.1 23.2l5.2 3"/></g></svg>
+          <span class="fr__power-label">Rolling ×${DRIVE_MULT}</span>
+        </span>
       </div>
       <div class="fr__corner">
         <button class="fr__icon" type="button" data-act="pause" aria-label="Pause" hidden>${ICON.pause}</button>
@@ -161,6 +181,8 @@ class Game {
     this.elScore = root.querySelector(".fr__score");
     this.elGears = root.querySelector(".fr__gears");
     this.elBest = root.querySelector(".fr__best");
+    this.elPower = root.querySelector(".fr__power");
+    this.elRing = root.querySelector(".fr__ring-fg");
     this.btnPause = root.querySelector('[data-act="pause"]');
     this.pad = root.querySelector(".fr__pad");
     this.layer = root.querySelector(".fr__layer");
@@ -186,7 +208,7 @@ class Game {
     scene.fog = new THREE.Fog(COL.fog, 46, 150); // fades into the page white, far enough to stay crisp
     this.scene = scene;
 
-    this.camera = new THREE.PerspectiveCamera(58, 1, 0.1, 170);
+    this.camera = new THREE.PerspectiveCamera(58, 1, 0.1, 175);
     this.camBase = new THREE.Vector3(0, 4.4, 8);
 
     scene.add(new THREE.HemisphereLight(0xffffff, 0xdde2ec, 1.9));
@@ -201,6 +223,10 @@ class Game {
     sun.target.position.set(0, 0, -6);
     scene.add(sun, sun.target);
     this.sun = sun;
+    // Soft fill from the other side so the far wall and the robot's shaded side stay light.
+    const fill = new THREE.DirectionalLight(0xeef1ff, 0.65);
+    fill.position.set(-6, 7, 3);
+    scene.add(fill);
 
     const lam = (color, emissive = 0x000000, ei = 1) =>
       new THREE.MeshLambertMaterial({ color, emissive, emissiveIntensity: ei, flatShading: true });
@@ -222,9 +248,11 @@ class Game {
       edgeSoft: new THREE.LineBasicMaterial({ color: COL.edge, transparent: true, opacity: 0.3 }),
     };
     this.gearGeo = gearGeometry();
+    this.kit = createKit(renderer);
 
     this.buildWorld();
     this.buildRobot();
+    this.buildToken();
     this.applyQuality();
   }
 
@@ -249,36 +277,25 @@ class Game {
 
   buildWorld() {
     const { scene, M } = this;
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(12, 170), M.floor);
-    floor.rotation.x = -Math.PI / 2;
-    floor.position.z = -70;
-    floor.receiveShadow = true;
-    scene.add(floor);
+    // The hall itself (floor, roof, walls, the shop-floor zones either side) lives in factory.js.
+    this.factory = new Factory(scene);
     for (const x of LANES) {
-      const lane = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 170), M.lane);
+      const lane = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 190), M.lane);
       lane.rotation.x = -Math.PI / 2;
-      lane.position.set(x, 0.003, -70);
+      lane.position.set(x, 0.003, -78);
       lane.receiveShadow = true;
       scene.add(lane);
     }
-    // Closed ceiling: tall portrait views look up into it instead of empty sky.
-    const ceil = new THREE.Mesh(new THREE.PlaneGeometry(12, 170), M.ceiling);
-    ceil.rotation.x = Math.PI / 2;
-    ceil.position.set(0, 7.4, -70);
-    scene.add(ceil);
-    for (const s of [-1, 1]) scene.add(this.mesh(M.strip, 0.1, 0.03, 170, 2.2 * s, 7.37, -70, false)); // ceiling light lines
-    for (const s of [-1, 1]) {
-      const wall = new THREE.Mesh(new THREE.PlaneGeometry(170, 7.4), M.wall);
-      wall.position.set(6 * s, 3.7, -70);
-      wall.rotation.y = -s * Math.PI / 2;
-      scene.add(wall);
-      scene.add(this.mesh(M.rail, 1.3, 0.55, 170, 4.45 * s, 0.275, -70, false));
-    }
+    const bed = new THREE.Mesh(new THREE.PlaneGeometry(7.6, 190), M.floor);
+    bed.rotation.x = -Math.PI / 2;
+    bed.position.set(0, 0.002, -78);
+    bed.receiveShadow = true;
+    scene.add(bed);
+    for (const s of [-1, 1]) scene.add(this.mesh(M.strip, 0.1, 0.03, 190, 2.2 * s, ROOF - 0.03, -78, false)); // ceiling light lines
+    for (const s of [-1, 1]) scene.add(this.mesh(M.rail, 1.3, 0.55, 190, 4.45 * s, 0.275, -78, false));
 
-    // Everything below repeats every PERIOD units and slides as one group.
+    // Line furniture repeats every PERIOD units and slides as one group.
     const scen = new THREE.Group();
-    const zs = [];
-    for (let z = 12; z >= -150; z -= 1) zs.push(z);
     const inst = (mat, sx, sy, sz, list, shadow = false) => {
       const im = new THREE.InstancedMesh(BOX, mat, list.length);
       const o = new THREE.Object3D();
@@ -286,20 +303,13 @@ class Game {
       im.castShadow = shadow;
       scen.add(im);
     };
-    const dashes = [], pillars = [], strips = [], beams = [], lights = [], rollers = [];
-    for (const z of zs) {
+    const dashes = [], lights = [], rollers = [];
+    for (let z = 12; z >= -168; z -= 1) {
       if (z % 4 === 0) for (const x of [-1.1, 1.1]) dashes.push([x, 0.012, z]);
-      if (z % PERIOD === 0) {
-        for (const s of [-1, 1]) { pillars.push([5.6 * s, 3.5, z]); strips.push([5.27 * s, 3.2, z]); }
-        beams.push([0, 7.2, z]);
-        lights.push([0, 6.95, z]);
-      }
+      if (z % PERIOD === 0) lights.push([0, ROOF - 0.1, z]);
     }
-    for (let z = 12; z >= -150; z -= 1.5) for (const s of [-1, 1]) rollers.push([4.45 * s, 0.58, z]);
+    for (let z = 12; z >= -168; z -= 1.5) for (const s of [-1, 1]) rollers.push([4.45 * s, 0.58, z]);
     inst(M.dash, 0.06, 0.02, 1.5, dashes);
-    inst(M.pillar, 0.6, 7, 0.6, pillars);
-    inst(M.strip, 0.06, 4.6, 0.06, strips);
-    inst(M.beam, 12, 0.35, 0.45, beams);
     inst(M.light, 3.2, 0.06, 0.5, lights);
     inst(M.roller, 1.25, 0.1, 0.22, rollers);
     scene.add(scen);
@@ -307,51 +317,59 @@ class Game {
   }
 
   buildRobot() {
-    const { M } = this;
-    this.edgeMat = new THREE.LineBasicMaterial({ color: 0x0c1024, transparent: true, opacity: 0.6 });
+    // Runner and roller come from the robot registry (game/robots/). The player
+    // container moves; the two forms inside it swap during the wheel power-up.
     const root = new THREE.Group();
-    const body = new THREE.Group();
-    body.position.y = 0.95;
-    root.add(body);
-    body.add(this.mesh(M.robot, 0.64, 0.72, 0.4, 0, 0.42, 0));
-    body.add(this.mesh(M.robotMid, 0.66, 0.12, 0.42, 0, 0.08, 0));
-    body.add(this.mesh(M.robotDark, 0.42, 0.44, 0.14, 0, 0.44, 0.26));      // back pack (faces camera)
-    body.add(this.mesh(M.accent, 0.26, 0.05, 0.02, 0, 0.54, 0.335, false)); // pack light
-    body.add(this.mesh(M.accent, 0.26, 0.07, 0.02, 0, 0.52, -0.21, false)); // chest light
+    const runner = this.kit.build(RUNNERS, this.settings.robot);
+    const roller = this.kit.build(ROLLERS, this.settings.roller);
+    roller.root.visible = false;
+    root.add(runner.root, roller.root);
 
-    body.add(this.mesh(M.robotDark, 0.2, 0.18, 0.2, 0, 0.86, 0));            // neck
-    const head = new THREE.Group();
-    head.position.y = 0.94;
-    head.add(this.mesh(M.robot, 0.5, 0.4, 0.44, 0, 0.2, 0));
-    head.add(this.mesh(M.accent, 0.38, 0.11, 0.02, 0, 0.22, -0.225, false)); // visor
-    for (const s of [-1, 1]) head.add(this.mesh(M.accent, 0.04, 0.14, 0.14, 0.27 * s, 0.2, 0, false));
-    head.add(this.mesh(M.robotMid, 0.04, 0.22, 0.04, 0.12, 0.5, 0));
-    head.add(this.mesh(M.accent, 0.09, 0.09, 0.09, 0.12, 0.63, 0, false));
-    body.add(head);
-
-    const limb = (x, y, len, w, mat) => {
-      const g = new THREE.Group();
-      g.position.set(x, y, 0);
-      g.add(this.mesh(mat, w, len, w + 0.02, 0, -len / 2, 0));
-      return g;
-    };
-    const armL = limb(-0.42, 0.72, 0.5, 0.15, M.robotMid);
-    const armR = limb(0.42, 0.72, 0.5, 0.15, M.robotMid);
-    armL.add(this.mesh(M.robotDark, 0.18, 0.16, 0.18, 0, -0.56, 0));
-    armR.add(this.mesh(M.robotDark, 0.18, 0.16, 0.18, 0, -0.56, 0));
-    const legL = limb(-0.17, 0, 0.86, 0.2, M.robotMid);
-    const legR = limb(0.17, 0, 0.86, 0.2, M.robotMid);
-    legL.add(this.mesh(M.robotDark, 0.24, 0.1, 0.34, 0, -0.9, -0.05));
-    legR.add(this.mesh(M.robotDark, 0.24, 0.1, 0.34, 0, -0.9, -0.05));
-    body.add(armL, armR, legL, legR);
-
-    const blob = new THREE.Mesh(new THREE.CircleGeometry(0.46, 18), M.blob);
+    const blob = new THREE.Mesh(new THREE.CircleGeometry(0.46, 24), this.M.blob);
     blob.rotation.x = -Math.PI / 2;
     blob.position.y = 0.015;
 
+    // Transform flash: two periwinkle rings that open out and fade.
+    const flashMat = new THREE.MeshBasicMaterial({ color: COL.accent, transparent: true, opacity: 0, depthWrite: false });
+    const flash = new THREE.Group();
+    for (const r of [0.55, 0.8]) flash.add(new THREE.Mesh(new THREE.TorusGeometry(r, 0.03, 8, 40), flashMat));
+    flash.visible = false;
+    root.add(flash);
+    this.M.flash = flashMat;
+
     this.scene.add(root, blob);
-    this.robot = { root, body, head, armL, armR, legL, legR, blob };
-    this.edgeMat = M.edge; // obstacles and mobile robots
+    this.robot = { root, runner, roller, blob, flash, form: "runner" };
+    this.edgeMat = this.M.edge; // obstacles and mobile robots keep their thin outline
+  }
+
+  // The wheel token: a glowing periwinkle wheel in a soft halo. One at a time.
+  buildToken() {
+    const g = new THREE.Group();
+    const glow = new THREE.MeshBasicMaterial({ color: 0xa9bcff });
+    const deep = new THREE.MeshBasicMaterial({ color: 0x6f84e0 });
+    const white = new THREE.MeshBasicMaterial({ color: 0xf4f6fb });
+    const halo = new THREE.MeshBasicMaterial({ color: 0xa9bcff, transparent: true, opacity: 0.28, depthWrite: false });
+    const wheel = new THREE.Group();
+    wheel.add(new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.085, 12, 36), glow));
+    wheel.add(new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.12, 18).rotateX(Math.PI / 2), white));
+    for (let i = 0; i < 5; i++) {
+      const sp = new THREE.Mesh(new THREE.CapsuleGeometry(0.028, 0.2, 3, 8), deep);
+      const a = (i / 5) * Math.PI * 2;
+      sp.position.set(Math.sin(a) * 0.17, Math.cos(a) * 0.17, 0);
+      sp.rotation.z = -a;
+      wheel.add(sp);
+    }
+    g.add(wheel);
+    const h = new THREE.Mesh(new THREE.SphereGeometry(0.62, 20, 14), halo);
+    g.add(h);
+    const ringM = new THREE.MeshBasicMaterial({ color: 0xa9bcff, transparent: true, opacity: 0.5, depthWrite: false });
+    const floorRing = new THREE.Mesh(new THREE.RingGeometry(0.45, 0.6, 32), ringM);
+    floorRing.rotation.x = -Math.PI / 2;
+    g.add(floorRing);
+    g.visible = false;
+    this.scene.add(g);
+    Object.assign(this.M, { tokGlow: glow, tokDeep: deep, tokWhite: white, tokHalo: halo, tokRing: ringM });
+    this.tokenMesh = { g, wheel, halo: h, floorRing };
   }
 
   /* ---------- pooled obstacles ---------- */
@@ -511,12 +529,28 @@ class Game {
       for (let i = 0; i < 5; i++) { const u = (i - 2) / 2; this.spawnGear(crateLane, z - u * 2.4, 1.0 + 1.3 * (1 - u * u)); }
     } else if (roll < 0.8) {
       const ln = pick(lanes.slice(n));
-      for (let i = 0; i < 5; i++) this.spawnGear(ln, z + 4.8 - i * 2.4, 1.0);
+      // Now and then the open lane carries a wheel token instead of a gear line.
+      if (this.tokenReady() && Math.random() < WHEEL_CHANCE) this.spawnToken(ln, z);
+      else for (let i = 0; i < 5; i++) this.spawnGear(ln, z + 4.8 - i * 2.4, 1.0);
     }
     this.toNext = Math.max(14, this.speed * 0.62) + Math.random() * 10;
   }
 
+  tokenReady() {
+    return !this.token && this.pw.phase === "none" && this.runTime >= WHEEL_FROM && this.runTime - (this.lastToken ?? -1e9) >= WHEEL_GAP;
+  }
+
+  spawnToken(lane, z) {
+    this.lastToken = this.runTime;
+    this.token = { x: LANES[lane], y: 1.05, z, taken: false, t: 0 };
+    const T = this.tokenMesh;
+    T.g.visible = true;
+    T.g.scale.setScalar(1);
+    T.g.position.set(this.token.x, this.token.y, z);
+  }
+
   clearWorld() {
+    if (this.token) { this.token = null; this.tokenMesh.g.visible = false; }
     for (const o of this.obstacles) { o.g.visible = false; this.pools[o.type].push(o.g); }
     for (const g of this.gears) { g.m.visible = false; this.pools.gear.push(g.m); }
     this.obstacles.length = 0;
@@ -534,6 +568,7 @@ class Game {
     const q = levels[this.quality];
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, q.dpr));
     this.sun.castShadow = q.shadow;
+    this.factory.setQuality(this.quality);
     this.resize();
   }
 
@@ -681,6 +716,9 @@ class Game {
     const R = this.robot;
     R.root.rotation.set(0, 0, 0);
     R.root.position.set(0, 0, 0);
+    this.resetPower();
+    this.lastToken = null;
+    this.rate.b.fill(0); this.rate.i = -1;
     this.speed = START_SPEED;
     this.runTime = 0;
     this.score = 0;
@@ -695,6 +733,58 @@ class Game {
     this.hud.hidden = false;
     this.btnPause.hidden = false;
     this.pad.hidden = !this.settings.pad;
+  }
+
+  /* ---------- wheel power-up ---------- */
+  resetPower() {
+    this.pw = { phase: "none", t: 0 };
+    const R = this.robot;
+    R.form = "runner";
+    R.runner.root.visible = true; R.runner.root.scale.setScalar(1); R.runner.root.rotation.set(0, 0, 0);
+    R.roller.root.visible = false; R.roller.root.scale.setScalar(1);
+    R.flash.visible = false;
+    this.elPower.hidden = true;
+    this.shownRing = -1;
+  }
+
+  startDrive() {
+    this.pw = { phase: "in", t: 0 };
+    this.elPower.hidden = false;
+    this.shownRing = -1;
+    navigator.vibrate?.(25);
+  }
+
+  // in -> drive -> out -> grace -> none. Morphs and grace are invulnerable.
+  updatePower(dt) {
+    const pw = this.pw;
+    if (pw.phase === "none") return;
+    pw.t += dt;
+    if (pw.phase === "in" && pw.t >= MORPH_T) pw.phase = "drive";
+    if (pw.phase === "drive" && pw.t >= DRIVE_T - MORPH_T) { pw.phase = "out"; pw.outAt = pw.t; }
+    if (pw.phase === "out" && pw.t >= DRIVE_T) { pw.phase = "grace"; pw.graceAt = pw.t; this.elPower.hidden = true; }
+    if (pw.phase === "grace" && pw.t >= DRIVE_T + GRACE_T) this.resetPower();
+    if (pw.phase === "in" || pw.phase === "drive" || pw.phase === "out") {
+      const left = Math.max(0, 1 - pw.t / DRIVE_T);
+      const q = Math.round(left * 200);
+      if (q !== this.shownRing) { this.shownRing = q; this.elRing.style.strokeDashoffset = ((1 - left) * 119.38).toFixed(2); }
+    }
+  }
+
+  get driving() { return this.pw.phase === "in" || this.pw.phase === "drive" || this.pw.phase === "out"; }
+  get invulnerable() { const p = this.pw.phase; return p === "in" || p === "out" || p === "grace"; }
+
+  // Every point goes through here: at most RATE_CAP in any one-second window.
+  // Normal play peaks well below it; only a lucky streak while rolling gets trimmed.
+  addScore(pts) {
+    // 0.1 s buckets; the cap holds over the current one plus the ten before it
+    // (1.0 to 1.1 s), so every one-second window stays under it.
+    const R = this.rate, n = R.b.length, i = Math.floor(this.runTime * 10);
+    if (i !== R.i) { if (i - R.i >= n || i < R.i) R.b.fill(0); else for (let k = R.i + 1; k <= i; k++) R.b[k % n] = 0; R.i = i; }
+    let sum = 0;
+    for (let k = 0; k < n; k++) sum += R.b[k];
+    const add = Math.max(0, Math.min(pts, RATE_CAP - sum));
+    R.b[i % n] += add;
+    this.score += add;
   }
 
   pause() {
@@ -794,9 +884,9 @@ class Game {
   }
 
   controlsHint() {
-    return this.coarse
+    return (this.coarse
       ? "Swipe left or right to switch lanes, up to jump, down to slide."
-      : "Arrow keys or WASD. Space jumps, down slides.";
+      : "Arrow keys or WASD. Space jumps, down slides.") + " Catch a wheel token to roll for a few seconds.";
   }
 
   padToggleHtml() {
@@ -810,6 +900,7 @@ class Game {
     this.pad.hidden = true;
     this.clearWorld();
     Object.assign(this.r, { lane: 1, x: 0, y: 0, vy: 0, ground: true, slideT: 0, queueSlide: false });
+    this.resetPower();
     const p = this.profile;
     const links = [];
     let body;
@@ -1026,11 +1117,15 @@ class Game {
 
     this.dist += v * dt;
     this.scenery.position.z = this.dist % PERIOD;
-    if (st === "play") this.score += v * dt * DIST_POINTS;
+    this.factory.update(dt, v, this.t);
+    if (st === "play") this.updatePower(dt);
+    const mult = this.driving ? DRIVE_MULT : 1;
+    if (st === "play") this.addScore(v * dt * DIST_POINTS * mult);
 
     // Robot physics
     if (st === "play") {
-      r.x += (LANES[r.lane] - r.x) * Math.min(1, dt * 14);
+      // Rolling switches lanes faster.
+      r.x += (LANES[r.lane] - r.x) * Math.min(1, dt * (this.driving ? 24 : 14));
       if (!r.ground) {
         r.vy += GRAVITY * dt;
         r.y += r.vy * dt;
@@ -1054,7 +1149,7 @@ class Game {
         o.parts.pivot.rotation.z = Math.sin(this.t * 2.4 + o.phase) * 0.5;
         o.parts.elbow.rotation.z = Math.sin(this.t * 2.4 + o.phase + 1.2) * 0.45;
       }
-      if (st === "play" && !o.passed && Math.abs(r.x - o.x) < 0.95) {
+      if (st === "play" && !o.passed && !this.invulnerable && Math.abs(r.x - o.x) < 0.95) {
         const h = o.h + 0.25;
         if (zPrev - h <= 0 && o.z + h >= 0) {
           if (o.type === "crate" && r.y < 1.05) this.die("crash");
@@ -1069,7 +1164,7 @@ class Game {
     }
 
     // Gears
-    const top = r.y + (sliding ? 0.8 : 1.9);
+    const top = r.y + (sliding ? 0.8 : this.driving ? 1.25 : 1.9);
     for (let i = this.gears.length - 1; i >= 0; i--) {
       const g = this.gears[i];
       const zPrev = g.z;
@@ -1084,11 +1179,32 @@ class Game {
         if (st === "play" && Math.abs(r.x - g.x) < 0.9 && zPrev - 0.6 <= 0 && g.z + 0.6 >= 0 && g.y + 0.4 > r.y && g.y - 0.4 < top) {
           g.taken = true;
           this.gearsRun++;
-          this.score += GEAR_POINTS;
+          this.addScore(GEAR_POINTS * mult);
         }
       }
       g.m.position.z = g.z;
       if (g.z > DESPAWN_Z) { g.m.visible = false; this.pools.gear.push(g.m); this.gears.splice(i, 1); }
+    }
+
+    // Wheel token
+    const tk = this.token;
+    if (tk) {
+      const T = this.tokenMesh;
+      const zPrev = tk.z;
+      tk.z += v * dt;
+      T.g.position.z = tk.z;
+      T.wheel.rotation.y = this.t * 2.4;
+      T.g.position.y = tk.y + Math.sin(this.t * 3) * 0.08;
+      T.floorRing.position.y = -T.g.position.y + 0.02;
+      T.halo.scale.setScalar(1 + Math.sin(this.t * 6) * 0.07);
+      if (tk.taken) {
+        tk.t += dt;
+        T.g.scale.setScalar(Math.max(0.01, 1 - tk.t * 4));
+        if (tk.t > 0.25) { T.g.visible = false; this.token = null; }
+      } else if (st === "play" && Math.abs(r.x - tk.x) < 0.95 && zPrev - 0.7 <= 0 && tk.z + 0.7 >= 0 && tk.y + 0.5 > r.y && tk.y - 0.5 < top) {
+        tk.taken = true;
+        this.startDrive();
+      } else if (tk.z > DESPAWN_Z) { T.g.visible = false; this.token = null; }
     }
 
     if (st === "play") {
@@ -1107,31 +1223,52 @@ class Game {
   }
 
   animateRobot(dt, v, sliding) {
-    const R = this.robot, r = this.r, st = this.state;
+    const R = this.robot, r = this.r, st = this.state, pw = this.pw;
     const k = Math.min(1, dt * 12);
     R.root.position.x = r.x;
     R.blob.position.x = r.x;
+    const runner = R.runner, roller = R.roller;
 
+    // Which form shows, and the morph between them.
+    let mix = 0; // 0 = runner, 1 = roller
+    if (pw.phase === "in") mix = Math.min(1, pw.t / MORPH_T);
+    else if (pw.phase === "drive") mix = 1;
+    else if (pw.phase === "out") mix = 1 - Math.min(1, (pw.t - pw.outAt) / MORPH_T);
+    const ease = mix * mix * (3 - 2 * mix);
+    // The runner folds down and spins away as the roller unfolds, and back.
+    const hs = Math.max(0, 1 - ease * 1.6), ws = Math.max(0, ease * 1.6 - 0.6);
+    runner.root.scale.set(hs, hs, hs);
+    runner.root.rotation.y = ease * Math.PI;
+    runner.root.visible = hs > 0.01;
+    roller.root.scale.set(ws, ws, ws);
+    roller.root.rotation.y = (1 - Math.min(1, ws)) * -Math.PI;
+    roller.root.visible = ws > 0.01;
+    if (pw.phase === "grace") runner.root.visible = Math.floor(pw.t * 12) % 2 === 0;
+    R.form = mix > 0.5 ? "roller" : "runner";
+
+    // Flash rings while morphing.
+    const morphing = pw.phase === "in" || pw.phase === "out";
+    R.flash.visible = morphing;
+    if (morphing) {
+      const u = pw.phase === "in" ? pw.t / MORPH_T : (pw.t - pw.outAt) / MORPH_T;
+      R.flash.position.y = 0.8;
+      R.flash.scale.setScalar(0.6 + u * 2.2);
+      R.flash.children[1].rotation.x = u * 3;
+      this.M.flash.opacity = Math.max(0, 0.85 * (1 - u));
+    }
+
+    const S = { mode: "run", t: this.t, speed: v, vy: r.vy, lean: LANES[r.lane] - r.x };
     if (st === "menu") {
       // Faces the camera and idles.
       R.root.rotation.y += (Math.PI - R.root.rotation.y) * Math.min(1, dt * 4);
       R.root.rotation.x = 0;
       R.root.position.y = 0;
-      R.body.position.y = 0.95 + Math.sin(this.t * 2.2) * 0.02;
-      R.body.rotation.x = 0;
-      R.legL.rotation.x = R.legR.rotation.x = 0;
-      R.armL.rotation.x = 0;
-      R.armR.rotation.x = 0;
-      R.armR.rotation.z = 2.6 + Math.sin(this.t * 5) * 0.35;
-      R.armL.rotation.z = -0.1;
-      R.head.rotation.y = Math.sin(this.t * 0.9) * 0.25;
       R.blob.scale.setScalar(1);
+      S.mode = "menu";
+      runner.update(S, dt);
       return;
     }
     R.root.rotation.y += (0 - R.root.rotation.y) * Math.min(1, dt * 10);
-    R.armR.rotation.z += (0 - R.armR.rotation.z) * k;
-    R.armL.rotation.z += (0 - R.armL.rotation.z) * k;
-    R.head.rotation.y += (0 - R.head.rotation.y) * k;
 
     if (st === "dying") {
       if (this.deathKind === "fall") {
@@ -1148,24 +1285,10 @@ class Game {
 
     R.root.position.y = r.y;
     R.root.rotation.x = 0;
-    const phase = this.t * (6 + v * 0.28);
-    const swing = r.ground ? Math.sin(phase) * 0.85 : 0.4;
-    if (sliding) {
-      R.body.rotation.x += (-1.05 - R.body.rotation.x) * k;
-      R.body.position.y += (0.42 - R.body.position.y) * k;
-      R.legL.rotation.x += (1.2 - R.legL.rotation.x) * k;
-      R.legR.rotation.x += (1.0 - R.legR.rotation.x) * k;
-      R.armL.rotation.x += (-0.6 - R.armL.rotation.x) * k;
-      R.armR.rotation.x += (-0.6 - R.armR.rotation.x) * k;
-    } else {
-      R.body.rotation.x += ((r.ground ? 0.12 : -0.05) - R.body.rotation.x) * k;
-      R.body.position.y = 0.95 + (r.ground ? Math.abs(Math.sin(phase)) * 0.06 : 0);
-      R.legL.rotation.x = r.ground ? swing : -0.5;
-      R.legR.rotation.x = r.ground ? -swing : 0.3;
-      R.armL.rotation.x = r.ground ? -swing * 0.9 : -2.4;
-      R.armR.rotation.x = r.ground ? swing * 0.9 : -2.4;
-    }
-    R.blob.scale.setScalar(Math.max(0.35, 1 - r.y * 0.3));
+    S.mode = sliding ? "slide" : r.ground ? "run" : "air";
+    if (runner.root.visible) runner.update(S, dt);
+    if (roller.root.visible) roller.update(S, dt);
+    R.blob.scale.setScalar(Math.max(0.35, 1 - r.y * 0.3) * (R.form === "roller" ? 1.25 : 1));
   }
 
   updateCamera(dt) {
@@ -1201,6 +1324,9 @@ class Game {
     this.scene.traverse((o) => { if (o.geometry && o.geometry !== BOX) o.geometry.dispose(); });
     Object.values(this.M).forEach((m) => m.dispose());
     this.gearGeo.dispose();
+    this.robot.runner.dispose(); this.robot.roller.dispose();
+    this.kit.dispose();
+    this.factory.dispose();
     this.renderer.dispose();
     this.renderer.forceContextLoss?.();
     this.root.remove();
