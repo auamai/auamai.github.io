@@ -11,16 +11,19 @@
   <meta property="og:url" content="https://auamai.dev/poundo/" />
   <meta property="og:title" content="Poundo Robot: build log | Alex Uamai" />
   <meta property="og:description" content="A robot arm that learns to turn poundo yam from videos of people making it." />
-  <meta property="og:image" content="https://auamai.dev/Images/so101-mujoco-control.webp" />
+  <meta property="og:image" content="https://auamai.dev/Images/og-poundo.jpg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
   <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Poundo Robot: build log | Alex Uamai" />
+  <meta name="twitter:description" content="Can a robot learn to make food from human video, and adapt to uncertain food properties, without a force sensor?" />
   <link rel="icon" href="../favicon.svg?v=2" type="image/svg+xml" />
   <link rel="icon" href="../favicon-32.png?v=2" sizes="32x32" type="image/png" />
   <link rel="apple-touch-icon" href="../apple-touch-icon.png?v=2" />
   <meta name="theme-color" content="#121a38" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../styles.css?v=20261020d" />
+  <link rel="preload" href="../fonts/inter-tight-var.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="../fonts/instrument-serif.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="../styles.css?v=20261020ux1" />
   <style>
     /* Poundo case study: scoped to .cs */
     .cs .bar { grid-template-columns: auto 1fr; }
@@ -83,7 +86,22 @@
     .credits p { font-size: 15px; font-weight: 300; line-height: 1.7; color: var(--ink-2); }
     .credits a { color: var(--ink); text-decoration: underline; text-decoration-color: var(--line-2); text-underline-offset: 3px; transition: text-decoration-color .2s; }
     .credits a:hover { text-decoration-color: var(--accent); }
-    .cs__end { padding: 84px 0 40px; display: flex; flex-wrap: wrap; gap: 10px; }
+    .cs__end { padding: 96px 0 8px; display: flex; flex-wrap: wrap; gap: 10px; }
+    .toc { display: flex; flex-wrap: wrap; gap: 0 20px; margin-top: 6px; }
+    .toc a { display: inline-flex; align-items: center; min-height: 44px; font-size: 14.5px; color: var(--ink-2); text-decoration: underline; text-decoration-color: transparent; text-underline-offset: 6px; transition: color .2s, text-decoration-color .2s; }
+    .toc a:hover { color: var(--ink); text-decoration-color: var(--accent); }
+    .cs__what { margin-top: 56px; display: grid; gap: 22px; }
+    .cs__what .eyebrow { margin: 0; font-weight: 400; letter-spacing: 0; line-height: 1.4; }
+    .steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+    .steps li { display: grid; gap: 8px; align-content: start; }
+    .steps figure { margin: 0 0 8px; border-radius: 16px; overflow: hidden; aspect-ratio: 4 / 3; background: #0c1128; }
+    .steps img { width: 100%; height: 100%; object-fit: cover; }
+    .steps h3 { font-size: 18px; font-weight: 400; letter-spacing: -0.015em; }
+    .steps p { font-size: 15px; font-weight: 300; line-height: 1.6; color: var(--ink-2); }
+    @media (max-width: 760px) { .steps { grid-template-columns: 1fr; gap: 32px; } }
+    .cs__rq { margin-top: 56px; padding-top: 28px; border-top: 1px solid var(--line-2); display: grid; gap: 24px; max-width: 980px; }
+    .cs__rq:focus { outline: none; }
+    .cs__rq .eyebrow { margin: 0; font-weight: 400; letter-spacing: 0; line-height: 1.4; }
     @media (max-width: 760px) {
       .flow__wide { display: none; }
       .flow__mobile { display: block; }
@@ -101,25 +119,64 @@
   </style>
 </head>
 <body class="cs">
+  <a class="skip" href="#research-q">Skip to content</a>
   <div class="sky" aria-hidden="true"></div>
 
   <header class="bar">
-    <a class="mark" href="../" aria-label="Alex Uamai, home">AU</a>
+    <a class="mark" href="../" aria-label="AU, home">AU</a>
     <nav class="nav" aria-label="Page">
-      <a class="pill pill--ghost pill--sm" href="../#projects">&larr; All projects</a>
+      <a class="pill pill--ghost pill--sm" href="../">&larr; Home</a>
     </nav>
   </header>
 
   <main id="top">
     <section class="cs__hero">
-      <p class="eyebrow">Project · Build log</p>
+      <p class="eyebrow">Research project · Build log</p>
       <h1 class="hero__title">Poundo Robot</h1>
       <p class="hero__lede">A robot arm that learns to turn poundo yam from videos of people making it.</p>
       <p class="cs__status"><i aria-hidden="true"></i>Started 19 Oct 2026 · Setup done · Next: understanding the task</p>
+      <nav class="toc" aria-label="On this page">
+        <a href="#problem">Problem</a><a href="#goal">Goal</a><a href="#approach">Approach</a><a href="#roadmap">Roadmap</a><a href="#decisions">Decisions</a><a href="#log">Build log</a><a href="#questions">Questions</a><a href="#credits">Credits</a>
+      </nav>
+    </section>
+
+    <section class="cs__what" aria-labelledby="what-label">
+      <h2 class="eyebrow" id="what-label">Poundo, in three pictures</h2>
+      <ol class="steps">
+        <li>
+          <figure><img src="../Images/thumbs/pounded-yam-egusi.webp" width="800" height="600" alt="A plate of pounded yam, smooth and white, beside egusi soup" decoding="async" /></figure>
+          <span class="research__n">01</span>
+          <h3>What it is</h3>
+          <p>Pounded yam: a smooth, stretchy West African staple, eaten with soups like egusi. Poundo is the everyday version, made from yam flour.</p>
+        </li>
+        <li>
+          <figure><img src="../Images/thumbs/pounding-yam-mortar.webp" width="800" height="600" alt="Two people pounding boiled yam in a wooden mortar with a long pestle" loading="lazy" decoding="async" /></figure>
+          <span class="research__n">02</span>
+          <h3>How it&rsquo;s made by hand</h3>
+          <p>Boiled yam is pounded in a mortar; poundo flour is stirred into hot water. Either way it&rsquo;s turned hard until smooth: hot, heavy, repetitive work.</p>
+        </li>
+        <li>
+          <figure><img src="../Images/thumbs/turning-yam-mortar.webp" width="800" height="600" alt="A wooden pestle turning yam in a mortar, with a pot of boiled yam beside it" loading="lazy" decoding="async" /></figure>
+          <span class="research__n">03</span>
+          <h3>What the robot has to learn</h3>
+          <p>The turn: a stick pushing through dough that starts loose and ends thick and sticky, with a resistance that keeps changing.</p>
+        </li>
+      </ol>
+      <p class="credit">Photos: <a href="https://commons.wikimedia.org/wiki/File:Pounded_yam_and_egusi_soup.jpg" target="_blank" rel="noopener">Kambai Akau</a>, <a href="https://commons.wikimedia.org/wiki/File:Pounding_of_boiled_yam_into_pounded_yam_food.jpg" target="_blank" rel="noopener">HarunaSylvester</a>, <a href="https://commons.wikimedia.org/wiki/File:Turning_Yam_While_Pounding_on_%E1%BB%8Ck%E1%BB%A5.jpg" target="_blank" rel="noopener">Johnnybam</a>, <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>, via Wikimedia Commons, cropped.</p>
+    </section>
+
+    <section class="cs__rq" id="research-q" tabindex="-1" aria-labelledby="rq-label">
+      <h2 class="eyebrow" id="rq-label">Research question</h2>
+      <p class="research__q">Can a robot learn to make food from human video, and adapt to uncertain food properties like poundo&rsquo;s consistency, without a force sensor?</p>
+      <ol class="research__parts">
+        <li><span class="research__n">01</span><h3>Learn from video</h3><p>The motion comes from clips of people turning poundo. The stick-tip path is tracked and retargeted to an SO-101 arm.</p></li>
+        <li><span class="research__n">02</span><h3>Handle uncertainty</h3><p>The dough goes from loose flour and water to a thick, sticky mass, and no two pots behave the same. The robot has to adapt as the resistance changes.</p></li>
+        <li><span class="research__n">03</span><h3>No force sensor</h3><p>The robot that runs has none. A load-cell stick is used only in training, to measure what a real turn takes.</p></li>
+      </ol>
     </section>
 
     <figure class="card cs__shot">
-      <img src="../Images/so101-mujoco-control.webp" alt="SO-101 robot arm in the MuJoCo simulator with its joint control panel" decoding="async" />
+      <img src="../Images/so101-mujoco-control.webp" width="1400" height="825" alt="SO-101 robot arm in the MuJoCo simulator with its joint control panel" decoding="async" fetchpriority="high" />
       <figcaption>The SO-101 arm running in MuJoCo on my own machine, with its joint control panel.</figcaption>
     </figure>
 
@@ -342,6 +399,7 @@
         <p><a href="https://github.com/google-deepmind/mujoco" target="_blank" rel="noopener">MuJoCo</a>, the physics simulator the arm runs in.</p>
         <p><a href="https://github.com/huggingface/lerobot" target="_blank" rel="noopener">LeRobot</a> by Hugging Face, for robot learning and the SO-101 integration.</p>
         <p><a href="https://voxel51.com" target="_blank" rel="noopener">FiftyOne</a> by Voxel51, for curating the video clips.</p>
+        <p>Poundo photos from Wikimedia Commons under <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>, cropped: <a href="https://commons.wikimedia.org/wiki/File:Pounded_yam_and_egusi_soup.jpg" target="_blank" rel="noopener">pounded yam and egusi soup</a> by Kambai Akau; <a href="https://commons.wikimedia.org/wiki/File:Pounding_of_boiled_yam_into_pounded_yam_food.jpg" target="_blank" rel="noopener">pounding boiled yam</a> by HarunaSylvester; <a href="https://commons.wikimedia.org/wiki/File:Turning_Yam_While_Pounding_on_%E1%BB%8Ck%E1%BB%A5.jpg" target="_blank" rel="noopener">turning yam while pounding</a> by Johnnybam.</p>
       </div>
     </section>
 
@@ -352,8 +410,17 @@
   </main>
 
   <footer class="foot">
-    <span>Alex Uamai</span>
-    <span class="foot__mono">Vancouver, BC · <a href="https://github.com/auamai" rel="noopener">github.com/auamai</a></span>
+    <div class="foot__id">
+      <span class="foot__name">Alex Uamai</span>
+      <span>Mechatronics Engineer · Vancouver, BC</span>
+    </div>
+    <ul class="foot__links">
+      <li><a href="https://calendar.app.google/bqcfSxu2rGQ8mgnq5" target="_blank" rel="noopener">Book a virtual coffee</a></li>
+      <li><a href="mailto:ighodarouamai@gmail.com">Email</a></li>
+      <li><a href="https://linkedin.com/in/alex-uamai" target="_blank" rel="noopener">LinkedIn</a></li>
+      <li><a href="https://github.com/auamai" target="_blank" rel="noopener">GitHub</a></li>
+      <li><a href="../pdf-files/Alex%20Uamai%20Resume.pdf?v=20261020r5" target="_blank" rel="noopener">Resume</a></li>
+    </ul>
   </footer>
 </body>
 </html>
