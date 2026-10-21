@@ -7,7 +7,7 @@ import { fmt, RNG, LOOT, clock } from "./util.js?v=20261020r6c";
 
 export class Run {
   freshFx() {
-    return { magnet: 0, drill: 0, hammer: 0, gold: 0, goldAge: 0, over: 0, meter: 0, smashCredit: 0, swing: 0, stop: 0, hitFlash: 0 };
+    return { magnet: 0, drill: 0, hammer: 0, gold: 0, goldAge: 0, goldStep: 2, over: 0, meter: 0, smashCredit: 0, swing: 0, stop: 0, hitFlash: 0 };
   }
 
   // Combined multiplier: rolling ×1.5, golden ×2 climbing to ×5, overdrive ×2; capped at ×6.
@@ -30,7 +30,7 @@ export class Run {
     // The golden torque wrench (r6 to r6b: this branch sat behind `else` and never ran, so the wrench
     // gave no multiplier and the next one never spawned).
     if (k === "gold") {
-      f.gold = GOLD_T; f.goldAge = 0; this.goldOut = false;
+      f.gold = GOLD_T; f.goldAge = 0; f.goldStep = 2; this.goldOut = false;
       if (this.pbGoldAt != null && this.runTime >= this.pbGoldAt) this.pbGoldAt = null;
       this.nextGold = this.runTime + GOLD_MIN + LOOT() * (GOLD_MAX - GOLD_MIN);
     }
@@ -84,7 +84,15 @@ export class Run {
   updateFx(dt) {
     const f = this.fx;
     for (const k of ["magnet", "drill", "hammer", "over"]) if (f[k] > 0) f[k] = Math.max(0, f[k] - dt);
-    if (f.gold > 0) { f.gold = Math.max(0, f.gold - dt); f.goldAge += dt; this.stat.goldT += dt; }
+    if (f.gold > 0) {
+      f.gold = Math.max(0, f.gold - dt); f.goldAge += dt; this.stat.goldT += dt;
+      // Each step up the golden ladder (×3, ×4, ×5) and the clean finish are called out: a pop over the
+      // runner plus a tick (sound) or a buzz, so the multiplier you're protecting is felt, not just read.
+      const step = Math.min(5, 2 + Math.floor(f.goldAge));
+      if (f.gold <= 0) { this.pop("×1", { x: this.r.x, y: 1.6, z: 0 }); this.buzz(8); this.sr("Golden multiplier over."); }
+      else if (step > (f.goldStep || 2)) { this.pop(`×${step}`, { x: this.r.x, y: 1.9, z: 0 }, true); this.sfx("gear", this.r.x); this.buzz(6); }
+      f.goldStep = step;
+    }
     if (f.swing > 0) f.swing = Math.max(0, f.swing - dt);
     if (!f.drill && !f.hammer) f.smashCredit = 0;
     const d = this.driftS;
