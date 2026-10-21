@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-5AgWD5gg2O0katLPS0tTlO+m4pWElLcBQVGYYxBhvtk='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://api.auamai.dev; media-src 'self' data: blob:; manifest-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'self'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://static.cloudflareinsights.com 'sha256-5AgWD5gg2O0katLPS0tTlO+m4pWElLcBQVGYYxBhvtk='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://api.auamai.dev https://cloudflareinsights.com; media-src 'self' data: blob:; manifest-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'self'" />
   <!-- One import map: three.js is mapped to its minified build (same r160 release, ~66 KB less over the wire) and that
        file is pinned by Subresource Integrity. The CSP above allows this exact map by its sha256; if the map or the
        three.js version changes, update the SRI hash here and on the modulepreload below, and the CSP sha256 here and in _headers. -->

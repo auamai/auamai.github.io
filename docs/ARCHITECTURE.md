@@ -815,11 +815,15 @@ The fallback in `handleScore` and `handleTop` runs only when `noColumn(e)` match
 ### Static site
 
 - **CSP** (meta in `index.html` for GitHub Pages, header in `_headers` for Cloudflare):
-  `default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-<import map>'; style-src 'self' 'unsafe-inline';
-  img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://api.auamai.dev; media-src 'self' data: blob:;
+  `default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://static.cloudflareinsights.com 'sha256-<import map>';
+  style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self';
+  connect-src 'self' https://api.auamai.dev https://cloudflareinsights.com; media-src 'self' data: blob:;
   manifest-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'self'`, plus
   `frame-ancestors 'self'` in the header only. `style-src` keeps `'unsafe-inline'` because the UI sets inline styles.
   No inline script: the boot code lives in `boot.js`; the import map is allowed by its sha256.
+  `static.cloudflareinsights.com` (script) and `cloudflareinsights.com` (beacon POST) are allowed because Cloudflare
+  Web Analytics on servosprint.xyz injects its beacon into the page at the edge; without them every page load logs a
+  CSP error. If Web Analytics is turned off for the zone, these two sources can be removed.
 - **SRI:** three.js 0.160.0 pinned by `integrity` in the import map. A wrong hash shows the boot error screen.
 - **Headers** (`_headers`, every path): `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`,
   `X-Frame-Options: SAMEORIGIN`, `Strict-Transport-Security: max-age=31536000; includeSubDomains` (no preload),
