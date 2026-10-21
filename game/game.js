@@ -58,7 +58,8 @@ class Game {
     this.challenge = MT.readChallenge();
     this.dailyLink = new URLSearchParams(location.search).has("daily");
     this.mode = this.challenge ? "challenge" : this.dailyLink ? "daily" : "free";
-    this.reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // Reduced motion follows the OS setting until the player flips "Reduce motion" in Settings (saved as settings.still).
+    this.reduceMotion = typeof this.settings.still === "boolean" ? this.settings.still : matchMedia("(prefers-reduced-motion: reduce)").matches;
     this.coarse = matchMedia("(pointer: coarse)").matches;
     this.canBuzz = typeof navigator.vibrate === "function" && this.coarse;
     // Lighter robot shaders from the start on small, low-memory phones; others switch when quality drops.

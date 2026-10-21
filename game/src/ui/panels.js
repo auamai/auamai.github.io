@@ -134,6 +134,15 @@ export class Panels {
     if (t) t.focus({ preventScroll: true });
   }
 
+  // Reduce motion, live: no camera shake, hit-stop, hint slow-mo, count-up, 3D hint bob or CSS motion.
+  setStill(on) {
+    this.reduceMotion = !!on;
+    this.settings.still = this.reduceMotion; P.setSetting("still", this.reduceMotion);
+    this.root.classList.toggle("is-still", this.reduceMotion);
+    if (this.ui) this.ui.still = this.reduceMotion;
+    if (this.reduceMotion) this.shake = 0;
+  }
+
   hidePanel() {
     this.layer.hidden = true;
     this.layer.dataset.view = "";
@@ -191,11 +200,11 @@ export class Panels {
   }
 
   settingsHtml() {
-    const t = (key, label) => `<button class="fr__toggle" type="button" data-panel="toggle" data-key="${key}" aria-pressed="${this.settings[key] ? "true" : "false"}"><span class="fr__switch" aria-hidden="true"></span>${label}</button>`;
+    const t = (key, label) => `<button class="fr__toggle" type="button" data-panel="toggle" data-key="${key}" aria-pressed="${(key === "still" ? this.reduceMotion : this.settings[key]) ? "true" : "false"}"><span class="fr__switch" aria-hidden="true"></span>${label}</button>`;
     const items = [t("pad", "Control wheel"), t("lefty", "Wheel on the left")];
     if (this.canBuzz) items.push(t("haptics", "Vibration"));
     const vol = (key, label) => `<label class="fr__vol"><span>${label}</span><input type="range" min="0" max="100" step="5" data-vol="${key}" value="${Math.round((this.settings[key] ?? (key === "musicVol" ? 0.7 : 0.8)) * 100)}" aria-label="${label} volume" /></label>`;
-    items.push(t("music", "Music"), vol("musicVol", "Music"), t("sfx", "Sound effects"), vol("sfxVol", "Effects"));
+    items.push(t("music", "Music"), vol("musicVol", "Music"), t("sfx", "Sound effects"), vol("sfxVol", "Effects"), t("still", "Reduce motion"));
     return `<div class="fr__settings">${items.join("")}</div>`;
   }
 
@@ -659,6 +668,10 @@ export class Panels {
       this.settings.trim = b.dataset.trim; P.setSetting("trim", b.dataset.trim);
       this.applyTrim();
       this.panel.querySelectorAll("[data-panel=trim]").forEach((x) => x.setAttribute("aria-pressed", x === b ? "true" : "false"));
+    }
+    else if (a === "toggle" && b.dataset.key === "still") {
+      this.setStill(!this.reduceMotion);
+      b.setAttribute("aria-pressed", this.reduceMotion ? "true" : "false");
     }
     else if (a === "toggle") {
       const k = b.dataset.key;
