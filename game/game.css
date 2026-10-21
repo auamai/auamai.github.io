@@ -685,3 +685,10 @@ html.fr-open, html.fr-open body { overscroll-behavior: none; }
 /* Every keyboard stop shows the same cyan ring, including the board tabs, badge buttons and sliders
    (they fell back to the browser's near-black ring, invisible on graphite). */
 .fr :where(button, input, a[href]):focus-visible { outline: 2px solid var(--ss-cyan); outline-offset: 2px; }
+/* Touch targets at least 44 px tall. Text links and switches grow invisibly (no border, so nothing moves visually);
+   the compact tabs, badge buttons and Garage buttons keep their look and get a 44 px hit area instead. */
+.fr__link, .fr__toggle, .fr__save .fr__link { min-height: 44px; }
+.fr__tab, .fr__medalbtn, .fr__btn--sm { position: relative; }
+.fr__tab::after, .fr__medalbtn::after, .fr__btn--sm::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%); }
+.fr__medals { row-gap: 14px; }
+.fr__vol input[type="range"] { height: 44px; margin: 0; }
