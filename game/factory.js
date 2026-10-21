@@ -3,12 +3,14 @@
 // pooled and recycled along the run, so the whole hall costs a few dozen
 // draw calls. Nothing here ever enters the three lanes (|x| < 5.2).
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
+import { BEND } from "./src/world/track.js?v=20261021r8";
 
 export const HALF = 16;      // hall half-width (wall plane)
 export const ROOF = 9;       // ceiling height
 const SEG = 24;              // one zone per 24 units, per side
 const NSLOT = 8;             // 8 x 24 = 192 units of hall per side
 const IN = 5.6;              // zones start here (the line's rails end at ~5.1)
+const FOGX = [IN, HALF + 30], FOGY = [0, ROOF]; // a zone's near face, for the fog test
 
 export const C = {
   white: 0xeef1f7, white2: 0xe2e6ef, steel: 0xc6ccda, steel2: 0xa9b0c3, steel3: 0x8a92aa,
@@ -360,6 +362,7 @@ const CAR_BODY = carPart([[-2.0, 0.32], [2.0, 0.32], [2.08, 0.62], [1.7, 0.86], 
 const CAR_CAB = carPart([[-1.15, 0.95], [1.0, 0.95], [0.45, 1.42], [-0.95, 1.44]], 1.5, 0.08);
 const CAR_ROOF = carPart([[-0.98, 1.4], [0.5, 1.4], [0.42, 1.5], [-0.92, 1.5]], 1.44, 0.04);
 
+export const ZONE_TYPES = Object.keys(ZONES);
 const WEIGHTS = { assembly: 3, inventory: 3, test: 2.2, weld: 2.2, laser: 2.2, window: 1.3, door: 0.8 };
 
 // A soft round dot drawn on a tiny canvas, so sparks read as glints, not squares.
@@ -399,10 +402,11 @@ export class Factory {
     this.pools = {};
     this.quality = 0;
     this.buildShell();
+    this.buildBatches();
     this.slots = [];
     this.last = [null, null];
     for (const side of [1, -1]) for (let i = 0; i < NSLOT; i++) {
-      const slot = { side, z: 12 - i * SEG, type: null, inst: null };
+      const slot = { side, z: 12 - i * SEG, type: null, inst: null, ri: i, lineAt: null };
       this.slots.push(slot);
       this.assign(slot);
     }
@@ -464,15 +468,10 @@ export class Factory {
     const got = pool.pop();
     if (got) { got.group.visible = true; return got; }
     const t = this.template(type), M = this.M;
+    // The zone's static mesh, glow, glass and outline are drawn in batches (buildBatches); the group only
+    // carries the moving parts (sparks, gantry, lamps, test arm).
     const group = new THREE.Group();
-    group.add(new THREE.Mesh(t.solid, M.solid));
-    if (t.glow) group.add(new THREE.Mesh(t.glow, M.glow));
-    const edges = new THREE.LineSegments(t.edges, M.edge);
-    group.add(edges);
-    const inst = { type, group, edges, anim: null };
-
-    if (t.glass) group.add(new THREE.Mesh(t.glass, M.glass));
-    if (t.screen) group.add(new THREE.Mesh(t.screen, M.screen));
+    const inst = { type, group, anim: null };
     if (type === "weld") {
       const sparks = [];
       for (const [z] of [[-6], [5.5]]) {
@@ -557,6 +556,95 @@ export class Factory {
     return inst;
   }
 
+  /* ---------- batches: one draw per zone type and side, one outline set per side ---------- */
+  // Zone pieces never move inside a zone, so every zone of a type on a side is one InstancedMesh (the side's
+  // mirror is the mesh's own scale.x, so winding stays right), and each side's outlines are one LineSegments
+  // with a fixed region per slot, rewritten only when a slot comes back into view with its new zone.
+  // Both happen in model space, so the world bend (track.js) curves them exactly as before.
+  buildBatches() {
+    this.travel = 0; this.batchList = []; this.parts = {};
+    const M = this.M;
+    for (const type of ZONE_TYPES) {
+      const t = this.template(type);
+      for (const side of [1, -1]) {
+        const list = [];
+        for (const [k, geo, mat] of [["solid", t.solid, M.solid], ["glow", t.glow, M.glow], ["glass", t.glass, M.glass], ["screen", t.screen, M.screen]]) {
+          if (!geo) continue;
+          const im = new THREE.InstancedMesh(geo, mat, NSLOT);
+          im.scale.x = side; im.count = 0; im.visible = false; im.frustumCulled = false;
+          im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+          // Transparent sort point: the first zone drawn this frame, as when each zone was its own mesh.
+          if (!geo.boundingSphere) geo.computeBoundingSphere();
+          im.boundingSphere = geo.boundingSphere.clone(); im.userData = { c: geo.boundingSphere.center.z, solid: k === "solid" };
+          this.scene.add(im); this.batchList.push(im); list.push(im);
+        }
+        (this.parts[type] ||= {})[side] = list;
+      }
+    }
+    this.lineCap = Math.max(...ZONE_TYPES.map((k) => this.templates[k].edges.attributes.position.count));
+  }
+
+  // Lazily (only when outlines are on): one LineSegments per side, NSLOT regions of lineCap vertices.
+  buildLines() {
+    this.lines = [1, -1].map((side) => {
+      const g = new THREE.BufferGeometry(), a = new Float32Array(NSLOT * this.lineCap * 3).fill(-1e4);
+      g.setAttribute("position", new THREE.BufferAttribute(a, 3).setUsage(THREE.DynamicDrawUsage));
+      g.boundingSphere = new THREE.Sphere(new THREE.Vector3(10.5, 3, -60), 1e4); // sorts with the far half of the hall
+      const L = new THREE.LineSegments(g, this.M.edge);
+      L.scale.x = side; L.frustumCulled = false; L.userData.ssTess = 1; // already in zone-sized pieces: never re-sliced
+      this.scene.add(L);
+      return L;
+    });
+  }
+
+  writeLine(slot) {
+    const attr = this.lines[slot.side > 0 ? 0 : 1].geometry.attributes.position, a = attr.array;
+    const src = this.templates[slot.type].edges.attributes.position.array, cap = this.lineCap * 3;
+    const o = slot.ri * cap, dz = slot.z - this.travel;
+    for (let i = 0; i < src.length; i += 3) { a[o + i] = src[i]; a[o + i + 1] = src[i + 1]; a[o + i + 2] = src[i + 2] + dz; }
+    a.fill(-1e4, o + src.length, o + cap);
+    attr.addUpdateRange(o, cap); attr.needsUpdate = true;
+    slot.lineAt = 1;
+  }
+
+  // Wholly past the fog's far edge, every pixel of a zone is the flat fog colour: the silhouette (its solid
+  // batch) is enough, so the glow, glass, outline and moving parts are skipped. The view depth of the slot's
+  // near face, bent the way the vertex shader bends it, at its four corners (fog reads view depth).
+  fogged(slot, cam, far) {
+    const e = cam.matrixWorldInverse.elements, B = BEND.value, zs = slot.z + SEG / 2;
+    const d = Math.max(0, -zs - B.z), bx = B.x * d * d, by = B.y * d * d;
+    let m = Infinity;
+    for (const x of FOGX) for (const y of FOGY) {
+      const px = x * slot.side + bx, py = y + by;
+      m = Math.min(m, -(e[2] * px + e[6] * py + e[10] * zs + e[14]));
+    }
+    return m > far + 4;
+  }
+
+  // Before each render (scene.onBeforeRender, chained in render.js): instance offsets, visibility, outlines.
+  sync(cam) {
+    for (const b of this.batchList) b.count = 0;
+    const far = this.scene.fog ? this.scene.fog.far : Infinity, lines = this.quality < 2 && !this.noEdges;
+    if (lines && !this.lines) this.buildLines();
+    if (this.lines) {
+      if (this.travel > 8192) { this.travel -= 8192; for (const s of this.slots) s.lineAt = null; } // keeps float32 offsets small
+      for (const L of this.lines) { L.visible = lines; L.position.z = this.travel; }
+    }
+    for (const slot of this.slots) {
+      const vis = slot.z > -156, fog = vis && this.fogged(slot, cam, far); // past -156 a zone sits wholly in the fog
+      slot.inst.group.visible = vis && !fog;
+      if (!vis) continue;
+      if (lines && slot.lineAt === null) this.writeLine(slot);
+      for (const im of this.parts[slot.type][slot.side]) {
+        if (fog && !im.userData.solid) continue;
+        const n = im.count++;
+        im.instanceMatrix.array[n * 16 + 14] = slot.z;
+        if (!n) im.boundingSphere.center.z = im.userData.c + slot.z;
+      }
+    }
+    for (const b of this.batchList) { b.visible = b.count > 0; if (b.visible) b.instanceMatrix.needsUpdate = true; }
+  }
+
   pickType(slot) {
     const other = this.slots.find((s) => s !== slot && s.side !== slot.side && Math.abs(s.z - slot.z) < SEG / 2);
     const prev = this.last[slot.side > 0 ? 0 : 1];
@@ -575,16 +663,16 @@ export class Factory {
     slot.inst = this.instance(type);
     slot.inst.group.scale.x = slot.side;
     slot.inst.group.position.z = slot.z;
-    slot.inst.edges.visible = this.quality < 2 && !this.noEdges;
+    slot.lineAt = null; // its outline region is rewritten when it comes into view
     this.last[slot.side > 0 ? 0 : 1] = type;
   }
 
   update(dt, v, t) {
+    this.travel += v * dt;
     for (const slot of this.slots) {
       slot.z += v * dt;
       if (slot.z - SEG / 2 > 10) { slot.z -= NSLOT * SEG; this.assign(slot); }
       slot.inst.group.position.z = slot.z;
-      slot.inst.group.visible = slot.z > -156;   // the farthest one sits wholly in the fog
       if (slot.inst.anim && slot.z > -120 && slot.z < 22) slot.inst.anim(dt, t);
     }
   }
@@ -598,12 +686,7 @@ export class Factory {
     }
   }
 
-  setQuality(q) {
-    this.quality = q;
-    const on = q < 2 && !this.noEdges;
-    for (const s of this.slots) s.inst.edges.visible = on;
-    for (const pool of Object.values(this.pools)) for (const i of pool) i.edges.visible = on;
-  }
+  setQuality(q) { this.quality = q; } // outlines follow it in sync()
 
   dispose() {
     for (const g of this.geos) g.dispose();
@@ -611,7 +694,8 @@ export class Factory {
     this.M.spark.map?.dispose();
     for (const m of Object.values(this.M)) m.dispose?.();
     for (const s of this.shell) { s.geometry.dispose(); s.material.dispose(); }
+    for (const L of this.lines || []) L.geometry.dispose();
+    for (const b of this.batchList) b.dispose();
   }
 }
 
-export const ZONE_TYPES = Object.keys(ZONES);
