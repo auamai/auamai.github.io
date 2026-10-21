@@ -169,7 +169,7 @@ five and you get **Overdrive**.
 | --- | --- | --- | --- |
 | **Wrench magnet** | Wrench | 6 s | Pulls gears and screws to you from every lane, a short way ahead |
 | **Drill** | Drill | 5 s | Bore straight through robot arms (+50 each) |
-| **Hammer** | Hammer | 6 s | Smash crates, stacks and rovers (+75 each). The world holds for a split second on each hit |
+| **Hammer** | Hammer | 6 s | Smash crates, stacks and rovers (+75 each). The world holds for a split second on each hit. Machines of the line can't be smashed |
 | **Golden torque wrench** | Gold wrench | 10 s | ×2 rising to ×5 while you stay clean (see [Multipliers](#multipliers)). The next one comes 60 to 120 s later, or 2.5 s after you pass your best |
 | **Overdrive** | Full toolbox meter | 8 s | ×2 on everything |
 | **Wheel token → Roller Mode** | Wheel | 8 s | You turn into the UL-W1 roller (see below) |
@@ -262,6 +262,8 @@ Each zone has its own machine. You meet it alone first on a roomy stretch, then 
 | Chip Fab | Wafer conveyor | Cyan chevrons push you one lane the way they point. Jump over it to stay in your lane. |
 | Night Port | Gantry crane | A container hangs over a marked bay. The marking turns yellow, then the container drops ahead of you. Jump it like a crate or go round. |
 | Rocket Factory | Engine test fire | A wall engine glows for 0.7 s, then fires across one lane (two lanes later in the zone). The yellow line on the floor shows how far it reaches. |
+
+**Machines can't be smashed.** The hammer and the drill only work on crates, stacks, rovers and robot arms; against a door, press, conveyor, crane or test fire they do nothing, so read the lamp and pick your lane. Invulnerable moments (a morph, ramp flight, the landing roll, a Spare Servo reboot) still carry you through, and a Spare Servo reboot clears machines just ahead.
 
 **Close shave:** get through a press or past a test fire within a quarter of a second of it going off and you earn +40 and a notch on the Overdrive meter.
 

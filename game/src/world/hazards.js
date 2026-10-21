@@ -10,7 +10,7 @@
 // Every hazard is pure sim state (lane, z, a phase from the COURSE stream, the run clock), so replays and the
 // Daily Run stay deterministic; classic (v1) and v2 courses never call any of this. Drawing: every part of every
 // set piece is one box instance in one of two InstancedMeshes (lit body, unlit glow), so the whole feature costs
-// at most 3 draw calls (body, glow, body shadow) whatever is on screen, and no per-frame allocation.
+// at most 3 draw calls (body, glow, body shadow) whatever is on screen, 0 when none is, and no per-frame allocation.
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
 import { LANES, SPAWN_Z, DESPAWN_Z, REVIVE_CLEAR } from "../core/constants.js?v=20261021r8";
 import { COURSE, pick, shuffle } from "../core/util.js?v=20261021r8";
@@ -43,7 +43,9 @@ export class Hazards {
     const body = new THREE.InstancedMesh(BOX, new THREE.MeshLambertMaterial({ color: 0xffffff, flatShading: true }), N_BODY);
     const glow = new THREE.InstancedMesh(BOX, new THREE.MeshBasicMaterial({ color: 0xffffff }), N_GLOW);
     for (const m of [body, glow]) { m.count = 0; m.frustumCulled = false; m.setColorAt(0, C.w); m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); this.scene.add(m); }
-    body.castShadow = true;
+    // Shadows: the machined body casts (one extra shadow draw while a set piece is near); lamps, chevrons and flames
+    // are light, not matter, so the glow mesh never casts or receives.
+    body.castShadow = true; glow.castShadow = false; glow.receiveShadow = false;
     this.hzMesh = { body, glow, nb: 0, ng: 0 };
     this.hz = []; this.hzPool = [];
   }
@@ -249,6 +251,8 @@ export class Hazards {
       }
     }
     M.body.count = M.nb; M.glow.count = M.ng;
+    // Nothing on screen: hide both meshes so they cost no draw call (main or shadow) between set pieces.
+    M.body.visible = M.nb > 0; M.glow.visible = M.ng > 0;
     M.body.instanceMatrix.needsUpdate = M.body.instanceColor.needsUpdate = true;
     M.glow.instanceMatrix.needsUpdate = M.glow.instanceColor.needsUpdate = true;
   }
