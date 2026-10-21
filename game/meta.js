@@ -137,7 +137,7 @@ export function missionsApply(list, stats, rnd) {
 export const missionInfo = (m) => ({ ...mDef(m.id), prog: m.prog });
 // "12 / 50", "640 / 1,000 m", "×2.4 / ×3": progress a player can read at a glance.
 export function missionProg(m) {
-  const d = missionInfo(m), u = mUnit[d.stat] || "", p = Math.min(d.prog, d.goal);
+  const d = missionInfo(m), u = mUnit[d.stat] || "", p = Math.min(d.stat === "mult" ? Math.max(1, d.prog) : d.prog, d.goal);
   const n = (v) => (d.stat === "mult" ? (Math.floor(v * 10) / 10).toString() : fmtN(v));
   return u === "×" ? `×${n(p)} / ×${n(d.goal)}` : `${n(p)} / ${n(d.goal)}${u}`;
 }

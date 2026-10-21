@@ -16,7 +16,7 @@ let r = MT.missionsApply([{ id: "dist1k", prog: 600 }, { id: "slide15", prog: 14
 ok(r.done.map((d) => d.id).sort().join() === "mult3,slide15" && r.list.find((m) => m.id === "dist1k").prog === 900 && r.list.length === 3, "one-run goals take the best run, totals add up, finished ones replaced", r);
 r = MT.missionsApply(MT.STARTER_LIST(), { jumps: 4, slides: 2, gearsRun: 11 });
 ok(r.done.length === 3 && r.done.reduce((a, d) => a + d.reward, 0) === 70 && r.list.every((m) => MT.missionInfo(m).kind !== "start"), "starter missions finish in one ordinary first run (+70) and never come back", r);
-ok(MT.missionProg({ id: "dist1k", prog: 640 }) === "640 / 1,000 m" && MT.missionProg({ id: "mult3", prog: 2.46 }) === "×2.4 / ×3" && MT.missionProg({ id: "screw50", prog: 70 }) === "50 / 50", "progress reads in numbers");
+ok(MT.missionProg({ id: "dist1k", prog: 640 }) === "640 / 1,000 m" && MT.missionProg({ id: "mult3", prog: 2.46 }) === "×2.4 / ×3" && MT.missionProg({ id: "mult3", prog: 0 }) === "×1 / ×3" && MT.missionProg({ id: "screw50", prog: 70 }) === "50 / 50", "progress reads in numbers");
 // reroll
 const L = [{ id: "jump30", prog: 5 }, { id: "gear60", prog: 0 }, { id: "dist4k", prog: 0 }];
 const a = MT.reroll(L, 0, null, "2026-10-21");
