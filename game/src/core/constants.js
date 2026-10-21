@@ -83,7 +83,9 @@ export const SCRAP_POINTS = 25;     // Clean Break (golden + hammer/drill): ever
 // Flow: style moves and clean pickups charge a meter; its level (1-5) multiplies style points only.
 // It never drains on a miss, it only cools after FLOW_IDLE seconds without a move, so beginners lose nothing.
 export const FLOW_MAX = 100, FLOW_LVL = 20, FLOW_IDLE = 2.2, FLOW_COOL = 14; // charge per level; cools at 14/s once idle
-export const FLOW_ADD = { gear: 2, screw: 3, tool: 10, clear: 9, near: 14, weave: 10, smash: 8, drift: 10, grind: 6 };
+export const FLOW_ADD = { gear: 1, screw: 2, tool: 8, clear: 9, near: 14, weave: 10, smash: 6, drift: 10, grind: 4 };
+export const FLOW_STYLE = new Set(["clear", "near", "weave"]); // pickups alone can charge flow to ×3 (FLOW_PICK); style moves take it to ×5
+export const FLOW_PICK = 59;
 export const STYLE_POINTS = { clear: 5, near: 10, weave: 15 }; // times FLOW_K[level - 1]
 export const FLOW_K = [1, 1.5, 2, 2.5, 3];
 export const STYLE_NAME = { clear: "Clean", near: "Near miss", weave: "Weave" };
@@ -91,6 +93,7 @@ export const NEAR_T = 0.42;         // a lane change this soon before an obstacl
 export const CLEAR_T = 0.55;        // a jump or slide this soon before an obstacle in your lane is a clean clear
 export const WEAVE_T = 1.6;         // two near misses this close together, opposite ways, are a weave
 export const ZONE_POINTS = 150;     // reaching Flow 5 ("In the zone"); re-arms once flow falls below 3
+export const ZONE_AGAIN = 45;       // ...or after this long held in the zone ("Still in the zone"), so a long clean run gets its big beat again
 export const MARK_FAR = -100, MARK_NEAR = -40; // incoming power-up markers show for pickups in this stretch
 export const SLOW_T = 1.2;          // first-run hint slow-mo: real seconds, eased in and out
 export const SLOW_K = 0.4;          // game speed at the bottom of the slow-mo

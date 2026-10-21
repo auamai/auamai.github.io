@@ -720,7 +720,7 @@ Everything is pooled (obstacles, gears, tools, rails, ramps, debris, popups); 3D
 | Hammer through crate, stack or rover | `75 x mult` |
 | Drift combo cash-out | `pool x (DRIFT_MULT[level] - 1)`, `DRIFT_MULT = [1, 1.2, 1.4, 1.6]` |
 | Style: clean / near miss / weave | `STYLE_POINTS = {clear 5, near 10, weave 15} x FLOW_K[lvl - 1]`, `FLOW_K = [1, 1.5, 2, 2.5, 3]` (not times `mult`) |
-| In the zone (flow level 5) | `ZONE_POINTS` 150, re-armed when `flow.lvl < 3` |
+| In the zone (flow level 5) | `ZONE_POINTS` 150, re-armed when `flow.lvl < 3` or after `ZONE_AGAIN` 45 s |
 | Bumper knock | `BUMP_POINTS 75 x mult` |
 | Clean break (first smash while golden) | `SCRAP_POINTS 25 x mult`, golden kept |
 
@@ -730,8 +730,10 @@ All sim-side (`run.js` `flowAdd` / `style` / `zone` / `updateFlow` / `bump`, `lo
 by seeded state and input, so replays and the Daily Run stay deterministic.
 
 - **Flow:** `flow.c` 0..`FLOW_MAX` 100, `lvl = min(5, 1 + floor(c / FLOW_LVL 20))`. Charge per event `FLOW_ADD`
-  (gear 2, screw 3, tool 10, clear 9, near 14, weave 10, smash 8, drift 10, grind 6). After `FLOW_IDLE` 2.2 s
-  without an event it cools at `FLOW_COOL` 14/s. It never resets on a miss.
+  (gear 1, screw 2, tool 8, clear 9, near 14, weave 10, smash 6, drift 10, grind 4). Non-style events cannot push
+  `c` past `FLOW_PICK` 59 (level 3); only `FLOW_STYLE` (clear, near, weave) reach level 5. After `FLOW_IDLE` 2.2 s
+  without an event it cools at `FLOW_COOL` 14/s. It never resets on a miss. The zone bonus re-arms when `lvl < 3` or
+  `ZONE_AGAIN` 45 s after the last one (then fires at once if still at level 5).
 - **Style detection** runs once per obstacle when its middle crosses z = 0 (`o.styled`), never while invulnerable
   or after contact: *clear* = same lane and a jump/slide/hop started within `CLEAR_T` 0.55 s (`r.actAt`) and the
   robot is airborne or sliding (not the roller under an arm); *near* = not in its lane, last lane change within

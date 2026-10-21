@@ -131,7 +131,8 @@ Every 20 % of charge is one level, **Flow ×1** to **Flow ×5**. Style points gr
 - Flow never drops because you missed a gear. It only cools down after about 2 s without a move, so a new
   player loses nothing and a good run keeps it hot.
 - Reaching **Flow ×5** is **In the zone**: +150, gear confetti, a chime and a buzz. It can happen again once your
-  flow has cooled below ×3.
+  flow has cooled below ×3, or every 45 s you stay in it ("Still in the zone").
+- Pickups alone (gears, screws, tools, smashes, grinds) can carry flow up to ×3; style moves take it to ×5.
 - Game over shows your peak flow and how many near misses, weaves and clean clears you made.
 
 ### Multipliers

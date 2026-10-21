@@ -2,12 +2,12 @@
 // Installed onto Game.prototype by game.js (methods use `this`, the Game).
 import * as P from "../../profile.js?v=20261021r7";
 import * as MT from "../../meta.js?v=20261021r7";
-import { START_SPEED, M_PER_U, MORPH_T, DRIVE_T, GRACE_T, DRIFT_CASH, DRIFT_MULT, RATE_CAP, OVER_LOCK, COUNT_BEAT, SCREW_POINTS, DRILL_POINTS, HAMMER_POINTS, MAGNET_T, DRILL_T, HAMMER_T, GOLD_T, OVER_T, MULT_CAP, GOLD_MIN, GOLD_MAX, METER_N, HIT_STOP, PB_GOLD_DELAY, allowedScore, TOOL_NAME, MILESTONES, CAUSE, HEADLINES, BAY, TIPS, REVIVE_T, REVIVE_CLEAR, BUMP_SLOW_T, BUMP_POINTS, SCRAP_POINTS, FLOW_MAX, FLOW_LVL, FLOW_IDLE, FLOW_COOL, FLOW_ADD, STYLE_POINTS, FLOW_K, STYLE_NAME, WEAVE_T, ZONE_POINTS } from "./constants.js?v=20261021r7";
+import { START_SPEED, M_PER_U, MORPH_T, DRIVE_T, GRACE_T, DRIFT_CASH, DRIFT_MULT, RATE_CAP, OVER_LOCK, COUNT_BEAT, SCREW_POINTS, DRILL_POINTS, HAMMER_POINTS, MAGNET_T, DRILL_T, HAMMER_T, GOLD_T, OVER_T, MULT_CAP, GOLD_MIN, GOLD_MAX, METER_N, HIT_STOP, PB_GOLD_DELAY, allowedScore, TOOL_NAME, MILESTONES, CAUSE, HEADLINES, BAY, TIPS, REVIVE_T, REVIVE_CLEAR, BUMP_SLOW_T, BUMP_POINTS, SCRAP_POINTS, FLOW_MAX, FLOW_LVL, FLOW_IDLE, FLOW_COOL, FLOW_ADD, FLOW_STYLE, FLOW_PICK, STYLE_POINTS, FLOW_K, STYLE_NAME, WEAVE_T, ZONE_POINTS, ZONE_AGAIN } from "./constants.js?v=20261021r7";
 import { fmt, RNG, LOOT, clock } from "./util.js?v=20261021r7";
 
 export class Run {
   freshFlow() {
-    return { c: 0, idle: 0, lvl: 1, armed: true, best: 1, near: 0, weave: 0, clear: 0, zones: 0, lastNear: -1e9, lastDir: 0, seen: false };
+    return { c: 0, idle: 0, lvl: 1, armed: true, zoneAt: 0, best: 1, near: 0, weave: 0, clear: 0, zones: 0, lastNear: -1e9, lastDir: 0, seen: false };
   }
 
   freshFx() {
@@ -108,7 +108,7 @@ export class Run {
   flowAdd(k) {
     const w = this.flow;
     if (!w) return;
-    w.c = Math.min(FLOW_MAX, w.c + FLOW_ADD[k]); w.idle = 0;
+    w.c = Math.min(FLOW_STYLE.has(k) ? FLOW_MAX : Math.max(w.c, FLOW_PICK), w.c + FLOW_ADD[k]); w.idle = 0;
     const lvl = Math.min(5, 1 + Math.floor(w.c / FLOW_LVL));
     if (lvl > w.best) w.best = lvl;
     w.lvl = lvl;
@@ -129,9 +129,9 @@ export class Run {
 
   zone() {
     const w = this.flow;
-    w.armed = false; w.zones++;
+    w.armed = false; w.zones++; w.zoneAt = this.runTime;
     const add = this.addScore(ZONE_POINTS);
-    this.pop(`In the zone +${Math.round(add)}`, { x: this.r.x, y: 2.4, z: 0 }, true);
+    this.pop(`${w.zones > 1 && w.lvl >= 5 && w.held ? "Still in the zone" : "In the zone"} +${Math.round(add)}`, { x: this.r.x, y: 2.4, z: 0 }, true);
     this.burst.emit("confetti", this.r.x, 1.8, -0.5, 18);
     this.sfx("mult", 0, 5);
     this.buzz(30);
@@ -145,7 +145,8 @@ export class Run {
       w.c = Math.max(0, w.c - FLOW_COOL * dt);
       w.lvl = Math.min(5, 1 + Math.floor(w.c / FLOW_LVL));
     }
-    if (w.lvl < 3) w.armed = true;
+    if (w.lvl < 3) { w.armed = true; w.held = false; }
+    else if (!w.armed && this.runTime - w.zoneAt >= ZONE_AGAIN) { w.armed = true; w.held = true; if (w.lvl >= 5) this.zone(); }
   }
 
   // Any contact (a smash, or passing through while invulnerable) ends the golden multiplier.
