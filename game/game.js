@@ -15,6 +15,7 @@ import { Hud } from "./src/ui/hud.js?v=20261021r7";
 import { Panels } from "./src/ui/panels.js?v=20261021r7";
 import { Garage } from "./src/meta/garage.js?v=20261021r7";
 import { Net } from "./src/net/net.js?v=20261021r7";
+import { Ghost } from "./src/render/ghost.js?v=20261021r7";
 import { SoundUi } from "./src/ui/sound-ui.js?v=20261021r7";
 import { installErrorReporting } from "./src/net/errors.js?v=20261021r7";
 export { allowedScore } from "./src/core/constants.js?v=20261021r7";
@@ -161,5 +162,5 @@ function install(target, ...sources) {
     }
   }
 }
-install(Game, Loop, Run, Physics, Input, WorldGen, Render, Sound, Hud, Panels, Garage, Net, SoundUi);
+install(Game, Loop, Run, Physics, Input, WorldGen, Render, Sound, Hud, Panels, Garage, Net, SoundUi, Ghost);
 installErrorReporting(() => current ? { state: current.state, q: current.quality, touch: !!current.coarse } : {});

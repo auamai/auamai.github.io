@@ -75,6 +75,7 @@ export class Render {
     this.buildRobot();
     this.buildToken();
     this.buildTools();
+    this.buildGhost();
     this.buildTrail();
     this.applyTrim();
     this.applyCos();

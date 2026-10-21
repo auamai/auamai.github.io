@@ -526,6 +526,7 @@ references); bump it on every release, and keep the `modulepreload` list in `ind
 | `src/input/input.js` | Keyboard, swipes, wheel pad, gamepad (hysteresis), focus trap, blur/visibility/orientation/context loss |
 | `src/render/render.js` | Scene, quality tiers, camera, trail, `applyDesign()`, Garage close-up |
 | `src/render/grade.js` | Brand colour grade and light rig (AgX), UI-overlay lights |
+| `src/render/ghost.js` | Ghost racing: records the run's track (10 Hz), plays back the stored best on the same seed as a baked translucent robot, ahead/behind chip, overtake moment, `au_factory_ghost_v1` |
 | `src/render/arm.js`, `geometry.js` | Machined arm gantry (merged per material), shared geometries |
 | `factory.js`, `ceiling.js` | The hall: floor, walls, zones, roof, signs (LINE 3, NO RUNNING, FOREMAN'S OFFICE) |
 | `robots/` | `ul-h1.js` runner, `ul-w1.js` roller, `kit.js` shared materials and `bake()` (keeps UVs for `userData.keepUv`) |
@@ -635,6 +636,15 @@ and is baked into the same mesh (+0 draw calls). The texture is redrawn only whe
 - **Revive:** `Run.revive()` returns obstacles within `REVIVE_CLEAR` = 30 units ahead (and the one hit) to their
   pools, sets `reviveT` = `REVIVE_T` = 1.5 s (part of the `invulnerable` getter), and the obstacle pass breaks
   after a revive because the list just changed. No-servo code paths are byte-for-byte the old ones.
+- **Ghost racing** (`src/render/ghost.js`) is presentation only. `ghostTick()` runs once per 120 Hz step after the
+  robot moves; it *reads* `r.x`, `r.y`, slide/roller/launch flags, `runDist` and `score` into a preallocated
+  `Uint8Array` (10 Hz, 6 bytes a sample: x int8 1/25 u, y uint8 1/20 u, flags, distance step uint8 1/20 u and
+  score step uint16, both carried so they never drift; 300 s max = 18 KB raw) and moves the ghost mesh. It never
+  writes sim state, never calls `COURSE()`/`LOOT()` or `Math.random`, so goldens and the Daily Run are unchanged
+  with or without a stored ghost. Playback is keyed by `runTime`: ghost z = `runDist - ghostDist(t)` (negative
+  = ahead). Ahead/behind compares score at the same `runTime` (speed is a function of time, so distance only
+  differs through Roller Mode and ramps); after the ghost's track ends the chip shows metres past it.
+  Overtake = gap goes above +25 after at least 1 s below −25, at most once per 6 s (pop, `tool` chime, 15 ms buzz).
 - `fx.goldStep` (golden ladder callouts) and `passMilestone()` (badge moments, `Math.random` headlines) are
   presentation only and never read the course RNG.
 
@@ -766,7 +776,8 @@ against `durationMs`), or replay verification using the deterministic sim (seed 
 | Key | Contents |
 | --- | --- |
 | `au_factory_profile_v1` | `{ username, best, games, gears, lastPlayed, code?, token?, passkey, claimed, held, tb, cos }`. `held`: best unposted run `{score, durationMs}`. `tb: 1`: Toolbox migration stamp. `cos`: `{ spent, owned[], eq{trim,trail,hammer}, sv{b,u}, d{name,code,at} }` |
-| `au_factory_settings_v1` | `pad`, `lefty`, `haptics`, `music`, `sfx`, `musicVol`, `sfxVol`, `tips`, `trim`, `missions[]`, `streak{n,last,freeWeek,usedFree}`, `dailyBest{day,score}`, `pbStreak`, `rank`, `still` (reduce motion; absent = follow OS), `servoArm` |
+| `au_factory_settings_v1` | `pad`, `lefty`, `haptics`, `music`, `sfx`, `musicVol`, `sfxVol`, `tips`, `trim`, `missions[]`, `streak{n,last,freeWeek,usedFree}`, `dailyBest{day,score}`, `pbStreak`, `rank`, `still` (reduce motion; absent = follow OS), `servoArm`, `ghost` (ghost racer; absent = on) |
+| `au_factory_ghost_v1` | Ghost tracks: `{ v: 1, list: [{ k: seed, m: "daily"\|"challenge", s: score, b: base64 track, at }] }`. One Daily entry (today's replaces older ones) plus the newest courses, 4 entries max. Written only when a run on that seed beats the stored score. Device-only, never synced |
 | `au_factory_public_v1` | Read-only summary for the portfolio teaser: `{v, name, best, rank, streak, dailyDay, dailyResetAt, dailyBest, weeklyResetAt, updatedAt}`. Never contains the code or token |
 
 - `code` and `token` are secrets; nothing outside the game may read them.
@@ -910,6 +921,7 @@ skips the bus ducks.
 | Round trips to first frame | 2 | 2 (modulepreload) |
 | Hot loop allocations | 0 per sub-step | HUD chips keyed by bitmask; revive and spend allocate once per event |
 | Robot meshes | 58 | 58 |
+| Ghost racer | ≤ +3 draw calls | **+2** while it shows (depth pre-pass + rim-lit colour pass on one baked geometry per form; runner and roller baked at load, only one visible), 0 when hidden |
 | Draw calls, in a run | see below | see below |
 
 ### Draw calls: the honest numbers
