@@ -657,9 +657,15 @@ state). Expected values for this build:
 
 | Scenario | Score / hash |
 | --- | --- |
-| `real_run` (17 s crash) | 432 / `acd66776` |
-| `god_180s` (180 s, no deaths) | **9885 / `93ed983c`** (was 8353 / `e970d5ce` before the golden-wrench fix `bbb916c`) |
-| `daily_like` (90 s clean) | 3057 / `ded68c93` |
+| `real_run` (17 s crash) | **452 / `c41c040f`** (r7: 432 / `acd66776`) |
+| `god_180s` (180 s, no deaths) | **13498 / `cde02266`** (r7: 9885 / `93ed983c`; before the golden-wrench fix `bbb916c`: 8353 / `e970d5ce`) |
+| `daily_like` (90 s clean) | **4562 / `e158bfe2`** (r7: 3057 / `ded68c93`) |
+
+**r8 fun pass (review/powerups):** the same recorded inputs replayed on the new sim, twice, identical both times. The
+change is deliberate: style points, flow and the zone bonus add score (`real_run` +3 clean clears = +20; the bots in
+`god_180s` / `daily_like` dodge late, so they rack up near misses: 54 near / 13 weaves / 34 clean and 22 / 4 / 28),
+and in `god_180s` the Bumper takes one hit in Overdrive with its half-speed beat, which shifts the course timing
+afterwards (gears 375 -> 364). Course layout from a seed is unchanged. Expectations: `review/powerups_golden.json`.
 
 The god_180s change is deliberate: the golden wrench picked up near 115 s now applies its multiplier and books the
 next one. New expectations are in `review/gameplay_golden.json`. Any other sim change must either keep all three
