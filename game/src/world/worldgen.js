@@ -223,7 +223,7 @@ export class WorldGen {
 
   spawnGear(lane, z, y) {
     let m = this.pools.gear.pop();
-    if (!m) { m = new THREE.Mesh(this.gearGeo, this.M.gear); m.castShadow = true; this.scene.add(m); }
+    if (!m) { m = new THREE.Mesh(this.gearGeo, this.M.gear); m.castShadow = this.gearShadow !== false; this.scene.add(m); }
     m.visible = true;
     m.scale.setScalar(1);
     m.position.set(LANES[lane], y, z);
