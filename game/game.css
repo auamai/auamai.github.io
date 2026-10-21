@@ -519,8 +519,8 @@ html.fr-open, html.fr-open body { overscroll-behavior: none; }
    Type: Inter Tight (UI, numerals) + IBM Plex Mono (labels). Bundled, no CDN.
    Spacing: 4 px grid. Radii: 4 (controls), 8 (cards), 12 (panels). No pills.
    ========================================================================== */
-@font-face { font-family: "Inter Tight"; font-style: normal; font-weight: 100 900; font-display: swap; src: url("./fonts/inter-tight-var.woff2?v=20261021r9") format("woff2"); }
-@font-face { font-family: "IBM Plex Mono"; font-style: normal; font-weight: 400; font-display: swap; src: url("./fonts/plex-mono-400.woff2?v=20261021r9") format("woff2"); }
+@font-face { font-family: "Inter Tight"; font-style: normal; font-weight: 100 900; font-display: swap; src: url("./fonts/inter-tight-var.woff2?v=20261021r91") format("woff2"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: normal; font-weight: 400; font-display: swap; src: url("./fonts/plex-mono-400.woff2?v=20261021r91") format("woff2"); }
 .fr {
   --ss-graphite: #14161b; --ss-graphite-2: #1c1f26; --ss-graphite-3: #262a33; --ss-steel: #3a3f4b;
   --ss-ink: #f2f0ea; --ss-ink-2: rgba(242, 240, 234, .76); --ss-ink-3: rgba(242, 240, 234, .6);

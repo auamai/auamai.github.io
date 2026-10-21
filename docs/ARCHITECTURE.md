@@ -509,7 +509,7 @@ mirror `game/meta.js` `SERVO`. A client cannot sync servos its spent gears did n
 
 ## 5. Module map
 
-All paths under `game/`. Every local import carries `?v=<build>` (r9: `?v=20261021r9`, on all 146 local
+All paths under `game/`. Every local import carries `?v=<build>` (r9.1: `?v=20261021r91`, on all 146 local
 references); bump it on every release, and keep the `modulepreload` list in `index.html` in step with the import graph.
 
 | Path | Role |

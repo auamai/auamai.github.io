@@ -8,7 +8,7 @@
 // instanced draw, each crane two. Nothing here comes lower than y = 6.3, above
 // the camera, so it can never hide a gear or read as something on the floor.
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
-import { Builder, C, BOXG, HALF, ROOF } from "./factory.js?v=20261021r9";
+import { Builder, C, BOXG, HALF, ROOF } from "./factory.js?v=20261021r91";
 
 const P = 48;                 // roof pattern period; a multiple of the hall's 24-unit column bays
 const Z_HI = 20, Z_LO = -226; // strip extent, so any offset in [0, P) still covers the view (far plane 175)

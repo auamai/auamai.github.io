@@ -1,13 +1,13 @@
 // DOM shell and every panel: menu, game over, board, settings, save/claim/restore.
 // Installed onto Game.prototype by game.js (methods use `this`, the Game).
-import * as P from "../../profile.js?v=20261021r9";
-import * as MT from "../../meta.js?v=20261021r9";
-import { Factory } from "../../factory.js?v=20261021r9";
-import { FactoryAudio } from "../../audio.js?v=20261021r9";
-import { OVER_LOCK, ICON, OVER_ICON } from "../core/constants.js?v=20261021r9";
-import { toolboxHtml } from "../meta/garage.js?v=20261021r9";
-import { fmt, esc, clock } from "../core/util.js?v=20261021r9";
-import { WORDMARK } from "./brand.js?v=20261021r9";
+import * as P from "../../profile.js?v=20261021r91";
+import * as MT from "../../meta.js?v=20261021r91";
+import { Factory } from "../../factory.js?v=20261021r91";
+import { FactoryAudio } from "../../audio.js?v=20261021r91";
+import { OVER_LOCK, ICON, OVER_ICON } from "../core/constants.js?v=20261021r91";
+import { toolboxHtml } from "../meta/garage.js?v=20261021r91";
+import { fmt, esc, clock } from "../core/util.js?v=20261021r91";
+import { WORDMARK } from "./brand.js?v=20261021r91";
 const MANUAL_URL = "https://github.com/auamai/auamai.github.io/blob/robot-game/docs/MANUAL.md";
 
 export class Panels {

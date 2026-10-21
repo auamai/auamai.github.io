@@ -6,7 +6,7 @@
 // turns, and the bend is a pure function of (seed, distance): the same corners for everyone on a seed.
 // Zones are distance bands with their own obstacle mix (worldgen.js reads zoneRow) and their own light.
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
-import { M_PER_U, SPAWN_Z, TIPS } from "../core/constants.js?v=20261021r9";
+import { M_PER_U, SPAWN_Z, TIPS } from "../core/constants.js?v=20261021r91";
 
 export const COURSE_V = 3;      // course version: 1 = classic straight hall (old links), 2 = zones + turns, 3 = + set pieces and tricks (hazards.js, tricks.js)
 export const ZONE_LEN = 1100;   // units per zone (935 m: ~60 s early in a run, ~30 s at top speed)

@@ -7,11 +7,11 @@
 // bit1 roller, bit2 airborne off a ramp), distance step (uint8, 1/20 u, carried so it never drifts) and
 // score step (uint16 LE, whole points, carried). 300 s at most (18 KB raw, 24 KB base64).
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
-import { M_PER_U, visY } from "../core/constants.js?v=20261021r9";
-import { fmt } from "../core/util.js?v=20261021r9";
-import { mergeParts } from "./geometry.js?v=20261021r9";
-import * as P from "../../profile.js?v=20261021r9";
-import { BEND } from "../world/track.js?v=20261021r9";
+import { M_PER_U, visY } from "../core/constants.js?v=20261021r91";
+import { fmt } from "../core/util.js?v=20261021r91";
+import { mergeParts } from "./geometry.js?v=20261021r91";
+import * as P from "../../profile.js?v=20261021r91";
+import { BEND } from "../world/track.js?v=20261021r91";
 
 const GKEY = "au_factory_ghost_v1";  // new key: { v: 1, list: [{ k: seed, cv: course version, m: mode, s: score, b: base64, at }] }
 // A ghost belongs to one course: seed AND course version (1 classic straight hall, 2 zones + turns; absent = 1),
