@@ -1,22 +1,38 @@
 // Frame loop and the fixed 120 Hz simulation step: every run advances only through update(1/120).
 // Installed onto Game.prototype by game.js (methods use `this`, the Game).
 import { LANES, DESPAWN_Z, START_SPEED, MAX_SPEED, ACCEL, GRAVITY, JUMP_V, PHYS_HZ, LANE_W, LANE_W_ROLL, SLIDE_T, GEAR_POINTS, DIST_POINTS, PERIOD, ROLL_SPEED, RAIL_H, LAND_ROLL, DRIFT_MULT, SLOW_T, SLOW_K, TUT_SPEED, TUT_EASE } from "./constants.js?v=20261020r6b";
+import { report } from "../net/errors.js?v=20261020r6b";
 
 export class Loop {
   /* ---------- frame ---------- */
   loop(now) {
     if (this.closed) return;
     this.raf = requestAnimationFrame(this.loop);
-    const dt = Math.min(0.05, Math.max(0, (now - this.last) / 1000));
-    this.last = now;
-    this.step(dt);
-    if (this.ctxLost) return;
-    // A paused frame doesn't change: draw it once, then let the GPU rest.
-    if (this.state === "pause" && this.drawn) return;
-    this.renderer.render(this.scene, this.camera);
-    this.ui.render();
-    this.drawn = this.state === "pause";
-    this.measure(dt);
+    // Background-tab / resume guard: one frame never advances more than 50 ms (the fixed-step
+    // accumulator below is capped at 100 ms too), so a long stall can't teleport the runner.
+    const raw = (now - this.last) / 1000;
+    const dt = Number.isFinite(raw) ? Math.min(0.05, Math.max(0, raw)) : 0;
+    if (Number.isFinite(now)) this.last = now;
+    // Error boundary: a throw in one frame is reported once and the loop keeps going; three bad
+    // frames in a row pause the run with a calm message instead of freezing on a dead canvas.
+    try {
+      if (this.padOn) this.pollPad();
+      this.step(dt);
+      if (this.ctxLost) return;
+      // A paused frame doesn't change: draw it once, then let the GPU rest.
+      if (this.state === "pause" && this.drawn) return;
+      this.renderer.render(this.scene, this.camera);
+      this.ui.render();
+      this.drawn = this.state === "pause";
+      this.measure(dt);
+      this.badFrames = 0;
+    } catch (err) {
+      report("frame", err, { state: this.state });
+      if ((this.badFrames = (this.badFrames | 0) + 1) >= 3 && (this.state === "play" || this.state === "count")) {
+        this.badFrames = 0;
+        try { this.pause(); this.toast("Something went wrong. Resume to keep going."); } catch { /* ignore */ }
+      }
+    }
   }
 
   // One real-time frame: countdown and hint animation on real time, the run itself on game time.

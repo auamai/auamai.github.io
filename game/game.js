@@ -107,6 +107,7 @@ class Game {
     this.ro?.disconnect();
     if (this.onPop) window.removeEventListener("popstate", this.onPop);
     if (this.onDocDown) document.removeEventListener("pointerdown", this.onDocDown, true);
+    if (this.onPadConn) { window.removeEventListener("gamepadconnected", this.onPadConn); window.removeEventListener("gamepaddisconnected", this.onPadGone); }
 
     this.scene.traverse((o) => { if (o.geometry && o.geometry !== BOX) o.geometry.dispose(); });
     Object.values(this.M).forEach((m) => m.dispose());
@@ -143,4 +144,4 @@ function install(target, ...sources) {
   }
 }
 install(Game, Loop, Run, Physics, Input, WorldGen, Render, Sound, Hud, Panels, Garage, Net, SoundUi);
-installErrorReporting();
+installErrorReporting(() => current ? { state: current.state, q: current.quality, touch: !!current.coarse } : {});

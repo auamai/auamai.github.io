@@ -58,10 +58,11 @@ const LIMITS = {
   hit: 30,
   passkey: 20,
   backup: 5,
+  err: 20,
 };
 
 const RP_ID = "auamai.dev";
-const RP_NAME = "Factory Run";
+const RP_NAME = "Servo Sprint"; // display name only; existing passkeys are bound to RP_ID, which is unchanged
 const CHALLENGE_TTL_MS = 5 * 60 * 1000;
 const SESSION_TTL_MS = 400 * 24 * 60 * 60 * 1000;
 const TOKEN_RE = /^[0-9a-f]{64}$/;
@@ -111,6 +112,9 @@ export default {
           case "/passkey/login/verify":
             if (!(await rateLimit(env, ip, "passkey", LIMITS.passkey))) return json({ error: "slow down" }, 429, cors);
             return await handlePasskey(url.pathname, request, env, cors, origin);
+          case "/err":
+            if (!(await rateLimit(env, ip, "err", LIMITS.err))) return new Response(null, { status: 204, headers: cors });
+            return await handleErr(request, cors);
           case "/profile/backup-code":
             if (!(await rateLimit(env, ip, "backup", LIMITS.backup))) return json({ error: "slow down" }, 429, cors);
             return await handleBackupCode(request, env, cors);
@@ -329,6 +333,23 @@ function randomCode() {
 }
 
 /* ---------- passkeys ---------- */
+
+// Client error reports (r6b): message, top stack frames, build id, coarse context. No PII is accepted:
+// the body is whitelisted and truncated, URLs lose their query (challenge links carry names), and nothing
+// is stored; reports go to the Worker log only (Workers Logs / wrangler tail).
+async function handleErr(request, cors) {
+  let b;
+  try { b = await request.json(); } catch { return json({ error: "bad json" }, 400, cors); }
+  if (!b || typeof b !== "object") return json({ error: "bad body" }, 400, cors);
+  const clip = (v, n) => String(v ?? "").replace(/https?:\/\/[^\s)]+/g, (u) => u.split(/[?#]/)[0]).slice(0, n);
+  const rec = {
+    kind: clip(b.kind, 16), msg: clip(b.msg, 300), src: clip(b.src, 600), build: clip(b.build, 32),
+    state: clip(b.state, 12), q: Number.isFinite(+b.q) ? +b.q : null, touch: !!b.touch, n: Math.min(99, Math.max(1, +b.n || 1)),
+  };
+  if (!rec.msg) return json({ error: "empty" }, 400, cors);
+  console.log("client_error " + JSON.stringify(rec));
+  return new Response(null, { status: 204, headers: cors });
+}
 
 async function handlePasskey(path, request, env, cors, origin) {
   const body = await readJson(request, 16384);

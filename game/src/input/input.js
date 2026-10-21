@@ -145,6 +145,31 @@ export class Input {
     }
   }
 
+  // Gamepad (standard mapping): D-pad or left stick = lanes / jump / slide, A jump, B slide, LB/RB lanes,
+  // Start pause/resume, A or Start begins a run from the menu or game over. Edge-triggered, polled once a
+  // frame outside the fixed-step sim (exactly like key events), so determinism is unaffected.
+  bindGamepad() {
+    this.padPrev = {};
+    this.onPadConn = () => { this.padOn = true; this.toast("Controller connected"); };
+    this.onPadGone = () => { this.padOn = [...(navigator.getGamepads?.() || [])].some(Boolean); };
+    window.addEventListener("gamepadconnected", this.onPadConn);
+    window.addEventListener("gamepaddisconnected", this.onPadGone);
+    this.padOn = [...(navigator.getGamepads?.() || [])].some(Boolean);
+  }
+
+  pollPad() {
+    const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+    const gp = [...pads].find((p) => p && p.connected);
+    if (!gp) return;
+    const b = (i) => !!(gp.buttons[i] && gp.buttons[i].pressed), ax = gp.axes[0] || 0, ay = gp.axes[1] || 0, D = 0.55;
+    const now = { left: b(14) || b(4) || ax < -D, right: b(15) || b(5) || ax > D, jump: b(12) || b(0) || ay < -D, slide: b(13) || b(1) || ay > D, start: b(9), a: b(0) };
+    const prev = this.padPrev, edge = (k) => now[k] && !prev[k];
+    this.padPrev = now;
+    if (edge("start")) { if (this.state === "play" || this.state === "count") return this.pause(); if (this.state === "pause") return this.resume(); }
+    if (this.state === "play") { for (const m of ["left", "right", "jump", "slide"]) if (edge(m)) this.act(m); return; }
+    if ((edge("a") || edge("start")) && (this.view === "over" || (this.view === "menu" && this.profile && !this.switching))) this.tryStart();
+  }
+
   // Keep Tab inside the game while it is open.
   trapFocus(e) {
     const els = [...this.root.querySelectorAll("button, input, a[href]")].filter((el) => !el.disabled && el.offsetParent !== null);
