@@ -45,7 +45,9 @@ export class Input {
     // Swipes fire as soon as the finger has moved far enough; a short, quick flick
     // that ends before the threshold still counts on release.
     this.onDown = (e) => {
-      if (this.state !== "play" || e.target.closest("button, .fr__panel, .fr__wheelpad")) return;
+      // A finger that lands in the last beat of the countdown is tracked too, so a swipe begun just
+      // before "Go" still counts once the run is live instead of being dropped.
+      if ((this.state !== "play" && this.state !== "count") || e.target.closest("button, .fr__panel, .fr__wheelpad")) return;
       if (this.swipe && this.swipe.id !== e.pointerId && !this.swipe.done) return; // ignore a second finger
       this.swipe = { x: e.clientX, y: e.clientY, id: e.pointerId, t: performance.now(), done: false };
     };

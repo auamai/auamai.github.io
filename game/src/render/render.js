@@ -7,7 +7,7 @@ import { Ceiling } from "../../ceiling.js?v=20261020r6d";
 import { UI3D } from "../../ui3d.js?v=20261020r6d";
 import { createKit, RUNNERS, ROLLERS } from "../../robots/index.js?v=20261020r6d";
 import { toolMaterials, toolGeometries, buildTool, Burst } from "../../tools.js?v=20261020r6d";
-import { LANES, MORPH_T, COL, MILESTONES } from "../core/constants.js?v=20261020r6d";
+import { LANES, MORPH_T, COL, MILESTONES, visY } from "../core/constants.js?v=20261020r6d";
 import { BOX, BOX_EDGES, CYL, CYL_EDGES, gearGeometry } from "./geometry.js?v=20261020r6d";
 import { applyGrade, regrade } from "./grade.js?v=20261020r6d";
 import { makeArmKit } from "./arm.js?v=20261020r6d";
@@ -338,7 +338,7 @@ export class Render {
     if (this.trailOn && this.state === "play" && T.acc > 0.035) {
       T.acc = 0;
       const b = T.bits[T.i++ % T.bits.length];
-      b.t = 0; b.m.visible = true; b.m.position.set(this.r.x + (Math.random() - 0.5) * 0.1, Math.max(0.03, this.r.y + 0.04), 0.3);
+      b.t = 0; b.m.visible = true; b.m.position.set(this.r.x + (Math.random() - 0.5) * 0.1, Math.max(0.03, visY(this.r.y) + 0.04), 0.3);
       b.m.material.color.copy(T.mat.color);
     }
     for (const b of T.bits) {
@@ -411,7 +411,7 @@ export class Render {
     }
     if (st !== "play") return;
 
-    R.root.position.y = r.y;
+    R.root.position.y = visY(r.y);
     R.root.rotation.x = 0;
     S.mode = sliding ? "slide" : r.ground ? "run" : "air";
     if (runner.root.visible) runner.update(S, dt);
@@ -423,8 +423,16 @@ export class Render {
     const c = this.camera, b = this.camBase;
     const tx = this.r.x * 0.45;
     c.position.x += (tx - c.position.x) * Math.min(1, dt * 6);
-    c.position.y = b.y;
-    c.position.z = b.z;
+    // Ramp flight: the camera rises, eases back and tilts up with the drawn arc so the robot stays in
+    // frame under the HUD on every phone aspect, then settles back after landing. Normal jumps (under
+    // ~1.7 units) never move it. Smoothed every frame, no snaps; render-only, the sim never reads it.
+    const air = this.state === "play" || this.state === "dying" ? Math.max(0, visY(this.r.y) - 1.8) : 0;
+    const up = air > (this.camAir || 0);
+    this.camAir = (this.camAir || 0) + (air - (this.camAir || 0)) * Math.min(1, dt * (up ? 9 : 4));
+    const L = this.camAir, tall = this.camera.aspect < 0.75 ? 1 : 0.7;
+    this.camLook = L * 0.75 * tall;
+    c.position.y = Math.min(7.4, b.y + L * 0.5 * tall); // stays under the roof trusses (8.24)
+    c.position.z = b.z + L * 0.3 * tall;
     if (this.shake > 0) {
       this.shake = Math.max(0, this.shake - dt);
       // Smooth low-frequency shake (was per-frame random jitter, which read as strobing on phones); gentler on touch.
@@ -432,6 +440,6 @@ export class Render {
       c.position.x += Math.sin(t * 38) * k;
       c.position.y += Math.sin(t * 45 + 1.3) * k * 0.8;
     }
-    c.lookAt(this.r.x * 0.3, this.lookY ?? 0.9, -10);
+    c.lookAt(this.r.x * 0.3, (this.lookY ?? 0.9) + (this.camLook || 0), -10);
   }
 }
