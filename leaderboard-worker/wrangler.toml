@@ -10,7 +10,11 @@ database_id = "0088edc7-5229-4028-8f3e-63b61d4160a9"
 
 [vars]
 # Comma-separated origins allowed to call the API from a browser.
-ALLOWED_ORIGINS = "https://auamai.dev,https://www.auamai.dev,https://auamai.github.io,https://servosprint.xyz,https://www.servosprint.xyz"
+ALLOWED_ORIGINS = "https://servosprint.xyz,https://www.servosprint.xyz,https://auamai.dev,https://www.auamai.dev"
+# Temporary, while the preview is in use (remove after launch): append ",https://servosprint.auamai.workers.dev".
+# auamai.github.io was dropped: GitHub Pages redirects it to auamai.dev, so no page ever calls from there.
+# CODE_PEPPER (optional secret, wrangler secret put CODE_PEPPER, >= 16 chars): save codes are then stored as
+# HMAC(pepper). Once set, never remove or change it, or every upgraded save code stops matching.
 # Cloudflare Access, used only by GET /stats. Not secrets, but fill them in
 # before deploying; /stats denies every request while they are empty.
 ACCESS_TEAM_DOMAIN = ""   # e.g. "yourteam.cloudflareaccess.com"

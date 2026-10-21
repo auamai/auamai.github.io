@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "build": "esbuild src/index.js --bundle --minify --format=esm --platform=neutral --main-fields=module,main --conditions=worker,browser --target=es2022 --outfile=dist/index.js",
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "test": "npm run build && WORKER_BUNDLE=./dist/index.js node --no-warnings test/security.test.mjs"
   },
   "dependencies": {
     "@simplewebauthn/server": "13.3.3"

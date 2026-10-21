@@ -59,7 +59,11 @@ const LIMITS = {
   passkey: 20,
   backup: 5,
   err: 20,
+  nameFail: 10,   // wrong code/token tries per NAME per minute, from any number of IPs
 };
+
+// Browser origins that may call the API (wrangler.toml ALLOWED_ORIGINS overrides). Exact matches only.
+const DEFAULT_ORIGINS = "https://servosprint.xyz,https://www.servosprint.xyz,https://auamai.dev,https://www.auamai.dev";
 
 const RP_ID = "auamai.dev";
 const RP_NAME = "Servo Sprint"; // display name only; existing passkeys are bound to RP_ID, which is unchanged
@@ -83,7 +87,10 @@ export default {
       const route = `${request.method} ${url.pathname.replace(/\/+$/, "") || "/"}`;
 
       if (route === "GET /stats") return await handleStats(request, env);
-      if (route === "GET /scores") return await handleTop(env, cors, url.searchParams.get("board") || "all");
+      if (route === "GET /scores") {
+        const board = url.searchParams.get("board");
+        return await handleTop(env, cors, board === "daily" || board === "weekly" ? board : "all");
+      }
 
       if (request.method === "POST") {
         // Browser-only API: reject other origins outright.
@@ -204,11 +211,7 @@ async function handleScore(request, env, cors) {
 
   // A claimed name only accepts runs that carry its save code or a passkey session token.
   const profile = await env.DB.prepare("SELECT username, code_hash FROM profiles WHERE username = ?1").bind(username).first();
-  if (profile) {
-    if (!(await codeMatches(profile.username, body.code, profile.code_hash)) && !(await tokenMatches(env, profile.username, body.token))) {
-      return json({ error: "name is claimed" }, 403, cors);
-    }
-  }
+  if (profile && (await checkAuth(env, profile, body)) !== true) return json({ error: "name is claimed" }, 403, cors);
 
   // Run mode (round 6). A Daily Run must carry today's date in Vancouver (or yesterday's, for a
   // run that started before midnight and ended after it) and that day's seed.
@@ -269,7 +272,7 @@ async function handleClaim(request, env, cors) {
   const res = await env.DB.prepare(
     `INSERT OR IGNORE INTO profiles (username, code_hash, best, games, gears, last_played, created_at, updated_at)
      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?7)`
-  ).bind(username, await codeHash(username, code), s.best, s.games, s.gears, s.lastPlayed, now).run();
+  ).bind(username, await codeHash(username, code, env), s.best, s.games, s.gears, s.lastPlayed, now).run();
   if (!res.meta || res.meta.changes !== 1) return json({ error: "name taken" }, 409, cors);
 
   // The plain code leaves the server exactly once, here.
@@ -280,6 +283,7 @@ async function handleRestore(request, env, cors) {
   const body = await readJson(request);
   if (!body) return json({ error: "bad request" }, 400, cors);
   const row = await authProfile(env, body);
+  if (row === false) return json({ error: "too many tries, wait a minute" }, 429, cors);
   if (!row) return json({ error: "name or code doesn't match" }, 401, cors);
   return json({ ok: true, profile: publicProfile(row) }, 200, cors);
 }
@@ -288,6 +292,7 @@ async function handleSync(request, env, cors) {
   const body = await readJson(request);
   if (!body) return json({ error: "bad request" }, 400, cors);
   const row = await authProfile(env, body);
+  if (row === false) return json({ error: "too many tries, wait a minute" }, 429, cors);
   if (!row) return json({ error: "name or code doesn't match" }, 401, cors);
   const s = cleanStats(body);
   // Stats only move forward, so two devices can sync in any order.
@@ -300,6 +305,8 @@ async function handleSync(request, env, cors) {
     const cur = parseCos(row.cosmetics), inc = parseCos(JSON.stringify(body.cos));
     const gears = Math.max(row.gears || 0, s.gears);
     const merged = { spent: Math.min(gears, Math.max(cur.spent, inc.spent)), owned: [...new Set([...cur.owned, ...inc.owned])], eq: { ...cur.eq, ...inc.eq } };
+    // A shop item can only be worn once it's owned (medal colours and "" stay as they are).
+    for (const k of Object.keys(merged.eq)) if (SHOP_IDS.has(merged.eq[k]) && !merged.owned.includes(merged.eq[k])) delete merged.eq[k];
     if (cur.sv || inc.sv) {
       // Spare Servos (r7): bought only grows, but never past what the spent gears paid for (450 each),
       // and no more than SERVO_MAX held (bought - used) at once; used never exceeds bought.
@@ -317,13 +324,32 @@ async function handleSync(request, env, cors) {
   return json({ ok: true, profile: publicProfile(updated) }, 200, cors);
 }
 
+// null = no such name or wrong code/token; false = this name is locked for the rest of the minute.
 async function authProfile(env, body) {
   const username = String(body.username || "");
   if (!NAME_RE.test(username)) return null;
   const row = await env.DB.prepare("SELECT * FROM profiles WHERE username = ?1").bind(username).first();
   if (!row) return null;
-  if (await codeMatches(row.username, body.code, row.code_hash)) return row;
-  return (await tokenMatches(env, row.username, body.token)) ? row : null;
+  const a = await checkAuth(env, row, body);
+  return a === true ? row : a === LOCKED ? false : null;
+}
+
+// Save code or session token for a claimed name. Every miss counts against the name (not the IP), so a
+// guesser spread over many IPs still gets LIMITS.nameFail tries a minute. After that even the right code
+// waits out the minute (the cost of a lockout; it lifts on its own).
+const LOCKED = "locked";
+async function checkAuth(env, row, body) {
+  if (await nameLocked(env, row.username)) return LOCKED;
+  if (await codeMatches(env, row, body.code)) return true;
+  if (await tokenMatches(env, row.username, body.token)) return true;
+  if (typeof body.code === "string" || typeof body.token === "string") await rateLimit(env, row.username.toLowerCase(), "namefail", LIMITS.nameFail);
+  return false;
+}
+
+async function nameLocked(env, username) {
+  const key = await sha256hex(`namefail:${username.toLowerCase()}:${currentWindow()}`);
+  const r = await env.DB.prepare("SELECT count FROM rate_limits WHERE key = ?1 AND win = ?2").bind(key, currentWindow()).first();
+  return Boolean(r && r.count >= LIMITS.nameFail);
 }
 
 function publicProfile(r) {
@@ -353,15 +379,32 @@ function cleanStats(b) {
   return { best: n(b.best), games: n(b.games), gears: n(b.gears), lastPlayed: lp };
 }
 
-async function codeHash(username, code) {
-  return sha256hex(`factory-run:${username.toLowerCase()}:${code}`);
+// Save codes: 50 random bits. Stored as SHA-256 (legacy, 64 hex) or, when the CODE_PEPPER secret is set,
+// as "h1:" + HMAC-SHA-256(pepper, ...), so a copy of the database alone can't be brute-forced offline.
+// Legacy hashes keep working and are upgraded to h1 on the next correct code.
+async function codeHash(username, code, env) {
+  const msg = `factory-run:${username.toLowerCase()}:${code}`;
+  const pepper = env && typeof env.CODE_PEPPER === "string" && env.CODE_PEPPER.length >= 16 ? env.CODE_PEPPER : "";
+  return pepper ? "h1:" + (await hmacHex(pepper, msg)) : sha256hex(msg);
 }
 
-async function codeMatches(username, code, storedHash) {
-  if (typeof code !== "string") return false;
+async function codeMatches(env, row, code) {
+  if (typeof code !== "string" || code.length > 32 || typeof row.code_hash !== "string") return false;
   const c = code.trim().toUpperCase().replace(/[\s-]/g, "");
   if (!CODE_RE.test(c)) return false;
-  return safeEqual(await codeHash(username, c), storedHash);
+  if (row.code_hash.startsWith("h1:")) return safeEqual(await codeHash(row.username, c, env), row.code_hash);
+  if (!safeEqual(await codeHash(row.username, c), row.code_hash)) return false;
+  const up = await codeHash(row.username, c, env);
+  if (up.startsWith("h1:")) {
+    await env.DB.prepare("UPDATE profiles SET code_hash = ?2 WHERE username = ?1 AND code_hash = ?3").bind(row.username, up, row.code_hash).run();
+  }
+  return true;
+}
+
+async function hmacHex(secret, text) {
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(text));
+  return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 function randomCode() {
@@ -377,9 +420,8 @@ function randomCode() {
 // the body is whitelisted and truncated, URLs lose their query (challenge links carry names), and nothing
 // is stored; reports go to the Worker log only (Workers Logs / wrangler tail).
 async function handleErr(request, cors) {
-  let b;
-  try { b = await request.json(); } catch { return json({ error: "bad json" }, 400, cors); }
-  if (!b || typeof b !== "object") return json({ error: "bad body" }, 400, cors);
+  const b = await readJson(request, 4096);
+  if (!b) return json({ error: "bad body" }, 400, cors);
   const clip = (v, n) => String(v ?? "").replace(/https?:\/\/[^\s)]+/g, (u) => u.split(/[?#]/)[0]).slice(0, n);
   const rec = {
     kind: clip(b.kind, 16), msg: clip(b.msg, 300), src: clip(b.src, 600), build: clip(b.build, 32),
@@ -434,7 +476,7 @@ async function passkeyRegisterOptions(body, env, cors) {
   if (nameErr) return json({ error: nameErr }, 400, cors);
   const row = await env.DB.prepare("SELECT * FROM profiles WHERE username = ?1").bind(username).first();
   // A claimed name can add a passkey only with its code or a session token.
-  if (row && !(await authProfile(env, { username: row.username, code: body.code, token: body.token }))) {
+  if (row && (await checkAuth(env, row, body)) !== true) {
     return json({ error: "name taken" }, 409, cors);
   }
   const name = row ? row.username : username;
@@ -482,7 +524,7 @@ async function passkeyRegisterVerify(body, env, cors, origin) {
     const res = await env.DB.prepare(
       `INSERT OR IGNORE INTO profiles (username, code_hash, best, games, gears, last_played, created_at, updated_at)
        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?7)`
-    ).bind(ch.username, await codeHash(ch.username, backupCode), s.best, s.games, s.gears, s.lastPlayed, now).run();
+    ).bind(ch.username, await codeHash(ch.username, backupCode, env), s.best, s.games, s.gears, s.lastPlayed, now).run();
     if (!res.meta || res.meta.changes !== 1) return json({ error: "name taken" }, 409, cors);
   } else {
     await env.DB.prepare(
@@ -494,13 +536,17 @@ async function passkeyRegisterVerify(body, env, cors, origin) {
     `INSERT OR IGNORE INTO passkeys (cred_id, username, public_key, counter, transports, created_at, last_used)
      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6)`
   ).bind(credential.id, ch.username, isoBase64URL.fromBuffer(credential.publicKey), credential.counter || 0,
-    JSON.stringify(Array.isArray(body.response?.response?.transports) ? body.response.response.transports.slice(0, 6) : []), now).run();
+    JSON.stringify(cleanTransports(body.response?.response?.transports)), now).run();
   if (!ins.meta || ins.meta.changes !== 1) return json({ error: "passkey already saved" }, 409, cors);
 
   const token = await newSession(env, ch.username);
   const row = await env.DB.prepare("SELECT * FROM profiles WHERE username = ?1").bind(ch.username).first();
   return json({ ok: true, token, profile: publicProfile(row), ...(backupCode ? { backupCode } : {}) }, 200, cors);
 }
+
+// Only the WebAuthn transport names, so nothing else is stored and echoed back in excludeCredentials.
+const TRANSPORTS = new Set(["ble", "cable", "hybrid", "internal", "nfc", "smart-card", "usb"]);
+const cleanTransports = (t) => (Array.isArray(t) ? [...new Set(t.filter((x) => TRANSPORTS.has(x)))].slice(0, 7) : []);
 
 async function passkeyLoginOptions(env, cors) {
   const options = await generateAuthenticationOptions({ rpID: RP_ID, userVerification: "preferred", timeout: 120000 });
@@ -552,7 +598,7 @@ async function handleBackupCode(request, env, cors) {
   if (!row || !(await tokenMatches(env, row.username, body.token))) return json({ error: "not signed in" }, 401, cors);
   const code = randomCode();
   await env.DB.prepare("UPDATE profiles SET code_hash = ?2, updated_at = ?3 WHERE username = ?1")
-    .bind(row.username, await codeHash(row.username, code), Date.now()).run();
+    .bind(row.username, await codeHash(row.username, code, env), Date.now()).run();
   return json({ ok: true, username: row.username, code }, 200, cors);
 }
 
@@ -760,7 +806,7 @@ function currentWindow() {
 }
 
 function allowedOrigins(env) {
-  return String(env.ALLOWED_ORIGINS || "https://auamai.github.io,https://auamai.dev")
+  return String(env.ALLOWED_ORIGINS || DEFAULT_ORIGINS)
     .split(",").map((s) => s.trim()).filter(Boolean);
 }
 
@@ -775,19 +821,46 @@ function corsHeaders(origin, allowed) {
   };
 }
 
+// API responses are never cached unless a route says so (save codes and session tokens travel in them),
+// never sniffed as HTML, and never framed.
 function json(data, status = 200, headers = {}) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "Content-Type": "application/json; charset=utf-8", ...headers },
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+      "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
+      ...headers,
+    },
   });
 }
 
-async function readJson(request, max = 2048) {
+// Bodies are read as bytes and cut off at `max`, so a chunked upload with no Content-Length
+// (or a lying one) can't make the Worker buffer more than that.
+async function readBody(request, max) {
   const len = Number(request.headers.get("Content-Length") || 0);
-  if (len > max) return null;
+  if (len > max || !request.body) return len > max ? null : "";
+  const reader = request.body.getReader();
+  const parts = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > max) { try { await reader.cancel(); } catch { /* ignore */ } return null; }
+    parts.push(value);
+  }
+  const all = new Uint8Array(size);
+  let o = 0;
+  for (const p of parts) { all.set(p, o); o += p.byteLength; }
+  return new TextDecoder().decode(all);
+}
+
+async function readJson(request, max = 2048) {
   try {
-    const text = await request.text();
-    if (text.length > max) return null;
+    const text = await readBody(request, max);
+    if (text === null) return null;
     const v = JSON.parse(text);
     return v && typeof v === "object" && !Array.isArray(v) ? v : null;
   } catch {
