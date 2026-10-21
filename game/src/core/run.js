@@ -90,7 +90,7 @@ export class Run {
       // runner plus a tick (sound) or a buzz, so the multiplier you're protecting is felt, not just read.
       const step = Math.min(5, 2 + Math.floor(f.goldAge));
       if (f.gold <= 0) { this.pop("×1", { x: this.r.x, y: 1.6, z: 0 }); this.buzz(8); this.sr("Golden multiplier over."); }
-      else if (step > (f.goldStep || 2)) { this.pop(`×${step}`, { x: this.r.x, y: 1.9, z: 0 }, true); this.sfx("gear", this.r.x); this.buzz(6); }
+      else if (step > (f.goldStep || 2)) { this.pop(`×${step}`, { x: this.r.x, y: 1.9, z: 0 }, true); this.buzz(6); } // the rising "mult" chime (loop.js) is the sound
       f.goldStep = step;
     }
     if (f.swing > 0) f.swing = Math.max(0, f.swing - dt);
