@@ -47,6 +47,9 @@ let fails = 0; const ok = (c, m, i = "") => { console.log((c ? "PASS " : "FAIL "
   const badRes = []; for (const n of bad) badRes.push([(await boardRobot(n)).robot, n]);
   ok(badRes.every(([a]) => a === undefined), "rude names still dropped (whole word, leet, spaced out, plural, long stems inside words)", badRes);
   ok((await boardRobot(undefined, "1000ESSEX")).design === "1000ESSEX" && (await boardRobot(undefined, "1000SEX-1")).design === "1000", "plates: ESSEX passes, SEX-1 is cut");
+  // r7.2 Line grade unlocks: Gunmetal paint (4), Rivets/Pinstripe (4/5), Off-white ink (2) pass; out-of-range digits still drop
+  ok((await boardRobot(undefined, "4052AB")).design === "4052AB" && (await boardRobot(undefined, "0040")).design === "0040" && (await boardRobot(undefined, "1000")).design === "1000", "r7.2 design codes (paint 4, pattern 4-5, accent 2) and old codes are kept");
+  ok(!("design" in (await boardRobot(undefined, "5000"))) && !("design" in (await boardRobot(undefined, "0060"))) && !("design" in (await boardRobot(undefined, "0003"))), "design digits past the r7.2 range are still dropped");
   // impersonation
   const ace = await call("POST", "/profile/claim", { username: "Real_Ace", gears: 0, games: 1, lastPlayed: 1 });
   await call("POST", "/score", { username: "faker", score: 300, durationMs: 30000, robot: "real_ace" });
