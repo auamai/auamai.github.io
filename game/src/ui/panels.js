@@ -181,7 +181,7 @@ export class Panels {
   challengeHtml() {
     const c = this.challenge;
     if (!c) return "";
-    return `<p class="fr__challenge"><span class="fr__badge fr__badge--pb">Challenge</span>${c.name ? `${esc(c.name)} scored` : "Beat"} <b>${fmt(c.score)}</b> on this course.</p>`;
+    return `<p class="fr__challenge"><span class="fr__badge fr__badge--pb">Challenge</span>${c.name ? `${esc(c.name)} scored` : "Beat"} <b>${fmt(c.score)}</b> on this course.${c.v === 1 ? `<span class="fr__muted"> Classic straight hall, as it was when they ran it.</span>` : ""}</p>`;
   }
 
   dailyHtml() {
@@ -323,6 +323,7 @@ export class Panels {
     const ls = MT.liveStreak(this.settings.streak);
     if (r.mode === "daily") out.push(`<li><b>Daily Run${ls.n ? ` · day ${ls.n}` : ""}</b><span>${r.dailyRank ? `#${r.dailyRank} today · ` : ""}new course in ${this.until(MT.nextMidnight())}</span></li>`);
     else if (ls.n) out.push(`<li><b>Streak · day ${ls.n}</b><span>${ls.playedToday ? "kept today" : "run the Daily Run to keep it"}</span></li>`);
+    if (r.zone) out.push(`<li><b>Reached ${esc(r.zone)}</b><span>zone ${r.zoneN} of the line</span></li>`);
     if (r.challenge) out.push(`<li><b>${r.score > r.challenge.score ? "Challenge beaten" : "Challenge"}</b><span>${r.score > r.challenge.score ? `by ${fmt(r.score - r.challenge.score)}` : `${fmt(r.challenge.score - r.score + 1)} short of ${r.challenge.name ? esc(r.challenge.name) : "their score"}`}</span></li>`);
     for (const m of r.missionsDone || []) out.push(`<li class="is-done"><b>${esc(m.text)}</b><span>+${m.reward} gears</span></li>`);
     for (const m of (this.settings.missions || []).slice(0, Math.max(0, 3 - (r.missionsDone || []).length))) {

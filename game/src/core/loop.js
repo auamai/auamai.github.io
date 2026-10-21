@@ -253,6 +253,7 @@ export class Loop {
     }
 
     this.animateRobot(dt, v, sliding);
+    this.updateTrack(dt);
     this.updateCamera(dt);
 
     if (this.audio && this.audio.started) {

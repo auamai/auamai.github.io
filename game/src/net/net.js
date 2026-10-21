@@ -100,7 +100,7 @@ export class Net {
   }
 
   shareLink(r) {
-    return r.mode === "daily" ? new URL("?daily=1", GAME_URL).href : MT.challengeUrl(GAME_URL, r.seed, r.score, this.profile.username);
+    return r.mode === "daily" ? new URL("?daily=1", GAME_URL).href : MT.challengeUrl(GAME_URL, r.seed, r.score, this.profile.username, r.courseV);
   }
 
   shareText(r) {
@@ -122,7 +122,7 @@ export class Net {
   async dare() {
     const r = this.lastRun;
     if (!r) return;
-    const link = MT.challengeUrl(GAME_URL, r.seed, r.score, this.profile.username);
+    const link = MT.challengeUrl(GAME_URL, r.seed, r.score, this.profile.username, r.courseV);
     try {
       if (navigator.share) { await navigator.share({ text: `Beat my ${fmt(r.score)} in Servo Sprint`, url: link }); return; }
     } catch (e) { if (e && e.name === "AbortError") return; }

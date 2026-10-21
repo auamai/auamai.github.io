@@ -21,6 +21,7 @@ computer, and you can install it like an app. There's nothing to buy with real m
 4. [Gears, screws and the Toolbox](#gears-screws-and-the-toolbox)
 5. [Power-ups](#power-ups)
 6. [Obstacles](#obstacles)
+   - [Factory zones and turns](#factory-zones-and-turns)
 7. [Daily Run and streaks](#daily-run-and-streaks)
 8. [Missions](#missions)
 9. [Garage: name and paint your robot](#garage-name-and-paint-your-robot)
@@ -220,6 +221,31 @@ crate stacks join in once you're past the opening stretch. Speed builds steadily
 When you crash, the game-over headline says what got you and where in the factory: the weld cell, the laser
 cutters, the parts racks, the loading dock and so on.
 
+### Factory zones and turns
+
+The line runs through five factory zones, one after another, about 935 m each (roughly a minute early in a
+run, half that at top speed). Each has its own light and its own favourite hazard:
+
+| Zone | Light | What it throws at you | Turns |
+| --- | --- | --- | --- |
+| **Bakery Line** | warm off-white haze | low crates, gaps | tight, winding |
+| **Auto Plant** | yellow work lights | welding arms (slide) | long, sweeping |
+| **Chip Fab** | clean cyan-white | crate stacks: precise lane switches | medium |
+| **Night Port** | dark, cyan rim light | rovers (forklifts) | medium, with climbs and drops |
+| **Rocket Factory** | bright off-white | gaps and everything else | medium, climbing the gantry |
+
+Every zone runs the same rhythm: it opens on a straight with roomy rows of its signature hazard on its own,
+then mixes it with the rest, and in its last stretch adds more two-lane rows and an S-bend. The zone's name
+shows for a moment as you cross into it, and the game-over screen says which zone you reached.
+
+The line steers itself through the turns: you never steer, lanes stay lanes, and every jump, slide and lane
+change works exactly as on a straight. The robot leans into a bend (more at speed) and the camera looks
+into it, so you see the next hazard coming round the corner.
+
+Free runs and challenges start on the Bakery Line. The **Daily Run** starts in a different zone each day.
+Zones and turns come from the course's seed, so a challenge or a Daily Run has the same zones, turns and
+hazards for everyone.
+
 ---
 
 ## Daily Run and streaks
@@ -386,7 +412,9 @@ Daily Runs and beaten challenges get their own wording and card line, and Daily 
 
 ### Opening a challenge
 
-A challenge link opens the same course, with a note about who you're racing and the score to beat. New players
+A challenge link opens the same course, with a note about who you're racing and the score to beat.
+Links made before factory zones existed (no `v=2` in the link) still open the exact course your friend ran:
+the classic straight hall, and the challenge note says so. New players
 see it right away above the name box, and the button reads **Take the challenge**. Beat the score and you'll see
 "Challenge beaten". Daily links read **Start the Daily Run**.
 

@@ -522,7 +522,8 @@ references); bump it on every release, and keep the `modulepreload` list in `ind
 | `src/core/run.js` | Run lifecycle and rules: modes, countdown, pause, `addScore`, tools, multipliers, Overdrive, revive, death, `endRun` |
 | `src/core/util.js` | `fmt`, `esc`, the `RNG` holder and `COURSE()` / `LOOT()`, `pick`, `shuffle` |
 | `src/sim/physics.js` | Runner and roller physics: lane spring, jump buffer, slide, rails, ramps, drift, magnet |
-| `src/world/worldgen.js` | Row spawning from COURSE, pickups from LOOT, pooled obstacles, rovers |
+| `src/world/worldgen.js` | Row spawning from COURSE, pickups from LOOT, pooled obstacles, rovers; reads `zoneRow()` for the zone mix (course v2) |
+| `src/world/track.js` | Factory Zones and turns (r7 levels): `ZONES` table, `bendAt()` (pure turn/climb schedule from seed + distance), course version, the shared `ssBend` vertex bend, long-geometry tessellation, zone light, robot lean, camera look-into-corner |
 | `src/input/input.js` | Keyboard, swipes, wheel pad, gamepad (hysteresis), focus trap, blur/visibility/orientation/context loss |
 | `src/render/render.js` | Scene, quality tiers, camera, trail, `applyDesign()`, Garage close-up |
 | `src/render/grade.js` | Brand colour grade and light rig (AgX), UI-overlay lights |
@@ -590,6 +591,32 @@ emissive floor on ceiling car bodies and hall solids (r6b).
   discard the drawing buffer. Anything that changes camera aspect or FOV must not rely on resize running.
 - On coarse pointers the menu and game-over backdrop draws at about 30 fps (frames under 30 ms apart are skipped,
   dt accumulates). Runs, countdown and pause are untouched.
+
+### Turns and climbs: the world bend (r7 levels)
+
+Turns are drawn, not simulated. `track.js` patches every world material once (`initBend()`, end of `buildScene`;
+newly pooled objects are patched in a chained `scene.onBeforeRender` when `scene.children.length` changes) so
+`#include <project_vertex>` becomes world-space: `p = modelMatrix * (instanceMatrix) * pos`, then
+`d = max(0, -p.z - 3)`, `p.xy += ssBend.xy * d²`, then `viewMatrix`/`projectionMatrix`. One shared `vec3` uniform
+(`BEND`), written once per frame in `updateTrack()` with no allocation. The patch chains any existing
+`onBeforeCompile` and appends `|ssBend` to the program cache key captured at patch time, so grade.js's yellow
+`punch()` and ceiling.js's fog patch keep their own programs. ShaderMaterials and the 3D UI overlay scene are not
+patched.
+
+- **Why world-space:** the robot sits at z = 0 and the bend starts 3 units ahead, so the robot, its lane and the
+  near hazards are never displaced; phone portrait keeps the robot framed through every turn. Shadows stay
+  consistent: casters render unbent into the shadow map and receivers look up shadows from their unbent world
+  position (`worldpos_vertex` is untouched), so a shadow stays under its object.
+- **Long pieces are tessellated** at build time (`tessellate`/`tessLines`: longest-z-edge bisection to 6-unit
+  steps, attributes interpolated, edges split) for any non-instanced mesh or line set over 30 units long (floor,
+  ceiling, lane and bed planes, side rails, roof strips). Short pieces and instanced furniture bend per vertex as
+  they are. +0 draw calls, +0 materials; extra triangles are measured in §15.
+- **Camera:** looks into the corner (`camYaw`, capped at 32 % of the horizontal half-FOV so the robot stays on
+  screen on a 360 px phone), pitches with a climb, and rolls 18 % of the robot's lean (off with reduced motion).
+- **Robot lean:** centripetal, real scale: `tan θ = v² / (r g)` with `r = 1 / (2 |bend.x|)` units converted with
+  `M_PER_U`, `g = 9.81`, capped at 22°. Render only (`robot.root.rotation.z`).
+- The sim never reads any of this; frustum culling uses unbent bounds, which is safe because the camera yaw is
+  capped well inside the frustum.
 
 ### Drawn height vs simulated height
 
@@ -687,6 +714,39 @@ change (`gearShadow`) is render-only.
 ---
 
 ## 10. Obstacles and world generation
+
+### Factory Zones and turns (course v2, r7 levels)
+
+Five zones in a fixed order, each `ZONE_LEN` = 1100 units (935 m) of run distance: Bakery Line, Auto Plant,
+Chip Fab, Night Port, Rocket Factory, then round again. Free runs and challenges start on the Bakery Line; the Daily
+Run starts on zone `(seed >>> 3) % 5`, so the start rotates by date and is the same for every player. A row belongs to
+the zone at its own position (`runDist - SPAWN_Z`), so the zone's hazards arrive as the robot crosses into it.
+
+| Zone | Signature (taught first) | Row types | Rover rows | Extra pairs | Spacing | Turns: k (radius), length | Climb |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Bakery Line | crate | crate x2, gap, arm, stack | x0.8 | 0 | x0.95 | 0.0034 (147 u), 40 % of a slot | - |
+| Auto Plant | arm | arm x2, crate, stack, gap | x1 | +0.05 | x1.05 | 0.0018 (278 u), 72 % | - |
+| Chip Fab | stack | stack x2, crate, arm | x0.5 | +0.10 | x1.0 | 0.0024 (208 u), 50 % | - |
+| Night Port | rover | crate, stack, gap, crate | x1.9 | 0 | x1.0 | 0.0020 (250 u), 60 % | 0.0011 |
+| Rocket Factory | gap | gap x2, arm, stack, crate | x1.2 | +0.12 | x0.95 | 0.0026 (192 u), 55 % | 0.0016 |
+
+**Teach, test, twist** inside every zone (`f` = position in the zone, 0-1): `f < 0.25` teach: one obstacle per row,
+signature type only, rows 15 % roomier, no extra pairs (a rover zone teaches with rover rows at x2.6);
+`0.25-0.75` test: the zone mix; `f >= 0.75` twist: +0.15 two-obstacle chance. All earlier rules still hold: stacks
+wait for `diff >= 0.15`, the tutorial keeps one obstacle per row and its 1.35 spacing, rovers keep their own rows,
+never three lanes blocked, pickups only in free lanes.
+
+**Turns** (`bendAt(seed, startZone, d)`): five 220-unit slots per zone. Slot 0 straight (the zone is taught on a
+straight), slot 1 a gentle turn (55 %), slots 2-3 full turns, slot 4 the twist, an S-bend (`sin 2πq`). Each slot's
+start, direction and climb sign come from `mix32(seed ^ (slot + 1) * 0x9e3779b1)`, a pure hash, so any distance can
+be evaluated without state and the same seed always gives the same corners. The bend on screen is the one 34 units
+ahead (you see the corner coming); the lean uses the bend at the robot.
+
+**Course version.** `COURSE_V = 2`. A run's version is 1 only for a challenge whose link has no `v=2`
+(`readChallenge` sets `v: 1`; unknown values also read as 1). v1 skips zones, zone light and turns entirely and lays
+rows out with the exact pre-r7 code path and draw order, so old links replay the course their sender ran.
+`challengeUrl(..., v)` adds `v=2` to every new link; a link shared from a v1 replay stays v1. Daily and free runs are
+always the current version.
 
 | Type | Counter | Hitbox notes |
 | --- | --- | --- |
