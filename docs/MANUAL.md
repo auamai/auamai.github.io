@@ -242,7 +242,8 @@ The line steers itself through the turns: you never steer, lanes stay lanes, and
 change works exactly as on a straight. The robot leans into a bend (more at speed) and the camera looks
 into it, so you see the next hazard coming round the corner.
 
-Free runs and challenges start on the Bakery Line. The **Daily Run** starts in a different zone each day.
+Free runs and challenges start on the Bakery Line. The **Daily Run** starts in a zone picked from the day's
+course, so the starting zone changes from day to day (two days in a row can share one).
 Zones and turns come from the course's seed, so a challenge or a Daily Run has the same zones, turns and
 hazards for everyone.
 

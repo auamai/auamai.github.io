@@ -1035,6 +1035,29 @@ gears 1. Shadow pass 31, of which the robot is 29.
 3. Arm gantries (8 draws each): one `InstancedMesh` per material across all live arms.
 4. Confirm frame time on a real mid-range phone (4x CPU throttle p95 ≤ 16.7 ms).
 
+### Factory Zones and turns (r7 levels): measured
+
+`review/val_h/out_levels/dcrun.py` on base `d5cc027` vs `review/levels`, same box, `renderer.info` (last `render()`
+call, shadow pass included; not the GL-hook method above, so compare within the table only). Run: seed 987654321,
+god mode, one render per simulated second for 150 s. Fixed scene: `dc.js` (forced side zones, 5 obstacles, 10 gears)
+on a fresh page.
+
+| Metric | Base d5cc027 | review/levels |
+| --- | --- | --- |
+| Run median / p95 / max, desktop 640x400 | 190 / 221 / 234 | **188 / 222 / 239** |
+| Run median / p95 / max, phone 390x844 DPR 2 | 171 / 204 / 226 | **171 / 204 / 223** |
+| Fixed scene menu q0 / q2 | 160 / 143 | **157 / 140** |
+| Fixed scene play q0 / q2 | 193 / 176 | **190 / 173** |
+| Triangles, run median (desktop) | 138.9 k | 162.6 k (+17 %, the tessellated long pieces, main + shadow pass) |
+| One-time `initBend()` (patch + tessellation), phone emulation on the loaded test box | - | 127 to 147 ms |
+| Payload gzip (game js/css/html) | 181.9 KB | +6.9 KB |
+
+The bend adds no meshes, materials or passes, so structural draws do not grow (the fixed scene is 3 lower). Run-level
+differences are content: the zone mix changes how many rovers and arms are on screen at once (Night Port is the
+busiest, its rover rows x1.9). Shader programs: 17 at the start of a run, up to 27 once every obstacle type has been
+drawn (not compared against base). No allocation in the per-frame path (`updateTrack` writes into
+preallocated objects; camera rotations use three's module scratch quaternions).
+
 Not yet measured on this box (2 CPUs, shared): 4x CPU-throttle p95 frame time, Fast-3G first frame, a 30-minute soak
 at full speed. These need a quiet machine or a real phone before release. The 10-minute soak at r6d showed 0 errors
 and stepwise heap growth consistent with pools warming (19.7 to 22.2 MB).
