@@ -10,7 +10,7 @@ const IDENT = new THREE.Matrix4();
 
 export class WorldGen {
   spawnItem(kind, lane, z, y = 1.05) {
-    const g = this.pools[kind].pop() || buildTool(kind, this.TM, this.TG);
+    const g = this.pools[kind].pop() || (kind === "screw" ? this.screwProxy() : buildTool(kind, this.TM, this.TG));
     if (!g.parent) this.scene.add(g);
     g.visible = true;
     g.scale.setScalar(1);
@@ -260,7 +260,8 @@ export class WorldGen {
 
   spawnGear(lane, z, y) {
     let m = this.pools.gear.pop();
-    if (!m) { m = new THREE.Mesh(this.gearGeo, this.M.gear); m.castShadow = this.gearShadow !== false; this.scene.add(m); }
+    // A bare transform: every gear is drawn by one InstancedMesh (render.js syncInstances).
+    if (!m) { m = new THREE.Object3D(); this.scene.add(m); }
     m.visible = true;
     m.scale.setScalar(1);
     m.position.set(LANES[lane], visY(y), z); // drawn height only; the sim keeps y

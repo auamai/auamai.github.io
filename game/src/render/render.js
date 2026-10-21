@@ -8,7 +8,7 @@ import { UI3D } from "../../ui3d.js?v=20261021r7";
 import { createKit, RUNNERS, ROLLERS } from "../../robots/index.js?v=20261021r7";
 import { toolMaterials, toolGeometries, buildTool, Burst } from "../../tools.js?v=20261021r7";
 import { LANES, MORPH_T, COL, MILESTONES, visY, REVIVE_T } from "../core/constants.js?v=20261021r7";
-import { BOX, BOX_EDGES, CYL, CYL_EDGES, gearGeometry } from "./geometry.js?v=20261021r7";
+import { BOX, BOX_EDGES, CYL, CYL_EDGES, gearGeometry, mergeParts } from "./geometry.js?v=20261021r7";
 import { applyGrade, regrade } from "./grade.js?v=20261021r7";
 import { makeArmKit } from "./arm.js?v=20261021r7";
 
@@ -107,14 +107,13 @@ export class Render {
     // The hall itself (floor, roof, walls, the shop-floor zones either side) lives in factory.js.
     this.factory = new Factory(scene);
     this.factory.noEdges = this.coarse; // hairline edges crawl (shimmer) at phone sizes; the grade's rim light carries the shapes
-    for (const x of LANES) {
-      const lane = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 190), M.lane);
-      lane.rotation.x = -Math.PI / 2;
-      lane.position.set(x, 0.003, -78);
-      lane.receiveShadow = true;
-      lane.renderOrder = -1;
-      scene.add(lane);
-    }
+    // The three lanes share one material: one merged plane, one draw.
+    const laneGeo = new THREE.PlaneGeometry(1.9, 190);
+    const lane = new THREE.Mesh(mergeParts(LANES.map((x) => ({ geo: laneGeo, mx: new THREE.Matrix4().makeRotationX(-Math.PI / 2).setPosition(x, 0.003, -78) }))), M.lane);
+    laneGeo.dispose();
+    lane.receiveShadow = true;
+    lane.renderOrder = -1;
+    scene.add(lane);
     const bed = new THREE.Mesh(new THREE.PlaneGeometry(7.6, 190), M.floor);
     bed.rotation.x = -Math.PI / 2;
     bed.position.set(0, 0.002, -78);
@@ -123,7 +122,11 @@ export class Render {
     scene.add(bed);
     // Roof trusses, cranes and the body conveyors overhead (ceiling.js). They replace round 3's flat light strips.
     this.ceiling = new Ceiling(scene);
-    for (const s of [-1, 1]) scene.add(this.mesh(M.rail, 1.3, 0.55, 190, 4.45 * s, 0.275, -78, false));
+    // Both side rails (and their outlines) in one mesh + one line set.
+    const rails = [-1, 1].map((s) => this.mesh(M.rail, 1.3, 0.55, 190, 4.45 * s, 0.275, -78, false));
+    for (const r of rails) r.updateMatrix();
+    scene.add(new THREE.Mesh(mergeParts(rails.map((r) => ({ geo: BOX, mx: r.matrix }))), M.rail));
+    if (this.edgeMat) scene.add(new THREE.LineSegments(mergeParts(rails.map((r) => ({ geo: BOX_EDGES, mx: r.matrix }))), this.edgeMat));
 
     // Line furniture repeats every PERIOD units and slides as one group.
     const scen = new THREE.Group();
@@ -208,6 +211,7 @@ export class Render {
     for (const k of ["screw", "wrench", "drill", "hammer", "gold", "rail", "ramp"]) this.pools[k] = [];
     this.rails = []; this.ramps = [];
     this.burst = new Burst(this.scene, this.TM, this.TG, this.gearGeo, 56);
+    this.buildInstances();
     this.burst.scale = this.coarse ? 0.6 : 1;
     // Held props: the hammer and the drill ride in the runner's right hand while active.
     const grip = this.robot.runner.joints?.armR?.grip;
@@ -244,6 +248,59 @@ export class Render {
     KM.light.color.setHex(m ? m.light : 0x3ddcff);
     KM.lightDeep.color.setHex(m ? m.deep : 0x1fa9cc);
     if (this.rig) { KM.light.userData.graded = KM.lightDeep.userData.graded = false; regrade(this); }
+  }
+
+  /* ---------- instanced pickups ---------- */
+  // Gears and screws are the most repeated things on the belt (a ramp arc is 10+ gears, a screw line 3-4
+  // screws of 6 parts). Each one is a bare transform in the scene (pooled, moved by the sim exactly as
+  // before); one InstancedMesh per part draws them all: gears 1 draw (+1 shadow on desktop), screws 3.
+  buildInstances() {
+    const G = this.TG, TM = this.TM, S = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
+    const at = (geo, x, y, z, rx = 0) => ({ geo, mx: new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), q.setFromEuler(e.set(rx, 0, 0)), new THREE.Vector3(1, 1, 1)) });
+    const steel = mergeParts([at(G.hex, 0, 0.17, 0), at(G.shaft, 0, -0.04, 0)]);
+    const navy = mergeParts([0, 1, 2].map((i) => at(G.thread, 0, 0.06 - i * 0.09, 0, Math.PI / 2)));
+    S.identity();
+    const im = (geo, mat, n) => { const m = new THREE.InstancedMesh(geo, mat, n); m.count = 0; m.frustumCulled = false; m.castShadow = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); this.scene.add(m); return m; };
+    this.inst = { gear: im(this.gearGeo, this.M.gear, 96), steel: im(steel, TM.steel, 32), navy: im(navy, TM.navy, 32), halo: im(G.halo, TM.halo, 32) };
+    this.inst.halo.renderOrder = 0;
+    this.scene.onBeforeRender = () => this.syncInstances(); // after the scene's matrix update, before the shadow pass
+  }
+
+  // Same transform tree buildTool("screw") makes, minus the meshes.
+  screwProxy() {
+    const g = new THREE.Group(), spin = new THREE.Object3D(), halo = new THREE.Object3D();
+    spin.rotation.z = 0.5; spin.scale.setScalar(1.25); halo.scale.setScalar(0.55);
+    g.add(spin, halo);
+    g.userData = { spin, halo, proxy: true };
+    return g;
+  }
+
+  // Copies live transforms into the instance buffers. No allocation; grows a buffer only past its size.
+  syncInstances() {
+    const I = this.inst;
+    if (!I) return;
+    let n = 0;
+    for (const g of this.gears) if (g.m.visible) { if (n >= I.gear.instanceMatrix.count) this.growInst("gear"); g.m.matrixWorld.toArray(I.gear.instanceMatrix.array, n++ * 16); }
+    I.gear.count = n; I.gear.visible = n > 0; I.gear.instanceMatrix.needsUpdate = true;
+    I.gear.castShadow = this.gearShadow !== false;
+    n = 0;
+    for (const it of this.items) {
+      if (it.kind !== "screw" || !it.g.visible) continue;
+      if (n >= I.steel.instanceMatrix.count) { this.growInst("steel"); this.growInst("navy"); this.growInst("halo"); }
+      const u = it.g.userData;
+      u.spin.matrixWorld.toArray(I.steel.instanceMatrix.array, n * 16);
+      u.spin.matrixWorld.toArray(I.navy.instanceMatrix.array, n * 16);
+      u.halo.matrixWorld.toArray(I.halo.instanceMatrix.array, n * 16);
+      n++;
+    }
+    for (const k of ["steel", "navy", "halo"]) { I[k].count = n; I[k].visible = n > 0; I[k].instanceMatrix.needsUpdate = true; }
+  }
+
+  growInst(k) {
+    const old = this.inst[k], m = new THREE.InstancedMesh(old.geometry, old.material, old.instanceMatrix.count * 2);
+    m.instanceMatrix.array.set(old.instanceMatrix.array);
+    m.frustumCulled = false; m.castShadow = old.castShadow; m.renderOrder = old.renderOrder; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.scene.remove(old); old.dispose(); this.scene.add(m); this.inst[k] = m;
   }
 
   /* ---------- quality & sizing ---------- */
