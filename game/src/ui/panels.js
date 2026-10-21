@@ -8,6 +8,7 @@ import { OVER_LOCK, ICON, OVER_ICON } from "../core/constants.js?v=20261021r7";
 import { toolboxHtml } from "../meta/garage.js?v=20261021r7";
 import { fmt, esc, clock } from "../core/util.js?v=20261021r7";
 import { WORDMARK } from "./brand.js?v=20261021r7";
+const MANUAL_URL = "https://github.com/auamai/auamai.github.io/blob/robot-game/docs/MANUAL.md";
 
 export class Panels {
   /* ---------- DOM ---------- */
@@ -207,6 +208,8 @@ export class Panels {
     if (this.canBuzz) items.push(t("haptics", "Vibration"));
     const vol = (key, label) => `<label class="fr__vol"><span>${label}</span><input type="range" min="0" max="100" step="5" data-vol="${key}" value="${Math.round((this.settings[key] ?? (key === "musicVol" ? 0.7 : 0.8)) * 100)}" aria-label="${label} volume" /></label>`;
     items.push(t("music", "Music"), vol("musicVol", "Music"), t("sfx", "Sound effects"), vol("sfxVol", "Effects"), t("still", "Reduce motion"));
+    // Player manual (docs/MANUAL.md on GitHub): a plain link, so it needs no script and no CSP change.
+    items.push(`<a class="fr__link fr__link--quiet" href="${MANUAL_URL}" target="_blank" rel="noopener">Player manual</a>`);
     return `<div class="fr__settings">${items.join("")}</div>`;
   }
 
