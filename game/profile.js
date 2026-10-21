@@ -134,7 +134,7 @@ async function req(method, path, body, ms = 5000) {
       signal: ctl.signal,
     });
     let data = null;
-    try { data = await res.json(); } catch { /* empty */ }
+    try { data = await res.json(); } catch { if (ctl.signal.aborted) return { ok: false, offline: true }; } // body cut off by the timeout: treat as offline so callers can retry
     return { ok: res.ok, status: res.status, data };
   } catch {
     return { ok: false, offline: true };

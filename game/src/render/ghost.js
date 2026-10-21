@@ -261,7 +261,7 @@ export class Ghost {
     if (!c || !(c.score > 0) || !P.online() || this.settings.ghost === false || c.ghost) return;
     P.getGhost((c.seed >>> 0).toString(36), c.score, c.v || 1).then((res) => {
       if (this.challenge !== c) return;
-      if (res && res.offline && retry > 0) { setTimeout(() => this.ghostFetch(retry - 1), 3000); return; }
+      if (res && (res.offline || (res.ok && !res.data)) && retry > 0) { setTimeout(() => this.ghostFetch(retry - 1), 3000); return; }
       const track = res && res.ok && res.data && decodeTrack(res.data.b);
       if (track && track.s[track.n - 1] <= c.score) c.ghost = { track, s: c.score };
     }).catch(() => {});
