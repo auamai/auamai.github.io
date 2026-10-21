@@ -1,0 +1,20 @@
+Music credits — Servo Sprint
+
+rhythm-factory.m4a
+  Title:   Rhythm Factory
+  Artist:  Zane Little Music
+  Source:  https://opengameart.org/content/rhythm-factory
+  License: CC0 1.0 Universal (public domain dedication)
+           https://creativecommons.org/publicdomain/zero/1.0/
+
+  Credit is not required under CC0; it is given here as a courtesy.
+  Thank you, Zane Little Music.
+
+Edit made for the game: a 90.000 s loop (36 bars at 96 BPM) cut from
+82.52 s to 172.52 s of the original, with a 20 ms equal-power crossfade
+baked into the loop end, 0.25 s of wrap-around padding on each side
+(the player loops 0.25 s .. 90.25 s), -4.9 dB static gain to about
+-16 LUFS integrated, AAC-LC 128 kbps stereo 44.1 kHz.
+
+The synthesized "Line Shift" cue in audio.js is original to the game and
+is used as a fallback when this file cannot be loaded.
