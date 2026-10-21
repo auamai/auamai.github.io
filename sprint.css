@@ -1,0 +1,109 @@
+/* Servo Sprint teaser: a 4-second seamless loop of real gameplay (rendered from /game/),
+   with the wordmark, the visitor's best and a Play button laid over its lower edge.
+   Self-contained: delete this file, sprint.js, assets/sprint/ and the .sprint block in
+   index.html to remove it. */
+.sprint {
+  position: relative; display: block; isolation: isolate;
+  grid-column: 1 / -1; grid-row: 2; align-self: end;
+  margin-top: 28px; aspect-ratio: 32 / 11; max-height: 400px;
+  border-radius: 22px; overflow: hidden;
+  border: 1px solid var(--line-2, rgba(255,255,255,.12));
+  background: #c9d1e8;
+  color: var(--ink, #f4f6fb); text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.sprint:focus { outline: none; }
+.sprint:focus-visible { outline: 2px solid var(--accent, #a9bcff); outline-offset: 4px; }
+
+.sprint__media { position: absolute; inset: 0; z-index: -1; }
+.sprint__video {
+  display: block; width: 100%; height: 100%;
+  object-fit: cover; object-position: 50% 62%;   /* keep the runner and the press in frame */
+  transform: scale(1.001); transition: transform 1.2s cubic-bezier(.2,.7,.2,1);
+}
+.sprint:hover .sprint__video, .sprint:focus-visible .sprint__video { transform: scale(1.025); }
+/* Night-side scrim: the scene is a bright factory, the copy is light */
+.sprint__media::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background:
+    linear-gradient(0deg, rgba(9, 12, 34, .88) 0%, rgba(9, 12, 34, .6) 30%, rgba(9, 12, 34, .12) 58%, rgba(9, 12, 34, 0) 72%),
+    linear-gradient(90deg, rgba(9, 12, 34, .42) 0%, rgba(9, 12, 34, 0) 44%);
+}
+
+.sprint__info {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  display: flex; align-items: flex-end; gap: 40px;
+  padding: 0 32px 28px;
+}
+.sprint__id { display: grid; gap: 10px; min-width: 0; margin-right: auto; }
+
+/* Wordmark: light caps, wide tracking, optically corrected (the trailing tracking is removed
+   so the mark's right edge is the T, not empty space; word gap set by hand) */
+.sprint__mark {
+  display: inline-flex; gap: .62em; align-items: baseline;
+  font: 300 22px/1 var(--sans, system-ui, sans-serif);
+  letter-spacing: .26em; text-transform: uppercase; white-space: nowrap;
+  font-kerning: normal; font-feature-settings: "kern" 1, "case" 1;
+  color: var(--ink, #f4f6fb);
+}
+.sprint__mark > span { margin-right: -.26em; }
+.sprint__cap { font-size: 14px; font-weight: 300; line-height: 1.4; text-wrap: balance; color: var(--ink-2, rgba(232,236,248,.72)); }
+
+/* Best score: tabular lining figures, one run of text (no per-digit cells) */
+.sprint__score { display: grid; justify-items: end; gap: 8px; text-align: right; }
+.sprint__score[hidden] { display: none; }
+.sprint__k { font-size: 12.5px; font-weight: 400; letter-spacing: .02em; color: var(--ink-2, rgba(232,236,248,.72)); }
+.sprint__n {
+  font: 300 30px/1 var(--sans, system-ui, sans-serif); letter-spacing: -.01em;
+  font-variant-numeric: tabular-nums lining-nums; font-feature-settings: "tnum" 1, "lnum" 1;
+  color: var(--ink, #f4f6fb);
+}
+
+.sprint__play { flex: none; }
+.sprint:hover .sprint__play, .sprint:focus-visible .sprint__play { transform: scale(1.06); }
+.sprint:active .sprint__play { transform: scale(.97); transition-duration: .08s; }
+.sprint:focus-visible { outline: none; }
+.sprint:focus-visible .sprint__play { box-shadow: 0 0 0 1px rgba(20, 22, 27, .1), 0 0 0 4px #14161B, 0 0 0 7px var(--accent, #a9bcff), 0 10px 30px rgba(10, 12, 24, .38); }
+
+/* Nav: "Play" sits with the section tabs but leaves the page */
+.tab-play {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 18px; border-radius: 999px;
+  font-size: 15px; font-weight: 400; color: var(--accent, #a9bcff);
+  transition: color .2s, background .25s;
+}
+.tab-play:hover { color: var(--ink, #f4f6fb); }
+.tab-play:focus-visible { outline: 2px solid var(--accent, #a9bcff); outline-offset: 2px; }
+
+/* Short laptop screens: a slimmer band so the hero still fits */
+@media (min-width: 981px) and (max-height: 760px) {
+  .sprint { max-height: 300px; margin-top: 16px; }
+}
+/* Stacked hero: between the buttons and the clock */
+@media (max-width: 980px) {
+  .sprint { order: 1; align-self: stretch; aspect-ratio: 16 / 9; max-height: none; margin-top: -4px; }
+  .sprint__video { object-position: 50% 60%; }
+}
+@media (max-width: 640px) {
+  /* Phones: the picture on top, the copy below it on the card (no text over a busy scene) */
+  .sprint { aspect-ratio: auto; display: flex; flex-direction: column; border-radius: 18px; background: var(--card, rgba(16,20,38,.62)); }
+  .sprint__media { position: relative; inset: auto; z-index: 0; aspect-ratio: 16 / 9; background: #c9d1e8; }
+  .sprint__media::after { background: linear-gradient(0deg, rgba(9, 12, 34, .28), rgba(9, 12, 34, 0) 40%); }
+  .sprint__video { object-position: 50% 60%; }
+  .sprint__info { position: static; flex-wrap: wrap; align-items: flex-end; gap: 18px 20px; padding: 20px 20px 20px; }
+  .sprint__id { gap: 8px; flex: 1 1 100%; }
+  .sprint__mark { font-size: 19px; }
+  .sprint__cap { font-size: 13.5px; }
+  .sprint__score { justify-items: start; text-align: left; gap: 6px; margin-right: auto; }
+  .sprint__n { font-size: 26px; }
+  .sprint__play { margin-left: auto; }
+  .tab-play { padding: 8px 11px; font-size: 13.5px; white-space: nowrap; }
+}
+@media (max-width: 359px) {
+  .sprint__mark { font-size: 17px; letter-spacing: .22em; }
+  .sprint__mark > span { margin-right: -.22em; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sprint__video, .sprint__play, .tab-play { transition: none; }
+  .sprint:hover .sprint__video, .sprint:focus-visible .sprint__video { transform: none; }
+}
