@@ -1,7 +1,7 @@
 // Player profile: saved on this device, optionally linked to the Worker with a passkey
 // (Face ID / Touch ID / fingerprint, synced by iCloud Keychain or Google Password Manager)
 // or, as a fallback, a backup code.
-import { cosClean } from "./meta.js?v=20261021r7";
+import { cosClean, gradeOf } from "./meta.js?v=20261021r7";
 import { API_BASE } from "./config.js?v=20261021r7";
 
 const KEY = "au_factory_profile_v1";
@@ -52,6 +52,10 @@ export function load() {
       cos: cosClean(p.cos),
       // Toolbox migration stamp (r7): the wallet is gears minus spent; set once, never re-run.
       ...(p.tb === 1 ? { tb: 1 } : {}),
+      // Line grade (r7.2): the last grade paid into the Toolbox, and the one-time migration stamp. Device-local
+      // (not synced): grade itself comes from gears, which sync.
+      ...(p.pg === 1 ? { pg: 1 } : {}),
+      lv: Math.min(30, Math.max(1, int(p.lv))),
       held: p.held && int(p.held.score) > 0 && int(p.held.durationMs) >= 3000 ? { score: int(p.held.score), durationMs: int(p.held.durationMs) } : null,
     };
   } catch {
@@ -64,7 +68,7 @@ export function save(p) {
 }
 
 export function create(username) {
-  const p = { username, best: 0, games: 0, gears: 0, lastPlayed: 0, code: "", token: "", passkey: false, claimed: false, held: null, cos: cosClean(null), tb: 1 };
+  const p = { username, best: 0, games: 0, gears: 0, lastPlayed: 0, code: "", token: "", passkey: false, claimed: false, held: null, cos: cosClean(null), tb: 1, lv: 1, pg: 1 };
   save(p);
   return p;
 }
@@ -86,6 +90,9 @@ export function hold(p, score, durationMs) {
 }
 
 export function merge(p, remote) {
+  // Gears another device already banked include that device's grade rewards: count those grades as paid here,
+  // so two devices never pay the same grade twice.
+  if (int(remote.gears) > p.gears) p.lv = Math.max(p.lv | 0, gradeOf(int(remote.gears)).n);
   p.best = Math.max(p.best, int(remote.best));
   p.games = Math.max(p.games, int(remote.games));
   p.gears = Math.max(p.gears, int(remote.gears));

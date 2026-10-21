@@ -760,7 +760,8 @@ function checkName(name) {
 // Optional on POST /score and in profile cosmetics. Bad or rude values are dropped (never an error),
 // so old clients and odd input still post their score.
 const ROBOT_RE = /^[A-Za-z0-9][A-Za-z0-9 _.-]{0,15}$/;
-const DESIGN_RE = /^[0-3][0-2][0-3][01][A-Z0-9-]{0,8}$/;
+// r7.2: paint 0-4, pattern 0-5, accent 0-2 (Line grade unlocks in the game). Older codes still match.
+const DESIGN_RE = /^[0-4][0-2][0-5][0-2][A-Z0-9-]{0,8}$/;
 // Short stems that hide inside ordinary words (Sussex, Dickens, grape, swanky) only match a whole word
 // (plus a plural / -y ending); every other stem still matches anywhere, across spaces too.
 const WORD_ONLY = new Set(["sex", "dick", "rape", "fag", "wank", "twat", "kike", "chink", "nazi"]);

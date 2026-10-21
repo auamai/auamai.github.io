@@ -188,7 +188,9 @@ export class Panels {
     const ls = MT.liveStreak(this.settings.streak), db = this.settings.dailyBest, today = MT.vanDay();
     const best = db && db.day === today ? ` · today's best ${fmt(db.score)}` : "";
     const streak = ls.n ? `<b>${ls.n}-day streak</b>${ls.playedToday ? " · done today" : " · run today to keep it"}${ls.freeLeft ? "" : " · free miss used this week"}` : "Run the Daily Run on consecutive days to build a streak (one free miss a week).";
-    return `<p class="fr__muted fr__daily">${streak}${best} · new course in ${this.until(MT.nextMidnight())}</p>`;
+    const tw = MT.twistOf(today), twDone = this.settings.twist && this.settings.twist.day === today && this.settings.twist.done;
+    return `<p class="fr__muted fr__daily">${streak}${best} · new course in ${this.until(MT.nextMidnight())}</p>
+      <p class="fr__muted fr__twist"><span class="fr__badge">Today's twist</span>${esc(tw.text)} in the Daily Run${twDone ? " · <b>done</b>" : ` · +${MT.TWIST_REWARD} gears`}</p>`;
   }
 
   controlsHtml() {
@@ -308,6 +310,11 @@ export class Panels {
       lines.push(`<p class="fr__nudge">${nm ? esc(nm.text) : `Best ${fmt(this.profile.best)}`}</p>`);
     }
     if (r.badge) lines.push(`<p class="fr__unlock"><span class="fr__medal is-${r.badge.id}" aria-hidden="true"></span>${fmt(r.badge.at)} reached: ${esc(r.badge.name)} unlocked in the Garage</p>`);
+    // Peak-end: the best progression moment of the run, last on the status block (grade, then weekly, then twist).
+    const g = (r.grades || []).slice(-1)[0];
+    if (g) { const un = (r.grades || []).flatMap((x) => x.unlocks); lines.push(`<p class="fr__moment fr__gradeup"><span class="fr__star" aria-hidden="true"></span>Grade <b>${g.n}</b><span class="fr__soft"> · +${fmt(r.grades.reduce((a, x) => a + x.reward, 0))} gears${un.length ? ` · ${esc(un.join(", "))} unlocked` : ""}</span></p>`); }
+    if (r.weekPay) lines.push(`<p class="fr__unlock"><span class="fr__medal is-deep" aria-hidden="true"></span>Weekly goal done · +${fmt(r.weekPay)} gears</p>`);
+    if (r.twist && r.twist.pay) lines.push(`<p class="fr__unlock"><span class="fr__medal is-star" aria-hidden="true"></span>Twist done: ${esc(r.twist.text)} · +${fmt(r.twist.pay)} gears</p>`);
     return lines.join("");
   }
 
@@ -321,6 +328,8 @@ export class Panels {
   progressHtml() {
     const r = this.lastRun, out = [];
     const ls = MT.liveStreak(this.settings.streak);
+    // First run: one line on where the gears went (the Toolbox counts up just above).
+    if (this.profile.games === 1) out.push(`<li><b>Gears bank in your Toolbox</b><span>spend them in the Garage</span></li>`);
     if (r.mode === "daily") out.push(`<li><b>Daily Run${ls.n ? ` · day ${ls.n}` : ""}</b><span>${r.dailyRank ? `#${r.dailyRank} today · ` : ""}new course in ${this.until(MT.nextMidnight())}</span></li>`);
     else if (ls.n) out.push(`<li><b>Streak · day ${ls.n}</b><span>${ls.playedToday ? "kept today" : "run the Daily Run to keep it"}</span></li>`);
     if (r.zone) out.push(`<li><b>Reached ${esc(r.zone)}</b><span>zone ${r.zoneN} of the line</span></li>`);
@@ -328,8 +337,9 @@ export class Panels {
     for (const m of r.missionsDone || []) out.push(`<li class="is-done"><b>${esc(m.text)}</b><span>+${m.reward} gears</span></li>`);
     for (const m of (this.settings.missions || []).slice(0, Math.max(0, 3 - (r.missionsDone || []).length))) {
       const d = MT.missionInfo(m);
-      out.push(`<li><b>${esc(d.text)}</b><span class="fr__mbar"><i style="transform:scaleX(${Math.min(1, d.prog / d.goal).toFixed(3)})"></i></span></li>`);
+      out.push(`<li><b>${esc(d.text)}<small class="fr__mprog">${MT.missionProg(m)}</small></b><span class="fr__mbar"><i style="transform:scaleX(${Math.min(1, d.prog / d.goal).toFixed(3)})"></i></span></li>`);
     }
+    if (r.twist && !r.twist.done) out.push(`<li><b>Twist: ${esc(r.twist.text)}</b><span>try again today</span></li>`);
     return out.length ? `<ul class="fr__progress">${out.join("")}</ul>` : "";
   }
 
@@ -693,6 +703,7 @@ export class Panels {
     else if (a === "shop" || a === "garage") this.showShop();
     else if (a === "buy") this.buy(b.dataset.id);
     else if (a === "g") this.garageAct(b);
+    else if (a === "reroll") this.rerollMission(b.dataset.i);
     else if (a === "board") { this.boardTab = b.dataset.board; this.refreshBoard(); }
     else if (a === "share") this.share();
     else if (a === "dare") this.dare();
