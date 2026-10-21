@@ -103,7 +103,7 @@ export const MISSIONS = [
 export const STARTER = [
   { id: "s-jump", kind: "start", stat: "jumps", goal: 3, text: "Jump 3 times", reward: 20 },
   { id: "s-slide", kind: "start", stat: "slides", goal: 2, text: "Slide twice", reward: 20 },
-  { id: "s-gears", kind: "start", stat: "gearsRun", goal: 15, text: "Grab 15 gears in one run", reward: 30, oneRun: true },
+  { id: "s-gears", kind: "start", stat: "gearsRun", goal: 10, text: "Grab 10 gears in one run", reward: 30, oneRun: true },
 ];
 const ALL_M = MISSIONS.concat(STARTER);
 const mDef = (id) => ALL_M.find((x) => x.id === id);

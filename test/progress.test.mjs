@@ -14,7 +14,7 @@ ok(f.length === 3 && f[0].prog === 12 && f[1].prog === 41 && !f.some((m) => m.id
 // apply
 let r = MT.missionsApply([{ id: "dist1k", prog: 600 }, { id: "slide15", prog: 14 }, { id: "mult3", prog: 2 }], { dist: 900, slides: 1, mult: 3.2 });
 ok(r.done.map((d) => d.id).sort().join() === "mult3,slide15" && r.list.find((m) => m.id === "dist1k").prog === 900 && r.list.length === 3, "one-run goals take the best run, totals add up, finished ones replaced", r);
-r = MT.missionsApply(MT.STARTER_LIST(), { jumps: 4, slides: 2, gearsRun: 16 });
+r = MT.missionsApply(MT.STARTER_LIST(), { jumps: 4, slides: 2, gearsRun: 11 });
 ok(r.done.length === 3 && r.done.reduce((a, d) => a + d.reward, 0) === 70 && r.list.every((m) => MT.missionInfo(m).kind !== "start"), "starter missions finish in one ordinary first run (+70) and never come back", r);
 ok(MT.missionProg({ id: "dist1k", prog: 640 }) === "640 / 1,000 m" && MT.missionProg({ id: "mult3", prog: 2.46 }) === "×2.4 / ×3" && MT.missionProg({ id: "screw50", prog: 70 }) === "50 / 50", "progress reads in numbers");
 // reroll

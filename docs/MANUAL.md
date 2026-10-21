@@ -43,7 +43,7 @@ computer, and you can install it like an app. There's nothing to buy with real m
    game-over screen outside the buttons.
 
 On your first run the game starts a bit slower and shows short tips the first time you meet something new.
-Your first three missions ("Jump 3 times", "Slide twice", "Grab 15 gears in one run") are made to finish on
+Your first three missions ("Jump 3 times", "Slide twice", "Grab 10 gears in one run") are made to finish on
 that first run, so you see gears land in your Toolbox and your first grade come up straight away.
 
 ---
