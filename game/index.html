@@ -27,6 +27,12 @@
   <link rel="icon" href="brand/icon-32.png?v=20261020r6c" sizes="32x32" type="image/png" />
   <link rel="apple-touch-icon" href="brand/apple-touch-icon.png?v=20261020r6c" />
   <link rel="manifest" href="manifest.webmanifest?v=20261020r6c" />
+  <!-- Home-screen app on iOS: full screen under the status bar (the HUD already pads for the safe areas). -->
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Servo Sprint" />
+  <meta name="format-detection" content="telephone=no" />
   <link rel="preload" href="fonts/inter-tight-var.woff2?v=20261020r6c" as="font" type="font/woff2" crossorigin />
   <link rel="preload" href="fonts/plex-mono-400.woff2?v=20261020r6c" as="font" type="font/woff2" crossorigin />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
