@@ -235,12 +235,12 @@ html.fr-open, html.fr-open body { overscroll-behavior: none; }
 .fr__btn--solid { background: #f2f0ea; color: #14161b; border-color: transparent; }
 .fr__btn--solid:hover { background: #ffffff; }
 .fr__btn--wide { flex-basis: 100%; height: 56px; font-size: 16px; }
-/* Periwinkle action for signing in or saving; Run again stays the navy primary. */
+/* Cyan action for signing in or saving (brand cyan #3DDCFF; #14161b ink ~11:1); Run again stays the navy primary. */
 .fr__btn--accent {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
-  background: #ffc93c; color: #14161b; border-color: transparent;
+  background: #3ddcff; color: #14161b; border-color: transparent;
 }
-.fr__btn--accent:hover { background: #f2b928; border-color: transparent; }
+.fr__btn--accent:hover { background: #22cdf3; border-color: transparent; }
 .fr__btn .fr__key, .fr__link .fr__key { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; flex: none; }
 .fr__link--key { display: inline-flex; align-items: center; gap: 8px; color: var(--fr-accent-ink); text-decoration-color: rgba(255, 201, 60, .35); }
 .fr__link--quiet { font-size: 13px; color: var(--fr-ink-3); }
