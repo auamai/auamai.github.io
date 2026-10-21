@@ -62,8 +62,8 @@ export function create({ M }) {
   const back = mesh(markGeo, M.light, 0, 0.5 - 0.52, 0.063, false);
   back.scale.setScalar(0.06);
   packG.add(back);
-  // Chassis plate across the light strip (Garage plate text and pattern). Faces the run camera.
-  if (M.plate) packG.add(mesh(keep(new THREE.PlaneGeometry(0.19, 0.095)), M.plate, 0, -0.2, 0.075));
+  // Chassis plate over the light strip (Garage plate text and pattern; z clears the strip). Faces the run camera.
+  if (M.plate) packG.add(mesh(keep(new THREE.PlaneGeometry(0.19, 0.095)), M.plate, 0, -0.2, 0.084));
 
   // Neck and head.
   const neck = mesh(keep(lathe([[0, 0.6], [0.06, 0.6], [0.05, 0.68], [0.055, 0.73], [0, 0.735]], 16)), M.frame);
