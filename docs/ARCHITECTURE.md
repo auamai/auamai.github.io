@@ -1103,6 +1103,14 @@ busiest, its rover rows x1.9). Shader programs: 17 at the start of a run, up to 
 drawn (not compared against base). No allocation in the per-frame path (`updateTrack` writes into
 preallocated objects; camera rotations use three's module scratch quaternions).
 
+### integration/r8 (levels + missions + ghost): measured
+
+Same probe (`dcrun.py`, 150 s god run, renderer.info once a second; free run, so no ghost): desktop 640x400 median
+**185** / p95 229 / max 245, phone 390x844 DPR 2 median **172** / p95 207 / max 218 (d5cc027: 190 / 221 / 234 and
+171 / 204 / 226). Fixed scene menu q0 158, play q0 188. Ghost visible: **+2** draw calls (desktop 151 -> 153, phone
+126 -> 128 in a Bakery Line turn), 0 hidden. Payload vs d5cc027: **+19.2 KB gz** (levels +7.2, missions +5.4, ghost
++6.8; each within the +15 KB per-specialist budget). Still over the 152 draw-call budget, as before these merges.
+
 Not yet measured on this box (2 CPUs, shared): 4x CPU-throttle p95 frame time, Fast-3G first frame, a 30-minute soak
 at full speed. These need a quiet machine or a real phone before release. The 10-minute soak at r6d showed 0 errors
 and stepwise heap growth consistent with pools warming (19.7 to 22.2 MB).
@@ -1139,6 +1147,7 @@ and stepwise heap growth consistent with pools warming (19.7 to 22.2 MB).
 | Worker: garage | `review/garage_shots/wtest/test_worker_garage.mjs` (outside the repo) | 14 | robot/design sanitise, old shapes, revive flag and Daily rejection, servo clamp, unmigrated fallback |
 | Progression unit tests | `test/progress.test.mjs` (`node test/progress.test.mjs`, no browser) | 26 | mission pool/kinds, fill + old-save carry-over, one-run vs total, starter missions, readable progress, daily swap, weekly goal, seeded Daily twist, grade thresholds/rewards/unlocks, r7.2 migration once, no back-pay |
 | Worker: garage fixes | `leaderboard-worker/test/garage_fixes.test.mjs` (in the repo, run by `npm test` after `security.test.mjs`) | 14 | servos capped by spent gears (450 each, max 3 held), fallback only on a missing column, whole-word name filter (Sussex/Dickens pass), robot name can't equal another username, r7.2 design range kept / out-of-range dropped |
+| Worker: ghosts | `leaderboard-worker/test/ghost.test.mjs` (in the repo, run by `npm test` after `garage_fixes`) | 31 | POST/GET `/ghost` validation (shape, flags, speed, score steps, caps), first write wins, cache headers, CORS, rate limit, unmigrated DB answers 200, course version in the key (v1 and v2 kept apart, bad `v` rejected), a real game track (with `REAL_TRACK`; 30 without) |
 | Worker: legacy | `worker/test_r6.mjs` 15, `test_r6b_err.mjs` 9, `test_r4r5_on_r6.mjs` 31 | 55 | earlier rounds run against the new bundle |
 
 **Gates for any PR:** goldens identical (or justified), 17/17, 9/9, Worker suites green, zero console errors on phone
@@ -1148,11 +1157,15 @@ At `integration/r7` only the two `leaderboard-worker/test/` suites are in the re
 (`gtests.py`, 11) and the Worker garage suite (14) still live under `review/garage_shots/`; moving them into the repo
 is open. Integrated Worker total: **134** (31 + 15 + 9 + 14 + 46 + 12 + 7, as counted by the integrator). Browser
 17/17, reliability 9/9, garage 11/11 on `b1ea002`.
+At `integration/r8` (levels + missions + ghost): Worker **167** (31 + 15 + 9 + 14 + 46 + 7 + 14 garage fixes + 31 ghost),
+progression unit tests 26, browser 17/17, reliability 9/9, garage 11/11 (its `draw_calls` check, ≤ 156 at 2.5 s into a free
+run, is content-dependent on v2 courses and failed 2 of 5 runs (159) during the r8 gate; see §15).
 
 **Course v2 (r7 levels):** golden expectations moved to `review/levels_golden.json` ([§8](#8-seeded-rng-determinism-and-golden-replays)),
 plus a fourth check: the old r7 golden file replayed with `challenge.v = 1` must still match. The reliability suite's
-`share_and_challenge` pinned the exact link text, so the levels copy (`review/val_h/out_levels/tests_b_lv.js`)
-expects `&v=2` on new links, `v: 1` from a link without it, and no `v` when a v1 run is re-shared.
+`share_and_challenge` pinned the exact link text. Since r8 the shared `review/val_h/tests_b.js` expects `&v=2` on new
+links, `v: 1` from a link without it, and `challengeUrl(..., 1)` without `v`; it detects a pre-v2 build (no `v` field
+from `readChallenge`) and keeps the r7 expectation there, so branches cut from `d5cc027` can still share it.
 
 Known test gaps: no WebKit on the test box (iOS covered by Chromium emulation plus code review); a real iPhone pass
 is needed for audio unlock, share sheet and Add to Home Screen.
