@@ -31,11 +31,13 @@ export class Input {
         if (k === "p") this.pause();
       } else if (this.state === "pause") {
         if (k === "p" || (k === " " && !onControl)) { e.preventDefault(); this.resume(); }
-      } else if ((this.view === "over" || (this.view === "menu" && this.profile && !this.switching)) && (k === "enter" || k === " ") && !onControl) {
+      } else if ((this.view === "over" || (this.view === "menu" && this.profile && !this.switching)) && (k === "enter" || k === " ") && (!onControl || onControl.dataset.panel === "start")) {
+        // Space or Enter runs again, including while "Run again" itself has focus (it does after every
+        // game over); before, Space on the focused button was swallowed and nothing happened.
         e.preventDefault();
-        if (!e.repeat) this.tryStart();
-      } else if (MOVES[k]) {
-        e.preventDefault(); // arrows and space never scroll the page behind
+        if (!e.repeat) this.startFromKeys();
+      } else if (MOVES[k] && !(onControl && k === " ")) {
+        e.preventDefault(); // arrows and space never scroll the page behind (Space still presses a focused button)
       }
     };
     window.addEventListener("keydown", this.onKey);
@@ -175,13 +177,27 @@ export class Input {
     const pads = navigator.getGamepads ? navigator.getGamepads() : [];
     const gp = [...pads].find((p) => p && p.connected);
     if (!gp) return;
-    const b = (i) => !!(gp.buttons[i] && gp.buttons[i].pressed), ax = gp.axes[0] || 0, ay = gp.axes[1] || 0, D = 0.55;
-    const now = { left: b(14) || b(4) || ax < -D, right: b(15) || b(5) || ax > D, jump: b(12) || b(0) || ay < -D, slide: b(13) || b(1) || ay > D, start: b(9), a: b(0) };
-    const prev = this.padPrev, edge = (k) => now[k] && !prev[k];
+    const prev = this.padPrev;
+    // Stick with hysteresis: a direction engages past 0.55 and only lets go under 0.35, so a stick resting
+    // near the threshold (or a worn one that jitters) can't fire the same lane change twice.
+    const b = (i) => !!(gp.buttons[i] && gp.buttons[i].pressed), ax = gp.axes[0] || 0, ay = gp.axes[1] || 0;
+    const st = (k, val) => val > (prev["s_" + k] ? 0.35 : 0.55);
+    const sl = st("left", -ax), sr = st("right", ax), su = st("jump", -ay), sd = st("slide", ay);
+    const now = { left: b(14) || b(4) || sl, right: b(15) || b(5) || sr, jump: b(12) || b(0) || su, slide: b(13) || b(1) || sd, start: b(9), a: b(0),
+      s_left: sl, s_right: sr, s_jump: su, s_slide: sd };
+    const edge = (k) => now[k] && !prev[k];
     this.padPrev = now;
     if (edge("start")) { if (this.state === "play" || this.state === "count") return this.pause(); if (this.state === "pause") return this.resume(); }
     if (this.state === "play") { for (const m of ["left", "right", "jump", "slide"]) if (edge(m)) this.act(m); return; }
-    if ((edge("a") || edge("start")) && (this.view === "over" || (this.view === "menu" && this.profile && !this.switching))) this.tryStart();
+    if ((edge("a") || edge("start")) && (this.view === "over" || (this.view === "menu" && this.profile && !this.switching))) this.startFromKeys();
+  }
+
+  // Keys and the gamepad start the same run the primary button would: the challenge or Daily Run a
+  // link opened on the menu, the current mode after a game over.
+  startFromKeys() {
+    const b = this.panel && this.panel.querySelector('[data-panel="start"]');
+    const mode = (b && b.dataset.mode) || (this.view === "menu" ? (this.challenge ? "challenge" : this.dailyLink ? "daily" : "free") : this.mode);
+    this.tryStart(mode);
   }
 
   // Keep Tab inside the game while it is open.

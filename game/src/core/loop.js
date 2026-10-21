@@ -112,6 +112,7 @@ export class Loop {
         // A hop off a rail lands back on it while it still runs under you.
         if (r.hopRail && r.vy < 0 && r.y <= RAIL_H && r.lane === r.hopRail.lane && r.hopRail.zNear > 0 && r.hopRail.zNear - r.hopRail.len < 0) {
           r.y = RAIL_H; r.vy = 0; r.rail = r.hopRail; r.hopRail = null; r.ground = true;
+          if (r.jumpBuf > 0 && this.driving) this.hop();
         }
         if (r.y <= 0) {
           // Landing: absorb and camera shake scale with the impact speed.
@@ -121,7 +122,8 @@ export class Loop {
           if (r.launch) { r.launch = false; r.landRoll = LAND_ROLL; this.addScore(50, { x: r.x, y: 1, z: 0 }); this.sfx("slide", r.x); }
           r.hopRail = null;
           r.y = 0; r.vy = 0; r.ground = true;
-          if (r.jumpBuf > 0) { r.jumpBuf = 0; r.queueSlide = false; r.vy = JUMP_V; r.ground = false; r.slideT = 0; }
+          if (r.jumpBuf > 0 && this.driving) this.hop();
+          else if (r.jumpBuf > 0) { r.jumpBuf = 0; r.queueSlide = false; r.vy = JUMP_V; r.ground = false; r.slideT = 0; }
           else if (r.queueSlide) { r.slideT = SLIDE_T; r.queueSlide = false; }
         }
       }
