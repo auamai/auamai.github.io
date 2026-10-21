@@ -41,7 +41,7 @@ export const HOP_V = Math.sqrt(2 * 9.81 / 0.85 * 0.75); // the roller's jump: a 
 export const DRIFT_CHAIN = 0.6, DRIFT_CASH = 1.5;
 export const DRIFT_MULT = [1, 1.2, 1.4, 1.6];
 export const RATE_CAP = 1200;       // points in any one-second window (the sim's best was 1,014)
-export const JUMP_BUF = 0.16;       // a jump pressed this close before landing still fires on landing
+export const JUMP_BUF = 0.3;        // a jump pressed this close before landing still fires on landing (0.16 until r7: early presses for a gap right after a crate were dropped)
 export const OVER_LOCK = 450;       // ms after game over before a key or tap can restart
 export const COUNT_BEAT = 0.42;    // countdown: three numbers of this length, then a GO beat while play starts
 // Tools (round 6). Every point still goes through addScore and its caps.
