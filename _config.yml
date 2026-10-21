@@ -1,0 +1,3 @@
+# Jekyll skips dot-folders by default; serve /.well-known (WebAuthn related origins for Servo Sprint).
+include:
+  - .well-known
