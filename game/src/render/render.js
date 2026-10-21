@@ -286,6 +286,11 @@ export class Render {
   resize() {
     const w = this.root.clientWidth || window.innerWidth;
     const h = this.root.clientHeight || window.innerHeight;
+    // One rotation or URL-bar slide fires window resize, visualViewport resize and the ResizeObserver together;
+    // re-assigning the same canvas size still throws the drawing buffer away, so only a real change does work.
+    const pr = this.renderer.getPixelRatio(), sz = this.sized || (this.sized = { w: 0, h: 0, pr: 0 });
+    if (w === sz.w && h === sz.h && pr === sz.pr) return;
+    sz.w = w; sz.h = h; sz.pr = pr;
     this.renderer.setSize(w, h, false);
     const a = w / h;
     this.camera.aspect = a;
