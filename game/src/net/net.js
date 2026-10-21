@@ -65,7 +65,7 @@ export class Net {
 
   paintBoard() {
     const b = this.panel.querySelector(".fr__board");
-    if (b) b.outerHTML = this.boardHtml();
+    if (b) this.keepFocus(b, () => { b.outerHTML = this.boardHtml(); return this.panel.querySelector(".fr__board"); });
   }
 
   async share() {

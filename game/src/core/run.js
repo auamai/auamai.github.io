@@ -292,6 +292,7 @@ export class Run {
     this.audio?.countIn(seq.length, COUNT_BEAT);
     if (this.countFlat) this.ui.stopCount(); else this.ui.startCount(seq);
     this.countOn = true;
+    this.sr(seq.length > 1 ? `Starting in ${seq.length - 1}` : "Go");
     this.tickCount(0);
   }
 
@@ -318,7 +319,7 @@ export class Run {
         this.countEl.classList.add("is-on");
       }
     }
-    if (this.state === "count" && this.countT >= this.countHold) this.state = "play";
+    if (this.state === "count" && this.countT >= this.countHold) { this.state = "play"; this.sr("Go"); }
     if (this.countT >= this.countHold + 0.5) this.stopCount();
   }
 
@@ -379,7 +380,8 @@ export class Run {
       score, gears: this.gearsRun, time: this.runTime, best, prevBest, delta: score - prevBest, streak, badge: newBadge,
       screws: this.screwsRun, tools: this.toolsRun, smashes: this.smashRun, rank: null, post, cause: CAUSE[this.deathType] || "Run over" };
     this.showOver();
-    this.sr(`Run over. ${fmt(score)} points.${this.lastRun.best ? " New best." : ""}`);
+    // Screen readers hear what sighted players read: why the run ended, the score, and whether it was a best.
+    this.sr(`${headline}. ${fmt(score)} points.${this.lastRun.best ? (prevBest > 0 ? ` New best, up ${fmt(score - prevBest)}.` : " New best.") : prevBest > 0 ? ` Best ${fmt(prevBest)}.` : ""}`);
     this.publish();
     this.submitRun(score, durationMs);
   }

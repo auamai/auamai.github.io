@@ -57,6 +57,6 @@ export class Garage {
     const best = this.profile ? this.profile.best : 0, cur = this.settings.trim || "";
     const b = (id, name, at, ok) => `<button class="fr__medalbtn" type="button" data-panel="trim" data-trim="${id}" aria-pressed="${cur === id ? "true" : "false"}"${ok ? "" : " disabled"}
         title="${ok ? esc(name) : `Reach ${fmt(at)}`}"><span class="fr__medal is-${id || "base"}${ok ? "" : " is-locked"}" aria-hidden="true"></span><span>${at ? (ok ? esc(name) : fmt(at)) : "Classic"}</span></button>`;
-    return `<div class="fr__medals" aria-label="Badges and robot trim">${b("", "Classic", 0, true)}${MILESTONES.map((m) => b(m.id, m.name, m.at, best >= m.at)).join("")}</div>`;
+    return `<div class="fr__medals" role="group" aria-label="Badges and robot trim">${b("", "Classic", 0, true)}${MILESTONES.map((m) => b(m.id, m.name, m.at, best >= m.at)).join("")}</div>`;
   }
 }

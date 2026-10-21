@@ -401,11 +401,10 @@ html.fr-open, html.fr-open body { overscroll-behavior: none; }
 @media (max-width: 360px) {
   .fr__tip-title { white-space: normal; }
 }
-@media (prefers-reduced-motion: reduce) {
-  .fr *, .fr *::before, .fr *::after { transition: none !important; animation: none !important; }
-  .fr__count.is-on { opacity: 1; }
-  .fr__count-ring { display: none; }
-}
+/* Reduced motion: .is-still is set from prefers-reduced-motion, or from Settings > Reduce motion. */
+.fr.is-still *, .fr.is-still *::before, .fr.is-still *::after { transition: none !important; animation: none !important; }
+.fr.is-still .fr__count.is-on { opacity: 1; }
+.fr.is-still .fr__count-ring { display: none; }
 
 /* Personal best, badges and settings (round 6) */
 .fr__pbline { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 8px; }
@@ -634,7 +633,7 @@ html.fr-open, html.fr-open body { overscroll-behavior: none; }
   .fr__btn, .fr__btn--wide { height: 48px; }
 }
 @media (max-width: 359px) { .fr__panel { padding: 28px 20px 20px; } .fr__panel::before { top: -28px; margin: -28px -20px 12px; } }
-@media (prefers-reduced-motion: reduce) { .fr__btn:active, .fr__icon:active { transform: none; } }
+.fr.is-still .fr__btn:active, .fr.is-still .fr__icon:active { transform: none; }
 /* Over the graphite hall (lighting pass): DOM text drawn on the scene is off-white with a dark halo. */
 .fr__popup { color: var(--ss-ink); text-shadow: 0 0 2px rgba(11, 12, 15, .95), 0 0 8px rgba(11, 12, 15, .8); }
 .fr__popup.is-big { color: var(--ss-yellow); text-shadow: 0 0 2px rgba(11, 12, 15, .95), 0 0 10px rgba(11, 12, 15, .8); }
@@ -681,3 +680,17 @@ html.fr-open, html.fr-open body { overscroll-behavior: none; }
   .fr__stats li > span:last-child { font-size: 12px; }
 }
 @media (max-width: 359px) { .fr__stats .fr__sicon { display: none; } .fr__stats b { font-size: 17px; } .fr__stats li > span:last-child { font-size: 11px; } }
+/* ---------- Accessibility pass (a11y review) ---------- */
+/* Every keyboard stop shows the same cyan ring, including the board tabs, badge buttons and sliders
+   (they fell back to the browser's near-black ring, invisible on graphite). */
+.fr :where(button, input, a[href]):focus-visible { outline: 2px solid var(--ss-cyan); outline-offset: 2px; }
+/* Touch targets at least 44 px tall. Text links and switches grow invisibly (no border, so nothing moves visually);
+   the compact tabs, badge buttons and Garage buttons keep their look and get a 44 px hit area instead. */
+.fr__link, .fr__toggle, .fr__save .fr__link { min-height: 44px; }
+.fr__tab, .fr__medalbtn, .fr__btn--sm { position: relative; }
+.fr__tab::after, .fr__medalbtn::after, .fr__btn--sm::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%); }
+.fr__medals { row-gap: 14px; }
+.fr__vol input[type="range"] { height: 44px; margin: 0; }
+/* Reduced motion: the "+25" score text appears and fades in place instead of vanishing with the animation. */
+.fr.is-still .fr__popup.is-on { animation: fr-pop-still .75s linear forwards !important; transform: translate(-50%, -100%); }
+@keyframes fr-pop-still { 0%, 65% { opacity: 1; } 100% { opacity: 0; } }

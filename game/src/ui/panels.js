@@ -121,6 +121,28 @@ export class Panels {
     if (f && !(this.coarse && f.tagName === "INPUT")) f.focus({ preventScroll: true });
   }
 
+  // Swap part of a panel without dropping keyboard focus: if focus was inside, it lands back on the same
+  // control (matched by its data attributes), or on the region's first control if that one is gone.
+  // Without this a keyboard player who switched a board tab was left on <body>, where Space starts a run.
+  keepFocus(region, swap) {
+    const a = document.activeElement, inside = !!(region && a && a !== region && region.contains(a));
+    const d = inside ? a.dataset : null;
+    const el = swap() || region;
+    if (!inside || !this.panel.contains(el)) return;
+    const sel = ["panel", "board", "key", "trim", "id", "vol"].filter((k) => d[k] != null).map((k) => `[data-${k}="${CSS.escape(d[k])}"]`).join("");
+    const t = (sel && el.querySelector(sel)) || el.querySelector("button:not([disabled]):not([tabindex='-1']), input, a[href]");
+    if (t) t.focus({ preventScroll: true });
+  }
+
+  // Reduce motion, live: no camera shake, hit-stop, hint slow-mo, count-up, 3D hint bob or CSS motion.
+  setStill(on) {
+    this.reduceMotion = !!on;
+    this.settings.still = this.reduceMotion; P.setSetting("still", this.reduceMotion);
+    this.root.classList.toggle("is-still", this.reduceMotion);
+    if (this.ui) this.ui.still = this.reduceMotion;
+    if (this.reduceMotion) this.shake = 0;
+  }
+
   hidePanel() {
     this.layer.hidden = true;
     this.layer.dataset.view = "";
@@ -130,8 +152,8 @@ export class Panels {
 
   boardHtml() {
     const tab = this.boardTab || "all";
-    const tabs = P.online() ? `<div class="fr__tabs" role="tablist">${[["daily", "Daily"], ["weekly", "Weekly"], ["all", "All-time"]].map(([k, n]) =>
-      `<button class="fr__tab" type="button" role="tab" data-panel="board" data-board="${k}" aria-selected="${k === tab}">${n}</button>`).join("")}</div>` : "";
+    const tabs = P.online() ? `<div class="fr__tabs" role="tablist" aria-label="Leaderboard period">${[["daily", "Daily"], ["weekly", "Weekly"], ["all", "All-time"]].map(([k, n]) =>
+      `<button class="fr__tab" type="button" role="tab" data-panel="board" data-board="${k}" aria-selected="${k === tab}"${k === tab ? "" : ' tabindex="-1"'}>${n}</button>`).join("")}</div>` : "";
     const inner = this.boardInner();
     const reset = tab !== "all" ? `<p class="fr__muted fr__reset">Resets ${tab === "daily" ? "at midnight" : "Monday 00:00"} Pacific · in ${this.until(tab === "daily" ? MT.nextMidnight() : MT.nextMonday())}</p>` : "";
     return inner.replace('<div class="fr__board"', `<div class="fr__board" data-tab="${tab}"`).replace(/^(<div class="fr__board"[^>]*>)/, `$1${tabs}`).replace(/<\/div>$/, `${reset}</div>`);
@@ -178,11 +200,11 @@ export class Panels {
   }
 
   settingsHtml() {
-    const t = (key, label) => `<button class="fr__toggle" type="button" data-panel="toggle" data-key="${key}" aria-pressed="${this.settings[key] ? "true" : "false"}"><span class="fr__switch" aria-hidden="true"></span>${label}</button>`;
+    const t = (key, label) => `<button class="fr__toggle" type="button" data-panel="toggle" data-key="${key}" aria-pressed="${(key === "still" ? this.reduceMotion : this.settings[key]) ? "true" : "false"}"><span class="fr__switch" aria-hidden="true"></span>${label}</button>`;
     const items = [t("pad", "Control wheel"), t("lefty", "Wheel on the left")];
     if (this.canBuzz) items.push(t("haptics", "Vibration"));
     const vol = (key, label) => `<label class="fr__vol"><span>${label}</span><input type="range" min="0" max="100" step="5" data-vol="${key}" value="${Math.round((this.settings[key] ?? (key === "musicVol" ? 0.7 : 0.8)) * 100)}" aria-label="${label} volume" /></label>`;
-    items.push(t("music", "Music"), vol("musicVol", "Music"), t("sfx", "Sound effects"), vol("sfxVol", "Effects"));
+    items.push(t("music", "Music"), vol("musicVol", "Music"), t("sfx", "Sound effects"), vol("sfxVol", "Effects"), t("still", "Reduce motion"));
     return `<div class="fr__settings">${items.join("")}</div>`;
   }
 
@@ -257,7 +279,7 @@ export class Panels {
     if (r.best && r.score > 0) lines.push(`<p class="fr__moment"><span class="fr__star" aria-hidden="true"></span>New best${r.prevBest > 0 ? ` <b>+${fmt(r.delta)}</b>` : ""}${r.streak >= 2 ? `<span class="fr__soft"> · ${r.streak} in a row</span>` : ""}</p>`);
     // Rank: where you stand, and what's next.
     if (r.post === "ok" && r.rank) {
-      const up = r.prevRank && r.prevRank > r.rank ? `<span class="fr__up" aria-label="up from #${r.prevRank}">↑ from #${r.prevRank}</span>` : "";
+      const up = r.prevRank && r.prevRank > r.rank ? `<span class="fr__up"><span aria-hidden="true">↑</span><span class="fr__sr-only">up</span> from #${r.prevRank}</span>` : "";
       let tail = "";
       if (r.rank === 1 && rows[1]) tail = ` · ${fmt(r.score - rows[1].score)} ahead of #2`;
       else if (r.rank > 1 && rows[r.rank - 2]) tail = ` · ${fmt(rows[r.rank - 2].score - r.score + 1)} to pass #${r.rank - 1}`;
@@ -501,7 +523,7 @@ export class Panels {
     const slot = this.panel.querySelector('[data-slot="save"]');
     if (!slot) return;
     const ctx = this.view === "over" ? "over" : this.view === "pause" ? "pause" : "menu";
-    slot.innerHTML = this.saveHtml(ctx);
+    this.keepFocus(slot, () => { slot.innerHTML = this.saveHtml(ctx); });
     const f = slot.querySelector("input");
     if (f && this.saveUi.focus) { f.focus({ preventScroll: true }); this.saveUi.focus = false; }
   }
@@ -646,6 +668,10 @@ export class Panels {
       this.settings.trim = b.dataset.trim; P.setSetting("trim", b.dataset.trim);
       this.applyTrim();
       this.panel.querySelectorAll("[data-panel=trim]").forEach((x) => x.setAttribute("aria-pressed", x === b ? "true" : "false"));
+    }
+    else if (a === "toggle" && b.dataset.key === "still") {
+      this.setStill(!this.reduceMotion);
+      b.setAttribute("aria-pressed", this.reduceMotion ? "true" : "false");
     }
     else if (a === "toggle") {
       const k = b.dataset.key;
