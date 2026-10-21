@@ -1,5 +1,15 @@
-// Servo Sprint: music and sound, all synthesised with WebAudio (no files, no licences to track).
-// Music: "Line Shift", an original Afrobeat/Afrobeats cue in G major at a FIXED 106 BPM with swung 16ths.
+// Servo Sprint: music and sound with WebAudio. Sound effects are all synthesised.
+// Music, first choice: "Rhythm Factory" by Zane Little Music (CC0, courtesy credit; see music/CREDITS.txt),
+// a 90 s seamless loop (36 bars at 96 BPM) in music/rhythm-factory.m4a (AAC-LC, ~1.5 MB, -16 LUFS).
+// It is fetched on the first music start (never while music is off), decoded once, and played by one looping
+// AudioBufferSourceNode into `bus`, so the volume slider, music toggle, pause/over duck, event duck and the
+// mood low-pass all still apply. The file carries 0.25 s of wrap-around padding on each side and the source
+// loops [0.25 s, 90.25 s], so an AAC priming offset that a browser does or doesn't trim only shifts both loop
+// points together and the seam stays click-free. It keeps playing across retries (no restart per run) and
+// pauses with the AudioContext. While it plays (and while it loads, up to 8 s) the synth builds no music
+// voices and the motor hum is silent; the beat clock keeps running (count-in ticks use it).
+// If the fetch or decode fails or takes over 8 s, the synth cue below plays instead, silently.
+// Music, fallback (and the offline render()): "Line Shift", an original Afrobeat/Afrobeats cue in G major at a FIXED 106 BPM with swung 16ths.
 // Interlocking drums (tight kick, rimshot on 2 and 4 with ghosts, open/closed hats, shaker 16ths, congas,
 // talking drum, agogo bell, son clave), a round syncopated bass that follows the chords, a Rhodes skank
 // and muted-guitar ostinato, and a modelled alto sax on the hook (harmonic-rich wave, formants, breath
@@ -24,6 +34,11 @@ const SWING = 0.022;             // odd 16ths land 22 ms late: ~58% swing, the A
 const LOOK = 0.12;               // scheduler lookahead (s); the timer runs every 25 ms
 const MAX_VOICES = 56;           // music polyphony cap (a "voice" is one note or phrase with all its nodes)
 const MUSIC_GAIN = 0.8;           // music bus trim at the default slider (tuned for -16 LUFS in a run)
+const MUSIC_URL = "music/rhythm-factory.m4a?v=20261021r91";
+const LOOP_PAD = 0.25, LOOP_LEN = 90;   // loop region in the file: [LOOP_PAD, LOOP_PAD + LOOP_LEN] seconds
+const FILE_TRIM = 2.0;           // file music gain into `bus` (+6 dB): the file is mastered at -16 LUFS and the
+                                 // chain after it (MUSIC_GAIN x default slider 0.7 x master 0.8) is about -7 dB
+const FILE_TIMEOUT = 8000;       // ms: fetch + decode slower than this falls back to the synth cue
 // Music dip per effect, [dB, hold s]: the crash and PB own the moment; power-ups only nudge.
 const DUCK = { crash_wood: [7, 0.5], crash_steel: [7, 0.5], hit: [7, 0.5], fall: [7, 0.6], pb: [5, 0.7], over: [3.5, 0.35], power: [3, 0.3], tool: [2, 0.18], mult: [1.5, 0.12] };
 const NOTE = (m) => 440 * Math.pow(2, (m - 69) / 12);
@@ -212,6 +227,8 @@ export class FactoryAudio {
     wo.connect(this.whine); wo.start();
     if (this.whinePan) this.whine.connect(this.whinePan).connect(this.ambOut); else this.whine.connect(this.ambOut);
 
+    // File music: idle (not asked for yet) | loading | on | failed (synth cue for the rest of the session).
+    this.file = { state: "idle", src: null, g: null };
     // Clock state. Step k plays at origin + k*S16 (+ swing). `bar0` = song bar at k = 0.
     this.voices = [];            // live music voices: { t0, t1, src: [], g, pri }
     this.origin = A.currentTime + 0.08;
@@ -246,7 +263,7 @@ export class FactoryAudio {
     const t = this.ctx.currentTime, k = now ? 0.01 : 0.25;
     this.filter.frequency.cancelScheduledValues(t);
     this.filter.frequency.setTargetAtTime(this.moodFreq(), t, k);
-    this.hum.gain.setTargetAtTime(level === "run" ? 0.025 : level === "menu" ? 0.02 : 0.015, t, 0.4);
+    this.hum.gain.setTargetAtTime(this.fileMusic() ? 0 : level === "run" ? 0.025 : level === "menu" ? 0.02 : 0.015, t, 0.4);
     this.bus.gain.cancelScheduledValues(t);
     this.bus.gain.setTargetAtTime(level === "pause" || level === "over" ? 0.5 : 1, t, 0.2);
   }
@@ -264,7 +281,7 @@ export class FactoryAudio {
     this.energy = on;
     if (!this.started) return;
     // A shaker swell into Overdrive, ending on the next downbeat; not re-fired if Overdrive flickers.
-    if (on && this.level === "run" && this.ctx.currentTime - this.lastRiser > 3) {
+    if (on && this.level === "run" && !this.fileMusic() && this.ctx.currentTime - this.lastRiser > 3) {
       const tb = this.nextBeat(this.ctx.currentTime + SPB * 0.75);
       this.riser(tb - SPB * 0.75, SPB * 0.75); this.lastRiser = this.ctx.currentTime;
     }
@@ -295,7 +312,7 @@ export class FactoryAudio {
     if (!resume) { this.runSteps = 0; this.lastRiser = -9; }
     this.eOn = this.energy && this.level === "run";
     for (let i = 0; i < n - 1; i++) this.tick(t0 + i * beat);
-    if (n > 1) {
+    if (n > 1 && !this.fileMusic()) {
       this.keys(t0, CH.G.k, go - t0 + 0.1, 0.05, 0.12);
       this.talk(go - beat * 0.5, 0.5, -3, beat * 0.45);
       this.talk(go - beat * 0.25, 0.45, 2, beat * 0.3);
@@ -324,16 +341,54 @@ export class FactoryAudio {
 
   schedule(until) {
     const now = this.ctx.currentTime;
+    if (this.file.state === "idle" && this.s.music !== false) this.loadMusic();
+    const synth = this.s.music !== false && !this.fileMusic();
     // Far behind (a stalled timer): jump the counter instead of looping over every missed step.
     if (this.tk(this.k) < now - 0.5) { const j = Math.ceil((now - this.origin) / S16); this.stats.late += j - this.k; this.k = j; }
     this.voices = this.voices.filter((v) => v.t1 > now);
     while (this.tk(this.k) < until) {
       const t = this.tk(this.k);
       if (t < now + 0.002) this.stats.late++;        // its moment passed during a stall: skip, never bunch
-      else if (this.s.music !== false) this.play(this.k, t);   // music off: keep the clock, build no voices
+      else if (synth) this.play(this.k, t);   // music off or file music: keep the clock, build no voices
       if (this.level === "run") this.runSteps++;
       this.k++;
     }
+  }
+
+  /* ---------- file music ---------- */
+  // True while the file loads or plays: the synth stays quiet so the two never overlap.
+  fileMusic() { return !!this.file && (this.file.state === "loading" || this.file.state === "on"); }
+
+  // Fetch and decode the track once. Any failure (offline, 404, decode error, > 8 s) quietly hands the
+  // music back to the synth cue; nothing is thrown or logged.
+  loadMusic() {
+    const f = this.file, A = this.ctx;
+    if (this.offline || f.state !== "idle" || typeof fetch !== "function") return;
+    f.state = "loading";
+    let done = false, ac = null;
+    try { ac = new AbortController(); } catch { /* old browser: no abort, the timeout still falls back */ }
+    const fail = () => { if (done) return; done = true; f.state = "failed"; try { ac?.abort(); } catch { /* ignore */ } };
+    const timer = setTimeout(fail, FILE_TIMEOUT);
+    fetch(MUSIC_URL, ac ? { signal: ac.signal } : undefined)
+      .then((r) => { if (!r.ok) throw new Error("music " + r.status); return r.arrayBuffer(); })
+      // Callback form too, for older Safari; the promise (where returned) is caught so it never goes unhandled.
+      .then((data) => new Promise((ok, no) => { const p = A.decodeAudioData(data, ok, no); if (p && p.catch) p.catch(no); }))
+      .then((buf) => { if (done || this.ctx !== A || !this.started) return; done = true; clearTimeout(timer); this.startFile(buf); })
+      .catch(() => { clearTimeout(timer); fail(); });
+  }
+
+  startFile(buf) {
+    const A = this.ctx, t = A.currentTime + 0.05;
+    const s = A.createBufferSource(), g = A.createGain();
+    const padded = buf.duration >= LOOP_PAD + LOOP_LEN - 0.01;
+    s.buffer = buf; s.loop = true;
+    s.loopStart = padded ? LOOP_PAD : 0; s.loopEnd = padded ? LOOP_PAD + LOOP_LEN : buf.duration;
+    g.gain.setValueAtTime(0.0001, t); g.gain.setTargetAtTime(FILE_TRIM, t, 0.12);
+    s.connect(g).connect(this.bus);
+    s.start(t, padded ? LOOP_PAD : 0);
+    this.file.state = "on"; this.file.src = s; this.file.g = g;
+    this.cut(t);                                  // fade anything the synth still had queued
+    this.hum.gain.setTargetAtTime(0, t, 0.3);
   }
 
   // Register a voice: for the polyphony cap and for cut(). `pri`: 3 = must play ... 0 = first to drop.
@@ -783,6 +838,7 @@ export class FactoryAudio {
 
   dispose() {
     clearInterval(this.timer);
+    if (this.file?.src) try { this.file.src.stop(); } catch { /* ignore */ }
     if (this.ctx && !this.offline) this.ctx.close().catch(() => {});
     this.ctx = null; this.started = false;
   }
