@@ -534,8 +534,8 @@ references); bump it on every release, and keep the `modulepreload` list in `ind
 | `src/ui/hud.js` | Score, gears, multiplier, tool chips (bitmask-keyed, DOM touched only on change) |
 | `src/ui/panels.js` | Menu, game over, board, settings, save/claim/restore, Garage panels, `keepFocus()`; the settings row ends with a plain `<a>` "Player manual" link to `MANUAL_URL` (docs/MANUAL.md on the `robot-game` branch on GitHub, new tab, no script, CSP-neutral) |
 | `src/ui/brand.js`, `sound-ui.js` | Wordmark; speaker button (tap mute, hold volume) |
-| `src/meta/garage.js` | Missions strip, Garage, shop, badges, Spare Servo arming |
-| `meta.js` | Vancouver calendar, Daily seed, `rng`, streaks, missions, `SHOP`, wallet + `spend`, `SERVO`, design code, profanity filter, near-miss, challenge URLs, share card, public summary |
+| `src/meta/garage.js` | Missions strip (progress numbers, daily swap, weekly goal), Line grade bar, Garage (grade-locked options), shop, badges, Spare Servo arming |
+| `meta.js` | Vancouver calendar, Daily seed, `rng`, streaks, missions + starters + swap + weekly goal, Daily twist, Line grade + unlocks + migration, `SHOP`, wallet + `spend`, `SERVO`, design code, profanity filter, near-miss, challenge URLs, share card, public summary |
 | `profile.js` | Local profile + settings, merge, API calls, passkeys, related-origin check |
 | `src/net/net.js` | Board fetch and tabs, share pipeline |
 | `src/net/errors.js` | Error boundary, `POST /err` (message + build, no PII) |
@@ -765,8 +765,8 @@ against `durationMs`), or replay verification using the deterministic sim (seed 
 
 | Key | Contents |
 | --- | --- |
-| `au_factory_profile_v1` | `{ username, best, games, gears, lastPlayed, code?, token?, passkey, claimed, held, tb, cos }`. `held`: best unposted run `{score, durationMs}`. `tb: 1`: Toolbox migration stamp. `cos`: `{ spent, owned[], eq{trim,trail,hammer}, sv{b,u}, d{name,code,at} }` |
-| `au_factory_settings_v1` | `pad`, `lefty`, `haptics`, `music`, `sfx`, `musicVol`, `sfxVol`, `tips`, `trim`, `missions[]`, `streak{n,last,freeWeek,usedFree}`, `dailyBest{day,score}`, `pbStreak`, `rank`, `still` (reduce motion; absent = follow OS), `servoArm` |
+| `au_factory_profile_v1` | `{ username, best, games, gears, lastPlayed, code?, token?, passkey, claimed, held, tb, pg, lv, cos }`. `lv`: last Line grade paid (1-30, device-local, never synced); `pg: 1`: progression migration stamp (r7.2). `held`: best unposted run `{score, durationMs}`. `tb: 1`: Toolbox migration stamp. `cos`: `{ spent, owned[], eq{trim,trail,hammer}, sv{b,u}, d{name,code,at} }` |
+| `au_factory_settings_v1` | `pad`, `lefty`, `haptics`, `music`, `sfx`, `musicVol`, `sfxVol`, `tips`, `trim`, `missions[]` (`{id, prog}`), `mv` (2 = r7.2 missions migration done), `reroll{day,n}`, `week{wk,n,paid}`, `twist{day,done}`, `streak{n,last,freeWeek,usedFree}`, `dailyBest{day,score}`, `pbStreak`, `rank`, `still` (reduce motion; absent = follow OS), `servoArm` |
 | `au_factory_public_v1` | Read-only summary for the portfolio teaser: `{v, name, best, rank, streak, dailyDay, dailyResetAt, dailyBest, weeklyResetAt, updatedAt}`. Never contains the code or token |
 
 - `code` and `token` are secrets; nothing outside the game may read them.
@@ -775,6 +775,21 @@ against `durationMs`), or replay verification using the deterministic sim (seed 
   spent, servos; newest design), checks, applies and saves in one synchronous task. Only the requested confirm row
   can spend, once. A `storage` listener keeps an open Garage in step.
 - `MT.migrateToolbox` is idempotent and changes no balance.
+- **Missions + Line grade (r7.2).** `MT.MISSIONS` (16, tagged `skill | route | collect | style`) plus `MT.STARTER` (3,
+  first session only). `missionsFill` keeps saved `{id, prog}` (old ids unchanged, unknown ids dropped) and fills to
+  three of different kinds. `reroll` allows one swap per Vancouver day (`settings.reroll`), never on starters.
+  `weekAdd` counts missions finished per Monday-based week (`weekOf`), +150 once at 8. `twistOf(day)` picks the
+  Daily twist from `hash32("servo-twist:" + day)`: rules only, judged at game over on Daily stats, +50 once a day;
+  the course RNG, sim and Worker never see it, so Daily Runs and replays are unchanged. Grade: `gradeOf(gears)`,
+  grade n at `50·n·(n-1)` gears; `gradeClaim` pays `10·n` per new grade and bumps `lv` (bounded loop). Run-end
+  order in `endRun`: missions -> weekly -> twist -> grade (grade rewards count toward the next grade).
+- **r7.2 migration, once per device:** `MT.migrateProgress(p)` sets `lv` to the grade the old gears already reached
+  (no back-pay) and stamps `pg: 1`; settings without `mv: 2` get the starter missions only when there are no saved
+  missions and no runs yet, then `mv: 2`. `P.merge` treats grades inside a larger remote `gears` as already paid, so
+  two devices never pay the same grade twice. Tested in `test/progress.test.mjs` (26 checks, `node test/progress.test.mjs`).
+- **Design code r7.2:** `^[0-4][0-2][0-5][0-2]` + plate (paint 4 Gunmetal, patterns 4 Rivets / 5 Pinstripe, accent 2
+  Off-white), same regex on the Worker (`cleanDesign`). Grade gating is client-side (looks only); older clients read
+  an unknown digit as the default design.
 - `cos.sv`: `b` bought and `u` used only grow, so merges take the max; servos held = `b - u`, max 3.
 
 ### D1 (server)
@@ -991,7 +1006,8 @@ and stepwise heap growth consistent with pools warming (19.7 to 22.2 MB).
 | Garage tests | `review/garage_shots/gtests.py` | 11 | wallet migration, spend, insufficient, two tabs, confirm row, design sanitise, revive once, revive flag, revive off in Daily, draw calls, breakdown |
 | Worker: security | `leaderboard-worker/test/security.test.mjs` (`npm test`, Node 22+ for `node:sqlite`) | 46 | caps, lockout, pepper, body caps, CORS, headers, transports, sync rules |
 | Worker: garage | `review/garage_shots/wtest/test_worker_garage.mjs` (outside the repo) | 14 | robot/design sanitise, old shapes, revive flag and Daily rejection, servo clamp, unmigrated fallback |
-| Worker: garage fixes | `leaderboard-worker/test/garage_fixes.test.mjs` (in the repo, run by `npm test` after `security.test.mjs`) | 12 | servos capped by spent gears (450 each, max 3 held), fallback only on a missing column, whole-word name filter (Sussex/Dickens pass), robot name can't equal another username |
+| Progression unit tests | `test/progress.test.mjs` (`node test/progress.test.mjs`, no browser) | 26 | mission pool/kinds, fill + old-save carry-over, one-run vs total, starter missions, readable progress, daily swap, weekly goal, seeded Daily twist, grade thresholds/rewards/unlocks, r7.2 migration once, no back-pay |
+| Worker: garage fixes | `leaderboard-worker/test/garage_fixes.test.mjs` (in the repo, run by `npm test` after `security.test.mjs`) | 14 | servos capped by spent gears (450 each, max 3 held), fallback only on a missing column, whole-word name filter (Sussex/Dickens pass), robot name can't equal another username, r7.2 design range kept / out-of-range dropped |
 | Worker: legacy | `worker/test_r6.mjs` 15, `test_r6b_err.mjs` 9, `test_r4r5_on_r6.mjs` 31 | 55 | earlier rounds run against the new bundle |
 
 **Gates for any PR:** goldens identical (or justified), 17/17, 9/9, Worker suites green, zero console errors on phone

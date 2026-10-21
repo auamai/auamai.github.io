@@ -741,3 +741,28 @@ html.fr-open, html.fr-open body { overscroll-behavior: none; }
 @media (prefers-reduced-motion: reduce) { .fr__tbfly { display: none; } .fr__toolbox.is-pulse { animation: none; } }
 .fr__tbline { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
 .fr__tbover { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 6px 12px; margin: 0; }
+
+/* Missions + Line grade (r7.2): numbers on every bar, a daily free swap, the weekly goal, Garage unlocks. */
+.fr__missions li { grid-template-columns: 1fr 56px 34px 44px; }
+.fr__missions li .fr__mrew { font: 400 12px/1 var(--fr-mono); color: #ffc93c; text-align: right; }
+.fr__mtext { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.fr__mtext small, .fr__mprog { font: 400 12px/1.2 var(--fr-mono); color: var(--fr-ink-3); font-variant-numeric: tabular-nums; }
+.fr__mprog { display: block; margin-top: 2px; }
+.fr__swap { width: 44px; height: 44px; display: inline-grid; place-items: center; border: 0; border-radius: 8px; background: transparent; color: var(--fr-ink-3); cursor: pointer; padding: 0; }
+.fr__swap svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.fr__swap:hover, .fr__swap:focus-visible { color: #3ddcff; background: rgba(242, 240, 234, .05); }
+.fr__swap.is-none { pointer-events: none; }
+.fr__missions li.is-new .fr__mtext { animation: fr-rise .28s ease-out both; }
+.fr__missions ul:focus { outline: none; }
+.fr__week { margin: 8px 0 0; font-size: 13px; }
+.fr__week b, .fr__twist b { color: #f2f0ea; font-weight: 400; }
+.fr__twist { margin: 4px 0 0; font-size: 13px; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
+.fr__grade { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; align-items: center; font-size: 14px; color: var(--fr-ink-2); }
+.fr__gradeN { font: 400 12px/1 var(--fr-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--fr-ink-3); }
+.fr__gradeN b { font: 400 16px/1 var(--fr-sans); color: #f2f0ea; letter-spacing: 0; margin-left: 4px; }
+.fr__grade .fr__mbar i { background: #3ddcff; }
+.fr__gradeNext { grid-column: 1 / -1; font-size: 12px; color: var(--fr-ink-3); }
+.fr__gradeup b { color: #3ddcff; }
+.fr__seg button.is-locked { opacity: .45; cursor: not-allowed; position: relative; }
+.fr__lockg { position: absolute; right: 2px; bottom: 1px; font: 400 9px/1 var(--fr-mono); color: #f2f0ea; }
+.fr.is-still .fr__missions li.is-new .fr__mtext { animation: none; }

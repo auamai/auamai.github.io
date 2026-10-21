@@ -21,7 +21,7 @@ export class Physics {
       else { r.jumpBuf = JUMP_BUF; r.queueSlide = false; } // buffered: fires on landing
       this.learned("jump");
     } else if (move === "slide") {
-      if (r.ground) { r.slideT = SLIDE_T; this.sfx("slide", r.x); }
+      if (r.ground) { r.slideT = SLIDE_T; this.sfx("slide", r.x); if (this.stat) this.stat.slides++; }
       else { r.vy = Math.min(r.vy, -16); r.queueSlide = true; r.jumpBuf = 0; }
       this.learned("slide");
     }

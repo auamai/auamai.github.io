@@ -61,6 +61,13 @@ class Game {
     });
     this.board = { status: P.online() ? "loading" : "soon", rows: [] };
     this.settings = P.settings();
+    // Missions + Line grade (r7.2), once per device: a first-time player gets the three starter missions; an old
+    // save keeps its missions and starts at the grade its gears already reached (no back-pay). Stamped mv: 2.
+    if (MT.migrateProgress(this.profile)) P.save(this.profile);
+    if (this.settings.mv !== 2) {
+      if (!Array.isArray(this.settings.missions) && (!this.profile || this.profile.games === 0)) { this.settings.missions = MT.STARTER_LIST(); P.setSetting("missions", this.settings.missions); }
+      this.settings.mv = 2; P.setSetting("mv", 2);
+    }
     this.tips = Object.assign({}, this.settings.tips);
     // A beat-my-run link (?c=seed&s=score&n=name) opens on that course with the score to beat.
     this.challenge = MT.readChallenge();

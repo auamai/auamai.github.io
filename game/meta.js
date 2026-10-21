@@ -76,39 +76,160 @@ export function liveStreak(st, today = vanDay()) {
 }
 
 /* ---------- missions ---------- */
+// Pool by kind (skill, route, collect, style), so the three active missions ask for different things.
+// "oneRun" goals are a best single run; the rest add up across runs. Old ids keep their meaning (saved progress
+// stays valid). Rewards stay 40-90 gears, so the Spare Servo (450) is still 2-3 good runs plus missions.
 export const MISSIONS = [
-  { id: "smash10", stat: "smash", goal: 10, text: "Smash 10 crates or robots", reward: 60 },
-  { id: "gold8", stat: "goldT", goal: 8, text: "Hold the golden wrench 8 s", reward: 80 },
-  { id: "screw50", stat: "screws", goal: 50, text: "Collect 50 screws", reward: 50 },
-  { id: "gear60", stat: "gearsRun", goal: 60, text: "Grab 60 gears in one run", reward: 60, oneRun: true },
-  { id: "tools5", stat: "tools", goal: 5, text: "Pick up 5 tools", reward: 50 },
-  { id: "over1", stat: "over", goal: 1, text: "Fill the toolbox for Overdrive", reward: 70 },
-  { id: "daily1", stat: "daily", goal: 1, text: "Run today's Daily Run", reward: 40 },
-  { id: "jump30", stat: "jumps", goal: 30, text: "Jump 30 times", reward: 40 },
-  { id: "score1500", stat: "score", goal: 1500, text: "Score 1,500 in one run", reward: 70, oneRun: true },
+  { id: "smash10", kind: "style", stat: "smash", goal: 10, text: "Smash 10 crates or robots", reward: 60 },
+  { id: "gold8", kind: "style", stat: "goldT", goal: 8, text: "Hold the golden wrench 8 s", reward: 80 },
+  { id: "screw50", kind: "collect", stat: "screws", goal: 50, text: "Collect 50 screws", reward: 50 },
+  { id: "gear60", kind: "collect", stat: "gearsRun", goal: 60, text: "Grab 60 gears in one run", reward: 60, oneRun: true },
+  { id: "tools5", kind: "collect", stat: "tools", goal: 5, text: "Pick up 5 tools", reward: 50 },
+  { id: "over1", kind: "style", stat: "over", goal: 1, text: "Fill the toolbox for Overdrive", reward: 70 },
+  { id: "daily1", kind: "route", stat: "daily", goal: 1, text: "Run today's Daily Run", reward: 40 },
+  { id: "jump30", kind: "skill", stat: "jumps", goal: 30, text: "Jump 30 times", reward: 40 },
+  { id: "score1500", kind: "skill", stat: "score", goal: 1500, text: "Score 1,500 in one run", reward: 70, oneRun: true },
+  // r7.2 pool
+  { id: "slide15", kind: "skill", stat: "slides", goal: 15, text: "Slide 15 times", reward: 40 },
+  { id: "time75", kind: "skill", stat: "time", goal: 75, text: "Last 75 s in one run", reward: 70, oneRun: true },
+  { id: "dist1k", kind: "route", stat: "dist", goal: 1000, text: "Run 1 km in one run", reward: 70, oneRun: true },
+  { id: "dist4k", kind: "route", stat: "dist", goal: 4000, text: "Cover 4 km in total", reward: 60 },
+  { id: "screwrun", kind: "collect", stat: "screws", goal: 20, text: "Grab 20 screws in one run", reward: 60, oneRun: true },
+  { id: "mult3", kind: "style", stat: "mult", goal: 3, text: "Reach a ×3 multiplier", reward: 80, oneRun: true },
+  { id: "clean600", kind: "style", stat: "clean", goal: 600, text: "Score 600 without a tool", reward: 90, oneRun: true },
 ];
-export function missionsFill(list = []) {
-  list = list.filter((m) => MISSIONS.some((x) => x.id === m.id)).slice(0, 3);
+// First session: three starter missions a first run finishes (jump, slide, bank gears), so the Toolbox fills
+// and the loop is taught by doing. Never drawn again once done.
+export const STARTER = [
+  { id: "s-jump", kind: "start", stat: "jumps", goal: 3, text: "Jump 3 times", reward: 20 },
+  { id: "s-slide", kind: "start", stat: "slides", goal: 2, text: "Slide twice", reward: 20 },
+  { id: "s-gears", kind: "start", stat: "gearsRun", goal: 15, text: "Grab 15 gears in one run", reward: 30, oneRun: true },
+];
+const ALL_M = MISSIONS.concat(STARTER);
+const mDef = (id) => ALL_M.find((x) => x.id === id);
+const mUnit = { score: "", gearsRun: "", screws: "", smash: "", tools: "", jumps: "", slides: "", over: "", daily: "", goldT: " s", time: " s", dist: " m", mult: "×", clean: "" };
+export const STARTER_LIST = () => STARTER.map((m) => ({ id: m.id, prog: 0 }));
+// Fill to three, preferring kinds not already showing. rnd is injectable for tests.
+export function missionsFill(list = [], rnd = Math.random, avoid = "") {
+  list = (Array.isArray(list) ? list : []).filter((m) => m && mDef(m.id)).map((m) => ({ id: m.id, prog: Number.isFinite(m.prog) && m.prog > 0 ? m.prog : 0 })).slice(0, 3);
   while (list.length < 3) {
-    const pool = MISSIONS.filter((x) => !list.some((m) => m.id === x.id));
-    const m = pool[Math.floor(Math.random() * pool.length)];
+    const kinds = new Set(list.map((m) => mDef(m.id).kind));
+    let pool = MISSIONS.filter((x) => x.id !== avoid && !list.some((m) => m.id === x.id));
+    const fresh = pool.filter((x) => !kinds.has(x.kind));
+    if (fresh.length) pool = fresh;
+    const m = pool[Math.floor(rnd() * pool.length)];
     list.push({ id: m.id, prog: 0 });
   }
   return list;
 }
 // Apply one run's stats. Returns { list, done: [mission...] } with finished ones replaced.
-export function missionsApply(list, stats) {
+export function missionsApply(list, stats, rnd) {
   const done = [];
-  list = list.map((m) => {
-    const d = MISSIONS.find((x) => x.id === m.id);
+  list = missionsFill(list, rnd).map((m) => {
+    const d = mDef(m.id);
     const v = stats[d.stat] || 0;
     const prog = d.oneRun ? Math.max(m.prog, v) : m.prog + v;
     if (prog >= d.goal) { done.push(d); return null; }
     return { id: m.id, prog };
   }).filter(Boolean);
-  return { list: missionsFill(list.concat()), done };
+  return { list: missionsFill(list, rnd), done };
 }
-export const missionInfo = (m) => ({ ...MISSIONS.find((x) => x.id === m.id), prog: m.prog });
+export const missionInfo = (m) => ({ ...mDef(m.id), prog: m.prog });
+// "12 / 50", "640 / 1,000 m", "×2.4 / ×3": progress a player can read at a glance.
+export function missionProg(m) {
+  const d = missionInfo(m), u = mUnit[d.stat] || "", p = Math.min(d.prog, d.goal);
+  const n = (v) => (d.stat === "mult" ? (Math.floor(v * 10) / 10).toString() : fmtN(v));
+  return u === "×" ? `×${n(p)} / ×${n(d.goal)}` : `${n(p)} / ${n(d.goal)}${u}`;
+}
+// Swap one mission: one free swap a day (Vancouver day), never on starter missions. Returns null when not allowed.
+export const REROLLS = 1;
+export function rerollsLeft(rr, day = vanDay()) { return rr && rr.day === day ? Math.max(0, REROLLS - (rr.n | 0)) : REROLLS; }
+export function reroll(list, idx, rr, day = vanDay(), rnd = Math.random) {
+  list = missionsFill(list, rnd);
+  const cur = list[idx];
+  if (!cur || mDef(cur.id).kind === "start" || rerollsLeft(rr, day) <= 0) return null;
+  const rest = list.filter((_, i) => i !== idx);
+  const next = missionsFill(rest, rnd, cur.id).slice(-1)[0];
+  rest.splice(idx, 0, next);
+  return { list: rest, rr: { day, n: (rr && rr.day === day ? rr.n | 0 : 0) + 1 } };
+}
+
+/* ---------- weekly goal ---------- */
+// Finish 8 missions between Monday and Sunday (Vancouver): +150 gears, once a week.
+export const WEEKLY = { goal: 8, reward: 150 };
+export function weekNow(w, wk = weekOf()) { return w && w.wk === wk ? { wk, n: w.n | 0, paid: !!w.paid } : { wk, n: 0, paid: false }; }
+export function weekAdd(w, k, wk = weekOf()) {
+  const cur = weekNow(w, wk);
+  cur.n += k;
+  const pay = !cur.paid && cur.n >= WEEKLY.goal;
+  if (pay) cur.paid = true;
+  return { w: cur, pay: pay ? WEEKLY.reward : 0 };
+}
+
+/* ---------- Daily twist ---------- */
+// One extra goal for the Daily Run, picked from the day's seed: the same for every player, judged only on the
+// Daily Run, worth +50 gears once a day. Rules only: the course and the sim are untouched, so the Daily Run
+// and every replay stay identical.
+export const TWISTS = [
+  { id: "t-screws", stat: "screws", goal: 20, text: "Grab 20 screws" },
+  { id: "t-smash", stat: "smash", goal: 4, text: "Smash 4 crates or robots" },
+  { id: "t-time", stat: "time", goal: 60, text: "Last 60 s" },
+  { id: "t-dist", stat: "dist", goal: 900, text: "Run 900 m" },
+  { id: "t-mult", stat: "mult", goal: 2, text: "Reach a ×2 multiplier" },
+  { id: "t-jumps", stat: "jumps", goal: 15, text: "Jump 15 times" },
+  { id: "t-clean", stat: "clean", goal: 400, text: "Score 400 without a tool" },
+];
+export const TWIST_REWARD = 50;
+export const twistOf = (day) => TWISTS[hash32(`servo-twist:${day}`) % TWISTS.length];
+export function twistCheck(tw, stats, day) {
+  const t = twistOf(day), paid = !!(tw && tw.day === day && tw.done);
+  if (paid || !stats.daily) return { t, done: paid, pay: 0, tw: paid ? tw : { day, done: false } };
+  const ok = (stats[t.stat] || 0) >= t.goal;
+  return { t, done: ok, pay: ok ? TWIST_REWARD : 0, tw: { day, done: ok } };
+}
+
+/* ---------- Line grade (level track) ---------- */
+// Grade from lifetime gears banked (profile.gears: runs, missions, rewards). Grade n needs 50·n·(n-1) gears:
+// 2 at 100, 3 at 300, 4 at 600, 5 at 1,000 ... 10 at 4,500. Each new grade pays 10·n gears into the Toolbox
+// (once, tracked by profile.lv) and some unlock Garage options.
+export const GRADE_MAX = 30;
+export const gradeAt = (n) => 50 * n * (n - 1);
+export function gradeOf(xp) {
+  let n = 1;
+  while (n < GRADE_MAX && xp >= gradeAt(n + 1)) n++;
+  const lo = gradeAt(n), hi = n < GRADE_MAX ? gradeAt(n + 1) : lo;
+  return { n, lo, hi, q: hi > lo ? (xp - lo) / (hi - lo) : 1 };
+}
+export const gradeReward = (n) => 10 * n;
+// Garage unlocks earned by grade: [kind, index, grade, label].
+export const UNLOCKS = [
+  ["pattern", 4, 2, "Rivets pattern"], ["accent", 2, 3, "Off-white plate ink"], ["paint", 4, 4, "Gunmetal paint"],
+  ["pattern", 5, 6, "Pinstripe pattern"],
+];
+export const unlockFor = (kind, i) => UNLOCKS.find((u) => u[0] === kind && u[1] === i) || null;
+export const isUnlocked = (kind, i, lv) => { const u = unlockFor(kind, i); return !u || (lv | 0) >= u[2]; };
+export const unlocksAt = (n) => UNLOCKS.filter((u) => u[2] === n).map((u) => u[3]);
+// Pay any grades reached since the last claim. Mutates p (gears, lv); returns [{ n, reward, unlocks }].
+export function gradeClaim(p) {
+  const out = [];
+  if (!p) return out;
+  p.lv = Math.max(1, p.lv | 0);
+  for (let guard = 0; guard < GRADE_MAX && gradeOf(p.gears).n > p.lv; guard++) {
+    p.lv += 1;
+    const reward = gradeReward(p.lv);
+    p.gears += reward;
+    out.push({ n: p.lv, reward, unlocks: unlocksAt(p.lv) });
+  }
+  return out;
+}
+// One-time progression migration (r7.2, stamp pg: 1): an old save starts at the grade its gears already earned,
+// with no back-pay (a veteran doesn't get a lump that makes the Spare Servo free); unlocks follow the grade.
+export function migrateProgress(p) {
+  if (!p || p.pg === 1) return false;
+  p.lv = Math.max(p.lv | 0, gradeOf(p.gears | 0).n);
+  p.pg = 1;
+  return true;
+}
 
 /* ---------- gear shop ---------- */
 // Cosmetic only. Prices in gears; the wallet is gears earned minus gears spent.
@@ -146,11 +267,12 @@ export const servoCount = (p) => { const s = cosClean(p && p.cos).sv; return Mat
 
 /* ---------- Garage design: robot name, chassis plate, paint, finish, pattern, accent ---------- */
 // Compact code shared with the Worker: 4 digits (paint finish pattern accent) + plate text.
-export const PAINTS = [["Off-white", 0xf2f0ea], ["Graphite", 0x2c3037], ["Signal yellow", 0xffc93c], ["Cyan", 0x3ddcff]];
+// r7.2: paint 4, pattern 4-5 and accent 2 are earned by Line grade (UNLOCKS); the Worker accepts the wider range.
+export const PAINTS = [["Off-white", 0xf2f0ea], ["Graphite", 0x2c3037], ["Signal yellow", 0xffc93c], ["Cyan", 0x3ddcff], ["Gunmetal", 0x4a4f58]];
 export const FINISHES = [["Gloss", 0.3, 1], ["Satin", 0.5, 0.45], ["Matte", 0.78, 0]];
-export const PATTERNS = ["Plain", "Hazard", "Grid", "Chevron"];
-export const ACCENTS = [["Yellow", "#FFC93C"], ["Cyan", "#3DDCFF"]];
-const DESIGN_RE = /^[0-3][0-2][0-3][01][A-Z0-9-]{0,8}$/;
+export const PATTERNS = ["Plain", "Hazard", "Grid", "Chevron", "Rivets", "Pinstripe"];
+export const ACCENTS = [["Yellow", "#FFC93C"], ["Cyan", "#3DDCFF"], ["Off-white", "#F2F0EA"]];
+const DESIGN_RE = /^[0-4][0-2][0-5][0-2][A-Z0-9-]{0,8}$/;
 const RNAME_RE = /^[A-Za-z0-9][A-Za-z0-9 _.-]{0,15}$/;
 const BAD = ["fuck", "shit", "bitch", "cunt", "dick", "pussy", "nigg", "fag", "slut", "whore", "rape", "nazi", "hitler",
   "porn", "penis", "vagina", "asshole", "bastard", "retard", "kike", "chink", "twat", "wank", "jizz", "dildo", "sex"];
@@ -201,6 +323,8 @@ export function drawPlate(ctx, x, y, w, h, code) {
   if (d.pattern === 1) { for (let i = -h; i < w + h; i += h * 0.36) { ctx.beginPath(); ctx.moveTo(x + i, y + h); ctx.lineTo(x + i + h, y); ctx.stroke(); } }
   else if (d.pattern === 2) { const g = h / 6; for (let i = g; i < w; i += g * 1.6) for (let j = g; j < h; j += g * 1.6) { ctx.beginPath(); ctx.arc(x + i, y + j, g * 0.22, 0, 7); ctx.fill(); } }
   else if (d.pattern === 3) { for (let i = -h * 0.2; i < w; i += h * 0.42) { ctx.beginPath(); ctx.moveTo(x + i, y + h * 0.15); ctx.lineTo(x + i + h * 0.3, y + h * 0.5); ctx.lineTo(x + i, y + h * 0.85); ctx.stroke(); } }
+  else if (d.pattern === 4) { const r = h * 0.05; for (const [px, py] of [[0.1, 0.18], [0.9, 0.18], [0.1, 0.82], [0.9, 0.82], [0.5, 0.18], [0.5, 0.82]]) { ctx.beginPath(); ctx.arc(x + w * px, y + h * py, r, 0, 7); ctx.fill(); } }
+  else if (d.pattern === 5) { ctx.lineWidth = h * 0.035; for (const py of [0.2, 0.27, 0.73, 0.8]) { ctx.beginPath(); ctx.moveTo(x, y + h * py); ctx.lineTo(x + w, y + h * py); ctx.stroke(); } }
   ctx.globalAlpha = 1;
   ctx.lineWidth = Math.max(2, h * 0.05); ctx.strokeStyle = "rgba(242,240,234,0.35)"; ctx.strokeRect(x + h * 0.06, y + h * 0.06, w - h * 0.12, h - h * 0.12);
   const t = d.plate || "SS";
@@ -247,7 +371,7 @@ export function nearMiss({ score, prevBest, missions, board, me }) {
   if (prevBest > 0 && score < prevBest && prevBest - score <= Math.max(60, prevBest * 0.2)) out.push({ w: 3, text: `${fmtN(prevBest - score)} to your best` });
   for (const m of missions || []) {
     const d = missionInfo(m), left = d.goal - d.prog;
-    if (left > 0 && left <= Math.max(2, d.goal * 0.25)) out.push({ w: 2, text: `${fmtN(left)} ${unit(d.stat, left)} from a mission` });
+    if (d.stat !== "mult" && left > 0 && left <= Math.max(2, d.goal * 0.25)) out.push({ w: 2, text: `${fmtN(left)} ${unit(d.stat, left)} from a mission` });
   }
   if (board && board.length) {
     const above = board.filter((r) => r.score > score && r.username.toLowerCase() !== (me || "").toLowerCase());
@@ -259,7 +383,7 @@ export function nearMiss({ score, prevBest, missions, board, me }) {
   return out.sort((a, b) => b.w - a.w)[0] || null;
 }
 const fmtN = (n) => Math.floor(n).toLocaleString("en-US");
-const unit = (stat, n) => ({ smash: n === 1 ? "smash" : "smashes", screws: "screws", gearsRun: "gears", tools: n === 1 ? "tool" : "tools", jumps: "jumps", goldT: "s", score: "points", over: "overdrive", daily: "run" }[stat] || "");
+const unit = (stat, n) => ({ smash: n === 1 ? "smash" : "smashes", screws: "screws", gearsRun: "gears", tools: n === 1 ? "tool" : "tools", jumps: "jumps", goldT: "s", score: "points", over: "overdrive", daily: "run", slides: n === 1 ? "slide" : "slides", time: "s", dist: "m", clean: "clean points" }[stat] || "");
 
 /* ---------- beat-my-run links ---------- */
 export function challengeUrl(base, seed, score, name) {

@@ -10,13 +10,44 @@ const hex6 = (n) => `#${n.toString(16).padStart(6, "0")}`;
 export const toolboxHtml = (n, cls = "") => `<span class="fr__toolbox ${cls}" role="status" aria-label="Toolbox: ${fmt(n)} gears"><span class="fr__sicon">${OVER_ICON.toolbox}</span><b class="fr__tbn">${fmt(n)}</b><span>gears</span></span>`;
 
 export class Garage {
+  // Menu: Line grade, the three active missions (progress in numbers, a daily free swap), the weekly goal.
   missionsHtml() {
     const list = MT.missionsFill(this.settings.missions);
     if (!this.settings.missions) { this.settings.missions = list; P.setSetting("missions", list); }
-    return `<div class="fr__missions"><p class="fr__label">Missions</p><ul>${list.map((m) => {
-      const d = MT.missionInfo(m), q = Math.min(1, d.prog / d.goal);
-      return `<li><span>${esc(d.text)}</span><span class="fr__mbar"><i style="transform:scaleX(${q.toFixed(3)})"></i></span><span>+${d.reward}</span></li>`;
-    }).join("")}</ul></div>`;
+    const swaps = MT.rerollsLeft(this.settings.reroll), wk = MT.weekNow(this.settings.week);
+    const rows = list.map((m, i) => {
+      const d = MT.missionInfo(m), q = Math.min(1, d.prog / d.goal), swap = swaps > 0 && d.kind !== "start";
+      return `<li><span class="fr__mtext">${esc(d.text)}<small>${MT.missionProg(m)}</small></span><span class="fr__mbar" role="progressbar" aria-label="${esc(d.text)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(q * 100)}"><i style="transform:scaleX(${q.toFixed(3)})"></i></span><span class="fr__mrew">+${d.reward}</span>${swap
+        ? `<button class="fr__swap" type="button" data-panel="reroll" data-i="${i}" aria-label="Swap mission: ${esc(d.text)}" title="Swap (free once a day)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9a7 7 0 0 1 12.2-3.2L19 8M19 4v4h-4M19 15a7 7 0 0 1-12.2 3.2L5 16M5 20v-4h4"/></svg></button>` : `<span class="fr__swap is-none" aria-hidden="true"></span>`}</li>`;
+    }).join("");
+    const starter = list.some((m) => MT.missionInfo(m).kind === "start");
+    const week = wk.paid ? `Weekly goal done · +${MT.WEEKLY.reward} banked` : `This week <b>${Math.min(wk.n, MT.WEEKLY.goal)} / ${MT.WEEKLY.goal}</b> missions · +${MT.WEEKLY.reward} gears`;
+    return `${this.gradeHtml()}<div class="fr__missions"><p class="fr__label">${starter ? "First missions" : "Missions"}</p><ul>${rows}</ul>
+      <p class="fr__muted fr__week">${week}${swaps > 0 && !starter ? " · one free swap today" : ""}</p></div>`;
+  }
+
+  // Line grade: lifetime gears banked. The bar shows the way to the next grade and what it unlocks.
+  gradeHtml() {
+    const p = this.profile;
+    if (!p) return "";
+    const g = MT.gradeOf(p.gears), next = MT.unlocksAt(g.n + 1)[0];
+    return `<div class="fr__grade"><span class="fr__gradeN">Grade <b>${g.n}</b></span><span class="fr__mbar" role="progressbar" aria-label="Grade ${g.n} progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(g.q * 100)}"><i style="transform:scaleX(${g.q.toFixed(3)})"></i></span><span class="fr__gradeNext">${g.n < MT.GRADE_MAX ? `${fmt(g.hi - p.gears)} gears to ${g.n + 1}${next ? ` · ${esc(next)}` : ` · +${MT.gradeReward(g.n + 1)}`}` : "Top grade"}</span></div>`;
+  }
+
+  rerollMission(i) {
+    const r = MT.reroll(this.settings.missions, +i, this.settings.reroll);
+    if (!r) return;
+    this.settings.missions = r.list; P.setSetting("missions", r.list);
+    this.settings.reroll = r.rr; P.setSetting("reroll", r.rr);
+    this.sfx("tap");
+    const box = this.panel.querySelector(".fr__missions");
+    const g = this.panel.querySelector(".fr__grade");
+    if (box) { if (g) g.remove(); box.outerHTML = this.missionsHtml(); }
+    const row = this.panel.querySelector(`.fr__missions li:nth-child(${+i + 1})`);
+    this.sr(`New mission: ${MT.missionInfo(r.list[+i]).text}`);
+    // Keep keyboard focus in place: the row's swap button is gone once the free swap is used, so fall back to the list.
+    const lst = this.panel.querySelector(".fr__missions ul");
+    if (row) { row.classList.add("is-new"); if (lst) { lst.tabIndex = -1; lst.focus({ preventScroll: true }); } }
   }
 
   /* ---------- Garage ---------- */
@@ -42,8 +73,13 @@ export class Garage {
       const btn = own ? `<button class="fr__btn fr__btn--sm" type="button" data-panel="buy" data-id="${it.id}" aria-pressed="${on}">${on ? "Wearing" : "Wear"}</button>` : priceBtn(it.id, it.price, it.name);
       return `<li>${sw}<span>${esc(it.name)}</span>${btn}</li>${pend === it.id ? `<li class="fr__confirmrow">${confirm(it.id, it.price, it.name)}</li>` : ""}`;
     };
-    const seg = (key, opts, cur, label) => `<div class="fr__seg" role="radiogroup" aria-label="${label}">${opts.map((o, i) =>
-      `<button type="button" role="radio" aria-checked="${i === cur}" data-panel="g" data-g="${key}" data-v="${i}"${o.sw ? ` title="${esc(o.n)}"` : ""}>${o.sw ? `<span class="fr__swatch" style="background:${o.sw}"></span><span class="fr__sr">${esc(o.n)}</span>` : esc(o.n)}</button>`).join("")}</div>`;
+    // Options earned by Line grade show locked (with the grade that opens them) until reached.
+    const lv = p.lv | 0;
+    const seg = (key, opts, cur, label) => `<div class="fr__seg" role="radiogroup" aria-label="${label}">${opts.map((o, i) => {
+      const u = MT.unlockFor(key, i), locked = !MT.isUnlocked(key, i, lv);
+      const tip = locked ? `${o.n}: reach grade ${u[2]}` : o.n;
+      return `<button type="button" role="radio" aria-checked="${i === cur}" data-panel="g" data-g="${key}" data-v="${i}"${locked ? ` aria-disabled="true" class="is-locked"` : ""}${o.sw || locked ? ` title="${esc(tip)}"` : ""}>${o.sw ? `<span class="fr__swatch" style="background:${o.sw}"></span><span class="fr__sr">${esc(tip)}</span>` : esc(o.n)}${locked ? `<small class="fr__lockg" aria-hidden="true">G${u[2]}</small>${o.sw ? "" : `<span class="fr__sr"> (reach grade ${u[2]})</span>`}` : ""}</button>`;
+    }).join("")}</div>`;
     const servos = MT.servoCount(p), armed = !!this.settings.servoArm && servos > 0;
     const kinds = [["trim", "Robot trims"], ["trail", "Run trails"], ["hammer", "Hammer skins"]];
     const note = this.garageNote || "";
@@ -137,7 +173,13 @@ export class Garage {
     if (g === "arm") { this.settings.servoArm = !this.settings.servoArm; P.setSetting("servoArm", this.settings.servoArm); return this.showShop(); }
     if (g === "show") return this.showRobot();
     if (g in { paint: 1, finish: 1, pattern: 1, accent: 1 }) {
-      const d = this.designNow(); d[g] = +b.dataset.v;
+      const v = +b.dataset.v;
+      if (!MT.isUnlocked(g, v, this.profile.lv)) {
+        const n = this.panel.querySelector(".fr__gnote");
+        if (n) n.textContent = `Reach grade ${MT.unlockFor(g, v)[2]} to use this. Runs and missions raise your grade.`;
+        return;
+      }
+      const d = this.designNow(); d[g] = v;
       this.saveDesign(d);
       for (const x of b.parentNode.children) x.setAttribute("aria-checked", String(x === b));
     }

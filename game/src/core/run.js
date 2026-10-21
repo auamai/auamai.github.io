@@ -142,7 +142,7 @@ export class Run {
     this.seed = this.mode === "daily" ? MT.dailySeed(this.day) : this.mode === "challenge" ? this.challenge.seed : (Math.random() * 4294967296) >>> 0;
     RNG.course = MT.rng(this.seed);
     RNG.loot = MT.rng(this.seed ^ 0x9e3779b9);
-    this.stat = { smash: 0, goldT: 0, screws: 0, gearsRun: 0, tools: 0, over: 0, daily: this.mode === "daily" ? 1 : 0, jumps: 0, score: 0 };
+    this.stat = { smash: 0, goldT: 0, screws: 0, gearsRun: 0, tools: 0, over: 0, daily: this.mode === "daily" ? 1 : 0, jumps: 0, slides: 0, score: 0, time: 0, dist: 0, mult: 1, clean: 0 };
     const fromMenu = this.view === "menu";
     this.clearWorld();
     this.hideTip();
@@ -414,11 +414,26 @@ export class Run {
     const newBadge = MILESTONES.filter((m) => score >= m.at && prevBest < m.at).pop() || null;
     // Missions, Daily Run streak, the shop wallet and the teaser's summary.
     const st = this.stat;
-    Object.assign(st, { smash: this.smashRun, screws: this.screwsRun, gearsRun: this.gearsRun, tools: this.toolsRun, score, goldT: Math.floor(st.goldT) });
-    const ms = MT.missionsApply(MT.missionsFill(this.settings.missions), st);
+    const dist = Math.round((this.runDist || 0) * M_PER_U);
+    Object.assign(st, { smash: this.smashRun, screws: this.screwsRun, gearsRun: this.gearsRun, tools: this.toolsRun, score, goldT: Math.floor(st.goldT),
+      time: Math.floor(this.runTime), dist, mult: this.bestMult || 1, clean: this.toolsRun ? 0 : score });
+    // Meta rewards (UI and wallet only; nothing here touches the sim): missions, the weekly goal, the Daily twist,
+    // then any Line grade the gears reached. All land in the Toolbox before the game-over screen counts it up.
+    const ms = MT.missionsApply(this.settings.missions, st);
     this.settings.missions = ms.list; P.setSetting("missions", ms.list);
-    const reward = ms.done.reduce((a, m) => a + m.reward, 0);
-    if (reward) { this.profile.gears += reward; P.save(this.profile); }
+    let reward = ms.done.reduce((a, m) => a + m.reward, 0);
+    const wk = MT.weekAdd(this.settings.week, ms.done.length);
+    this.settings.week = wk.w; P.setSetting("week", wk.w); reward += wk.pay;
+    let twist = null;
+    if (this.mode === "daily" && this.runTime >= 3) {
+      const tc = MT.twistCheck(this.settings.twist, st, this.day);
+      this.settings.twist = tc.tw; P.setSetting("twist", tc.tw); reward += tc.pay;
+      twist = { text: tc.t.text, done: tc.done, pay: tc.pay };
+    }
+    if (reward) this.profile.gears += reward;
+    const grades = MT.gradeClaim(this.profile);
+    reward += grades.reduce((a, g) => a + g.reward, 0);
+    P.save(this.profile);
     if (this.mode === "daily" && this.runTime >= 3) {
       this.settings.streak = MT.bumpStreak(this.settings.streak, this.day); P.setSetting("streak", this.settings.streak);
       const db = this.settings.dailyBest || {};
@@ -437,7 +452,7 @@ export class Run {
     let headline = pool[li].replace("{v}", mps).replace("{bay}", bay);
     headline = headline[0].toUpperCase() + headline.slice(1);
     const prevRank = this.settings.rank || null;
-    this.lastRun = { mode: this.mode, seed: this.seed, headline, prevRank, dist: Math.round((this.runDist || 0) * M_PER_U), bestMult: this.bestMult || 1, missionsDone: ms.done, reward, challenge: this.mode === "challenge" ? this.challenge : null,
+    this.lastRun = { mode: this.mode, seed: this.seed, headline, prevRank, dist: Math.round((this.runDist || 0) * M_PER_U), bestMult: this.bestMult || 1, missionsDone: ms.done, reward, weekPay: wk.pay, twist, grades, challenge: this.mode === "challenge" ? this.challenge : null,
       score, gears: this.gearsRun, time: this.runTime, best, prevBest, delta: score - prevBest, streak, badge: newBadge,
       screws: this.screwsRun, tools: this.toolsRun, smashes: this.smashRun, revive: !!this.servoUsed, wallet0: MT.wallet(this.profile) - this.gearsRun - reward, rank: null, post, cause: CAUSE[this.deathType] || "Run over" };
     this.showOver();

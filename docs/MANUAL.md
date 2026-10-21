@@ -43,6 +43,8 @@ computer, and you can install it like an app. There's nothing to buy with real m
    game-over screen outside the buttons.
 
 On your first run the game starts a bit slower and shows short tips the first time you meet something new.
+Your first three missions ("Jump 3 times", "Slide twice", "Grab 15 gears in one run") are made to finish on
+that first run, so you see gears land in your Toolbox and your first grade come up straight away.
 
 ---
 
@@ -233,6 +235,13 @@ The **Daily Run** is one course a day, the same for every player.
 - Open it straight from **https://servosprint.xyz/?daily=1**, or from the "Daily Run" shortcut on the
   installed app's icon.
 
+### Today's twist
+
+Each day also has one **twist**: an extra goal for that day's Daily Run, such as "Grab 20 screws" or
+"Last 60 s". It's picked from the date, so everyone gets the same one. Meet it in a Daily Run and you get
+**+50 gears**, once a day. The twist only changes the goal, never the course, so the Daily Run itself stays
+the same for everyone.
+
 ### Streaks
 
 Play the Daily Run on consecutive days to build a streak. You get **one free miss a week**: skip a single day
@@ -242,20 +251,50 @@ and the streak survives, as long as you haven't used the week's free miss alread
 
 ## Missions
 
-You always have **three missions** on the go. Finish one and you earn gears for your Toolbox, and a new
-mission takes its place. Progress carries across runs unless the mission says "in one run".
+You always have **three missions** on the go, each a different kind (a skill, a distance, a pickup or a style
+goal). Each shows its progress in numbers ("640 / 1,000 m"). Finish one and you earn gears for your Toolbox,
+and a new mission takes its place. Progress carries across runs unless the mission says "in one run".
 
-| Mission | Reward |
+- **Swap:** once a day (midnight Pacific) you can swap one mission for a new one with the arrows button
+  next to it. The new one starts from zero.
+- **Weekly goal:** finish **8 missions** between Monday and Sunday for **+150 gears**, once a week.
+- **First missions:** a new player starts with three easy ones (Jump 3 times, Slide twice, Grab 15 gears in
+  one run: 20, 20 and 30 gears). They can't be swapped and don't come back.
+
+| Mission | Kind | Reward |
+| --- | --- | --- |
+| Jump 30 times | Skill | 40 gears |
+| Slide 15 times | Skill | 40 gears |
+| Score 1,500 in one run | Skill | 70 gears |
+| Last 75 s in one run | Skill | 70 gears |
+| Run today's Daily Run | Distance | 40 gears |
+| Run 1 km in one run | Distance | 70 gears |
+| Cover 4 km in total | Distance | 60 gears |
+| Collect 50 screws | Pickup | 50 gears |
+| Grab 20 screws in one run | Pickup | 60 gears |
+| Grab 60 gears in one run | Pickup | 60 gears |
+| Pick up 5 tools | Pickup | 50 gears |
+| Smash 10 crates or robots | Style | 60 gears |
+| Hold the golden wrench 8 s | Style | 80 gears |
+| Fill the toolbox for Overdrive | Style | 70 gears |
+| Reach a ×3 multiplier | Style | 80 gears |
+| Score 600 without a tool | Style | 90 gears |
+
+### Grade
+
+Your **grade** goes up with every gear you bank (run gears, mission and goal rewards). Grade 2 takes 100 gears,
+grade 3 300, grade 4 600, grade 5 1,000, and each step after is a little longer (grade 10 at 4,500). Each new
+grade pays **10 × the grade** in gears (grade 2: +20, grade 5: +50) and is called out on the game-over screen.
+Some grades open new Garage options:
+
+| Grade | Unlocks |
 | --- | --- |
-| Smash 10 crates or robots | 60 gears |
-| Hold the golden wrench 8 s | 80 gears |
-| Collect 50 screws | 50 gears |
-| Grab 60 gears in one run | 60 gears |
-| Pick up 5 tools | 50 gears |
-| Fill the toolbox for Overdrive | 70 gears |
-| Run today's Daily Run | 40 gears |
-| Jump 30 times | 40 gears |
-| Score 1,500 in one run | 70 gears |
+| 2 | Rivets pattern |
+| 3 | Off-white plate ink |
+| 4 | Gunmetal paint |
+| 6 | Pinstripe pattern |
+
+Players from before grades existed start at the grade their gears already reached (without a back-payment).
 
 ---
 
@@ -278,10 +317,12 @@ and on your share card.
 
 | Option | Choices |
 | --- | --- |
-| Paint | Off-white, Graphite, Signal yellow, Cyan |
+| Paint | Off-white, Graphite, Signal yellow, Cyan, Gunmetal (grade 4) |
 | Finish | Gloss, Satin, Matte |
-| Pattern | Plain, Hazard, Grid, Chevron |
-| Accent | Yellow, Cyan |
+| Pattern | Plain, Hazard, Grid, Chevron, Rivets (grade 2), Pinstripe (grade 6) |
+| Accent (plate ink) | Yellow, Cyan, Off-white (grade 3) |
+
+Options you haven't reached yet show dimmed with their grade (G4); tapping one says which grade opens it.
 
 ### Trims, trails and hammer skins (bought with gears)
 
@@ -368,6 +409,8 @@ manager, then press "I've saved it".
 ### What syncs
 
 Best score, number of runs, gears, Toolbox spending, Garage items, your robot's design and your Spare Servos.
+Your grade follows your gears, so it syncs too. Missions, swaps, the weekly goal and the Daily twist are kept
+on each device.
 Two devices merge safely: scores and gears only move up, and the newest robot design wins.
 
 ---

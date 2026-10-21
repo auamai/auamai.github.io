@@ -127,7 +127,7 @@ export class Loop {
           r.y = 0; r.vy = 0; r.ground = true;
           if (r.jumpBuf > 0 && this.driving) this.hop();
           else if (r.jumpBuf > 0) { r.jumpBuf = 0; r.queueSlide = false; r.vy = JUMP_V; r.ground = false; r.slideT = 0; }
-          else if (r.queueSlide) { r.slideT = SLIDE_T; r.queueSlide = false; }
+          else if (r.queueSlide) { r.slideT = SLIDE_T; r.queueSlide = false; if (this.stat) this.stat.slides++; }
         }
       }
       if (r.jumpBuf > 0) r.jumpBuf = Math.max(0, r.jumpBuf - dt);
