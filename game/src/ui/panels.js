@@ -121,6 +121,19 @@ export class Panels {
     if (f && !(this.coarse && f.tagName === "INPUT")) f.focus({ preventScroll: true });
   }
 
+  // Swap part of a panel without dropping keyboard focus: if focus was inside, it lands back on the same
+  // control (matched by its data attributes), or on the region's first control if that one is gone.
+  // Without this a keyboard player who switched a board tab was left on <body>, where Space starts a run.
+  keepFocus(region, swap) {
+    const a = document.activeElement, inside = !!(region && a && a !== region && region.contains(a));
+    const d = inside ? a.dataset : null;
+    const el = swap() || region;
+    if (!inside || !this.panel.contains(el)) return;
+    const sel = ["panel", "board", "key", "trim", "id", "vol"].filter((k) => d[k] != null).map((k) => `[data-${k}="${CSS.escape(d[k])}"]`).join("");
+    const t = (sel && el.querySelector(sel)) || el.querySelector("button:not([disabled]):not([tabindex='-1']), input, a[href]");
+    if (t) t.focus({ preventScroll: true });
+  }
+
   hidePanel() {
     this.layer.hidden = true;
     this.layer.dataset.view = "";
@@ -130,8 +143,8 @@ export class Panels {
 
   boardHtml() {
     const tab = this.boardTab || "all";
-    const tabs = P.online() ? `<div class="fr__tabs" role="tablist">${[["daily", "Daily"], ["weekly", "Weekly"], ["all", "All-time"]].map(([k, n]) =>
-      `<button class="fr__tab" type="button" role="tab" data-panel="board" data-board="${k}" aria-selected="${k === tab}">${n}</button>`).join("")}</div>` : "";
+    const tabs = P.online() ? `<div class="fr__tabs" role="tablist" aria-label="Leaderboard period">${[["daily", "Daily"], ["weekly", "Weekly"], ["all", "All-time"]].map(([k, n]) =>
+      `<button class="fr__tab" type="button" role="tab" data-panel="board" data-board="${k}" aria-selected="${k === tab}"${k === tab ? "" : ' tabindex="-1"'}>${n}</button>`).join("")}</div>` : "";
     const inner = this.boardInner();
     const reset = tab !== "all" ? `<p class="fr__muted fr__reset">Resets ${tab === "daily" ? "at midnight" : "Monday 00:00"} Pacific · in ${this.until(tab === "daily" ? MT.nextMidnight() : MT.nextMonday())}</p>` : "";
     return inner.replace('<div class="fr__board"', `<div class="fr__board" data-tab="${tab}"`).replace(/^(<div class="fr__board"[^>]*>)/, `$1${tabs}`).replace(/<\/div>$/, `${reset}</div>`);
@@ -501,7 +514,7 @@ export class Panels {
     const slot = this.panel.querySelector('[data-slot="save"]');
     if (!slot) return;
     const ctx = this.view === "over" ? "over" : this.view === "pause" ? "pause" : "menu";
-    slot.innerHTML = this.saveHtml(ctx);
+    this.keepFocus(slot, () => { slot.innerHTML = this.saveHtml(ctx); });
     const f = slot.querySelector("input");
     if (f && this.saveUi.focus) { f.focus({ preventScroll: true }); this.saveUi.focus = false; }
   }

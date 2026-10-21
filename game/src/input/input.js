@@ -111,6 +111,20 @@ export class Input {
     });
     this.panel.addEventListener("click", (e) => { if (e.target.closest("button")) this.sfx("tap"); this.onPanelClick(e); });
     this.panel.addEventListener("submit", (e) => this.onPanelSubmit(e));
+    // Leaderboard tabs follow the ARIA tabs pattern: one Tab stop, arrows / Home / End switch period.
+    this.panel.addEventListener("keydown", (e) => {
+      const t = e.target.closest && e.target.closest('[role="tab"]');
+      if (!t || e.altKey || e.ctrlKey || e.metaKey) return;
+      const tabs = [...t.parentNode.querySelectorAll('[role="tab"]')], n = tabs.length;
+      let i = tabs.indexOf(t);
+      if (e.key === "ArrowRight" || e.key === "ArrowDown") i = (i + 1) % n;
+      else if (e.key === "ArrowLeft" || e.key === "ArrowUp") i = (i + n - 1) % n;
+      else if (e.key === "Home") i = 0;
+      else if (e.key === "End") i = n - 1;
+      else return;
+      e.preventDefault(); e.stopPropagation();
+      tabs[i].focus(); tabs[i].click();
+    });
     this.panel.addEventListener("input", (e) => this.onPanelInput(e));
     this.panel.addEventListener("focusin", (e) => {
       if (e.target.tagName === "INPUT") setTimeout(() => e.target.scrollIntoView({ block: "center", behavior: this.reduceMotion ? "auto" : "smooth" }), 300);
@@ -172,7 +186,7 @@ export class Input {
 
   // Keep Tab inside the game while it is open.
   trapFocus(e) {
-    const els = [...this.root.querySelectorAll("button, input, a[href]")].filter((el) => !el.disabled && el.offsetParent !== null);
+    const els = [...this.root.querySelectorAll("button, input, a[href]")].filter((el) => !el.disabled && el.offsetParent !== null && el.tabIndex >= 0);
     if (!els.length) return;
     const first = els[0], last = els[els.length - 1], a = document.activeElement;
     if (!this.root.contains(a)) { e.preventDefault(); first.focus(); }
