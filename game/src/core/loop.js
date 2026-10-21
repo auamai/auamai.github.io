@@ -1,6 +1,6 @@
 // Frame loop and the fixed 120 Hz simulation step: every run advances only through update(1/120).
 // Installed onto Game.prototype by game.js (methods use `this`, the Game).
-import { LANES, DESPAWN_Z, START_SPEED, MAX_SPEED, ACCEL, GRAVITY, JUMP_V, PHYS_HZ, LANE_W, LANE_W_ROLL, SLIDE_T, GEAR_POINTS, DIST_POINTS, PERIOD, ROLL_SPEED, RAIL_H, LAND_ROLL, DRIFT_MULT, SLOW_T, SLOW_K, TUT_SPEED, TUT_EASE } from "./constants.js?v=20261020r6c";
+import { LANES, DESPAWN_Z, START_SPEED, MAX_SPEED, ACCEL, GRAVITY, JUMP_V, PHYS_HZ, LANE_W, LANE_W_ROLL, SLIDE_T, GEAR_POINTS, DIST_POINTS, PERIOD, ROLL_SPEED, RAIL_H, LAND_ROLL, DRIFT_MULT, SLOW_T, SLOW_K, TUT_SPEED, TUT_EASE, visY } from "./constants.js?v=20261020r6c";
 import { report } from "../net/errors.js?v=20261020r6c";
 
 export class Loop {
@@ -175,7 +175,7 @@ export class Loop {
         g.m.rotation.y = this.t * 3 + g.x;
         if (st === "play" && this.magnetize(g, zPrev, dt)) {
           if (this.pulled(g)) { g.taken = true; this.gearsRun++; this.addScore(GEAR_POINTS * mult, g); this.sfx("gear", g.x); }
-          g.m.position.x = g.x; g.m.position.y = g.y;
+          g.m.position.x = g.x; g.m.position.y = visY(g.y);
         } else if (st === "play" && Math.abs(r.x - g.x) < 0.9 && zPrev - 0.6 <= 0 && g.z + 0.6 >= 0 && g.y + 0.4 > r.y && g.y - 0.4 < top) {
           g.taken = true;
           this.gearsRun++;

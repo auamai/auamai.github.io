@@ -2,7 +2,7 @@
 // Installed onto Game.prototype by game.js (methods use `this`, the Game).
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
 import { buildTool } from "../../tools.js?v=20261020r6c";
-import { LANES, SPAWN_Z, START_SPEED, MAX_SPEED, GRAVITY, WHEEL_FROM, WHEEL_GAP, WHEEL_CHANCE, DRIVE_T, ROLL_SPEED, RAIL_H, RAIL_GEAR_GAP, RAMP_DEG, RAMP_H, RAMP_L, TOOL_FROM, TOOL_GAP, TOOL_KIND_GAP, TOOL_CHANCE, BOT_SPEED, BOT_FROM, BOT_TURN_T, BOT_TURN_MIN_Z } from "../core/constants.js?v=20261020r6c";
+import { LANES, SPAWN_Z, START_SPEED, MAX_SPEED, GRAVITY, WHEEL_FROM, WHEEL_GAP, WHEEL_CHANCE, DRIVE_T, ROLL_SPEED, RAIL_H, RAIL_GEAR_GAP, RAMP_DEG, RAMP_H, RAMP_L, TOOL_FROM, TOOL_GAP, TOOL_KIND_GAP, TOOL_CHANCE, BOT_SPEED, BOT_FROM, BOT_TURN_T, BOT_TURN_MIN_Z, visY } from "../core/constants.js?v=20261020r6c";
 import { COURSE, LOOT, pick, shuffle } from "../core/util.js?v=20261020r6c";
 import { BOX } from "../render/geometry.js?v=20261020r6c";
 
@@ -226,7 +226,7 @@ export class WorldGen {
     if (!m) { m = new THREE.Mesh(this.gearGeo, this.M.gear); m.castShadow = true; this.scene.add(m); }
     m.visible = true;
     m.scale.setScalar(1);
-    m.position.set(LANES[lane], y, z);
+    m.position.set(LANES[lane], visY(y), z); // drawn height only; the sim keeps y
     this.gears.push({ m, x: LANES[lane], y, z, taken: false, t: 0 });
   }
 

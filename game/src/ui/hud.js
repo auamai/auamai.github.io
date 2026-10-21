@@ -2,7 +2,7 @@
 // Installed onto Game.prototype by game.js (methods use `this`, the Game).
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
 import * as P from "../../profile.js?v=20261020r6c";
-import { DIST_POINTS, MAGNET_T, DRILL_T, HAMMER_T, GOLD_T, OVER_T, SLOW_T, ICON, TIPS, NO_SLOW } from "../core/constants.js?v=20261020r6c";
+import { DIST_POINTS, MAGNET_T, DRILL_T, HAMMER_T, GOLD_T, OVER_T, SLOW_T, ICON, TIPS, NO_SLOW, visY } from "../core/constants.js?v=20261020r6c";
 import { fmt } from "../core/util.js?v=20261020r6c";
 
 export class Hud {
@@ -14,7 +14,7 @@ export class Hud {
       if (this.popEls.length >= 10) el = this.popEls.reduce((a, b) => (a._t < b._t ? a : b));
       else { el = document.createElement("span"); el.className = "fr__popup"; this.elPops.appendChild(el); this.popEls.push(el); }
     }
-    const v = new THREE.Vector3(at.x, (at.y || 1) + 0.6, Math.min(at.z || 0, 0)).project(this.camera);
+    const v = new THREE.Vector3(at.x, visY(at.y || 1) + 0.6, Math.min(at.z || 0, 0)).project(this.camera);
     el.textContent = text;
     el.style.left = `${((v.x + 1) / 2 * 100).toFixed(1)}%`;
     el.style.top = `${((1 - v.y) / 2 * 100).toFixed(1)}%`;

@@ -36,6 +36,11 @@ export const RAIL_H = 1.2;           // grind height
 export const RAIL_GEAR_GAP = 2.0;    // gears along a rail
 export const RAMP_DEG = 35, RAMP_H = 1.4, RAMP_L = 2.0;  // kicker: a 35 degree lip 1.4 high; a true projectile off it
 export const RAMP_G = 1;             // (real gravity in the air)
+// Drawn height of things in a ramp arc. The sim keeps the true projectile (scores, Daily Run and replays
+// unchanged), but a fast kicker throws it far above the 9-unit roof; above AIR_SOFT the drawn height eases
+// toward AIR_MAX so the robot (and the gear arc it collects) stays under the trusses and in frame.
+export const AIR_SOFT = 4.0, AIR_MAX = 6.3;
+export const visY = (y) => (y <= AIR_SOFT ? y : AIR_SOFT + (AIR_MAX - AIR_SOFT) * (1 - Math.exp(-(y - AIR_SOFT) / (AIR_MAX - AIR_SOFT))));
 export const LAND_ROLL = 0.5;        // invulnerable roll after a ramp landing
 export const HOP_V = Math.sqrt(2 * 9.81 / 0.85 * 0.75); // the roller's jump: a low hop, 0.75 units
 export const DRIFT_CHAIN = 0.6, DRIFT_CASH = 1.5;
