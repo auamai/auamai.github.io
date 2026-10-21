@@ -378,7 +378,7 @@ main { width: min(var(--wrap), calc(100% - 40px)); margin: 0 auto; }
 .clip__cta b { font-weight: 400; display: inline-block; transition: transform .25s; }
 .clip:hover .clip__cta b { transform: translate(2px, -2px); }
 @media (max-width: 820px) { .media { grid-template-columns: 1fr; } .clip__paper { min-height: 300px; } }
-@media (prefers-reduced-motion: reduce) { .clip, .clip__frame img, .lower3__play { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .clip, .clip__frame img, .play__disc { transition: none; } }
 
 /* Principle */
 .creed { padding: 72px 0 0; max-width: 40em; }
@@ -493,37 +493,49 @@ main { width: min(var(--wrap), calc(100% - 40px)); margin: 0 auto; }
 
 /* Media: an honest broadcast lower third instead of an "on air" badge */
 .media { grid-template-columns: 1fr 1fr; }
-.clip--tv .clip__frame img { object-position: 28% center; filter: saturate(.7) brightness(.92); }
+.clip--tv .clip__frame picture { display: contents; }
+.clip--tv .clip__frame img { object-position: 30% 30%; }   /* full brightness; the face sits in the left third */
+/* Only a short, soft graphite scrim under the caption (AA for the lower third), nothing over the photo */
 .clip--tv .clip__frame::after {
-  background:
-    linear-gradient(90deg, rgba(14, 19, 42, 0) 22%, rgba(14, 19, 42, .55) 42%, rgba(14, 19, 42, .86) 70%, rgba(14, 19, 42, .9) 100%),
-    linear-gradient(180deg, rgba(10, 14, 32, 0) 48%, rgba(10, 14, 32, .86) 100%);
+  top: auto; height: 36%; pointer-events: none;
+  background: linear-gradient(0deg, rgba(20, 22, 27, .74) 0%, rgba(20, 22, 27, .6) 22%, rgba(20, 22, 27, 0) 100%);
 }
 .lower3 {
   position: absolute; left: 0; right: 0; bottom: 0; z-index: 1;
   display: flex; align-items: center; gap: 12px; padding: 16px 16px 16px 18px;
 }
-.lower3::before {
-  content: ""; position: absolute; left: 18px; right: 72px; top: 0; height: 1px;
-  background: linear-gradient(90deg, rgba(232, 236, 248, .55), rgba(232, 236, 248, 0));
-  transform-origin: left; transform: scaleX(1);
-}
 .lower3__tally { width: 7px; height: 7px; border-radius: 50%; flex: none; background: var(--accent); box-shadow: 0 0 8px 1px rgba(169, 188, 255, .45); }
 .lower3__text { font: 300 14.5px/1.3 var(--sans); color: var(--ink); letter-spacing: .005em; text-shadow: 0 1px 12px rgba(8, 12, 30, .7); }
 .lower3__sep, .lower3__role span { color: var(--ink-3); }
 .lower3__role span { margin: 0 .3em; }
-.lower3__play {
-  margin-left: auto; width: 44px; height: 44px; border-radius: 50%; flex: none; display: grid; place-items: center;
-  background: rgba(244, 245, 248, .92); transition: transform .25s;
+.lower3 { pointer-events: none; }
+.lower3__text { text-shadow: 0 1px 2px rgba(20, 22, 27, .55), 0 0 14px rgba(20, 22, 27, .45); }
+
+/* Play button: a solid off-white disc with a graphite triangle (custom SVG, rounded corners,
+   optically centred: its box sits ~4% right of centre). The whole poster is the tap target. */
+.play { -webkit-appearance: none; appearance: none; border: 0; padding: 0; margin: 0; background: none; color: inherit; font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.play--frame { position: absolute; inset: 0; z-index: 2; display: grid; place-items: center; border-radius: inherit; }
+.play__disc {
+  --d: 88px;
+  width: var(--d); height: var(--d); border-radius: 50%; display: grid; place-items: center;
+  background: #F2F0EA;
+  box-shadow: 0 0 0 1px rgba(20, 22, 27, .1), 0 0 0 6px rgba(242, 240, 234, .16), 0 10px 30px rgba(10, 12, 24, .38), 0 2px 6px rgba(10, 12, 24, .22);
+  transition: transform .22s cubic-bezier(.2, .7, .2, 1), box-shadow .22s;
 }
-.lower3__play svg { width: 16px; height: 16px; fill: #111526; margin-left: 2px; }
-.clip:hover .lower3__play { transform: scale(1.06); }
+.play__icon { width: 55%; height: 55%; display: block; fill: #14161B; stroke: #14161B; stroke-width: 2.4; stroke-linejoin: round; overflow: visible; }
+.play--frame:hover .play__disc, .clip--tv:hover .play__disc { transform: scale(1.06); }
+.play--frame:active .play__disc { transform: scale(.97); transition-duration: .08s; }
+.play--frame:focus { outline: none; }
+.play--frame:focus-visible .play__disc { transform: scale(1.06); box-shadow: 0 0 0 1px rgba(20, 22, 27, .1), 0 0 0 4px #14161B, 0 0 0 7px var(--accent), 0 10px 30px rgba(10, 12, 24, .38); }
+@media (max-width: 640px) { .play__disc { --d: 72px; } }
+.clip__frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; border-radius: inherit; background: #000; }
+.clip__frame.is-playing::after, .clip__frame.is-playing .lower3, .clip__frame.is-playing .play { display: none; }
+.clip--tv:hover .clip__frame img { transform: none; }
+.clip__body .clip__cta { align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; min-height: 44px; margin-top: -4px; }
+.clip__body .clip__cta:hover b, .clip__body .clip__cta:focus-visible b { transform: translate(2px, -2px); }
 /* Once, on scroll-in: the rule draws across and the tally lights, then holds still */
-.js .clip--tv.reveal .lower3::before { transform: scaleX(0); }
 .js .clip--tv.reveal .lower3__tally { background: rgba(169, 188, 255, .25); box-shadow: none; }
-.js .clip--tv.reveal.is-in .lower3::before { animation: rule-draw .9s cubic-bezier(.2, .7, .2, 1) .35s forwards; }
 .js .clip--tv.reveal.is-in .lower3__tally { animation: tally-on 1.6s ease-out 1s forwards; }
-@keyframes rule-draw { to { transform: scaleX(1); } }
 @keyframes tally-on {
   0%   { background: rgba(169, 188, 255, .25); box-shadow: 0 0 0 0 rgba(169, 188, 255, 0); }
   25%  { background: #c9d5ff; box-shadow: 0 0 14px 4px rgba(169, 188, 255, .75); }
@@ -597,16 +609,22 @@ main { width: min(var(--wrap), calc(100% - 40px)); margin: 0 auto; }
   .tab { min-height: 44px; }
   .js .nav__cta { display: inline-flex; }
   .foot { flex-direction: column; align-items: flex-start; }
-  .lower3__text { font-size: 14px; display: grid; gap: 2px; }
-  .lower3__sep { display: none; }
-  .lower3__role { font-size: 13px; color: var(--ink-2); }
+  .lower3 { padding: 12px 14px; gap: 10px; }
+  .lower3__text { font-size: 13.5px; white-space: nowrap; }
 }
 @media (max-width: 360px) {
   .js .nav__now { display: none; }
 }
+/* Very narrow phones: the two text buttons share the first row, the icons sit together on the second */
+@media (max-width: 374px) {
+  .hero .hero__actions .pill { flex: 1 1 40%; }
+}
+/* The clock's sweep is a rotating square; its corners must never widen the page.
+   Setting html too keeps body's value from propagating to the viewport, so body really clips
+   (clip, not hidden: no scroll container, sticky and scroll-padding keep working). */
+html, body { overflow-x: clip; }
 @media (prefers-reduced-motion: reduce) {
   .bar, .bar::before, .tab::after, .link-arrow b, .skip, .nav__menu-icon::before, .nav__menu-icon::after { transition: none; }
-  .js .clip--tv.reveal .lower3::before, .js .clip--tv.reveal.is-in .lower3::before { animation: none; transform: scaleX(1); }
   .js .clip--tv.reveal .lower3__tally, .js .clip--tv.reveal.is-in .lower3__tally { animation: none; background: var(--accent); box-shadow: 0 0 8px 1px rgba(169, 188, 255, .45); }
 }
 
