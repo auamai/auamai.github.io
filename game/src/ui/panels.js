@@ -270,7 +270,7 @@ export class Panels {
     if (r.best && r.score > 0) lines.push(`<p class="fr__moment"><span class="fr__star" aria-hidden="true"></span>New best${r.prevBest > 0 ? ` <b>+${fmt(r.delta)}</b>` : ""}${r.streak >= 2 ? `<span class="fr__soft"> · ${r.streak} in a row</span>` : ""}</p>`);
     // Rank: where you stand, and what's next.
     if (r.post === "ok" && r.rank) {
-      const up = r.prevRank && r.prevRank > r.rank ? `<span class="fr__up" aria-label="up from #${r.prevRank}">↑ from #${r.prevRank}</span>` : "";
+      const up = r.prevRank && r.prevRank > r.rank ? `<span class="fr__up"><span aria-hidden="true">↑</span><span class="fr__sr-only">up</span> from #${r.prevRank}</span>` : "";
       let tail = "";
       if (r.rank === 1 && rows[1]) tail = ` · ${fmt(r.score - rows[1].score)} ahead of #2`;
       else if (r.rank > 1 && rows[r.rank - 2]) tail = ` · ${fmt(rows[r.rank - 2].score - r.score + 1)} to pass #${r.rank - 1}`;
