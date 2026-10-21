@@ -129,7 +129,8 @@ html.fr-open, html.fr-open body { overscroll-behavior: none; }
 .fr__pops { position: absolute; inset: 0; pointer-events: none; z-index: 2; overflow: hidden; }
 .fr__popup {
   position: absolute; transform: translate(-50%, -50%); opacity: 0; white-space: nowrap;
-  font: 400 16px/1 "Inter Tight", ui-sans-serif, system-ui, sans-serif; color: #f2f0ea; font-variant-numeric: tabular-nums;
+  font: 500 16px/1 "Inter Tight", ui-sans-serif, system-ui, sans-serif; color: #f2f0ea; font-variant-numeric: tabular-nums;
+  text-transform: uppercase; letter-spacing: var(--fr-track-caps, .08em);
   text-shadow: 0 0 3px #14161b, 0 0 8px rgba(20, 22, 27, .95);
 }
 .fr__popup.is-big { font-size: 20px; color: #ffc93c; }
@@ -543,7 +544,7 @@ html.fr-open, html.fr-open body { overscroll-behavior: none; }
   .fr__actions { flex-wrap: wrap; }
   .fr__actions .fr__btn { min-width: 0; }
 }
-.fr__popup { font-weight: 400; }
+.fr__popup { font-weight: var(--fr-w-medium, 500); } /* pickup text: medium caps, tabular nums; colours unchanged (AA on graphite / with halo text-shadow) */
 .fr__rank { display: block; }
 .fr__rank b { margin-right: 8px; }
 
