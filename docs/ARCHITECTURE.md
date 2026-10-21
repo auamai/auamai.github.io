@@ -681,6 +681,9 @@ and is baked into the same mesh (+0 draw calls). The texture is redrawn only whe
   with or without a stored ghost. Playback is keyed by `runTime`: ghost z = `runDist - ghostDist(t)` (negative
   = ahead). Ahead/behind compares score at the same `runTime` (speed is a function of time, so distance only
   differs through Roller Mode and ramps); after the ghost's track ends the chip shows metres past it.
+  A challenge link's ghost is fetched in the background as the page boots (`ghostFetch()`, `GET /ghost` with a 15 s
+  timeout, since shader warm-up can stall a slow machine's main thread); a request that gets no HTTP answer is retried
+  once 3 s later. Each run start reads `challenge.ghost`, so a ghost that lands after the first run starts races the next.
   A stored or downloaded ghost is matched by seed **and** course version (`cv` / `v`), so a v1 ghost never races
   on a v2 course. The ghost is drawn with the same world-space bend as the hall (§6): the depth pass gets it from the
   material patch, the rim-lit `ShaderMaterial` applies the same `ssBend` formula in its own vertex shader, so it

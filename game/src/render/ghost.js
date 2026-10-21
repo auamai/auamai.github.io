@@ -254,12 +254,16 @@ export class Ghost {
 
   // Opening a challenge link: fetch the sharer's ghost in the background. If it lands before the run starts,
   // it races you; otherwise you race your own best on that course (if any).
-  ghostFetch() {
+  // The timeout is generous (15 s) because a slow machine can stall the main thread during shader warm-up,
+  // and a request that only timed out (no HTTP answer) is retried once 3 s later.
+  ghostFetch(retry = 1) {
     const c = this.challenge;
-    if (!c || !(c.score > 0) || !P.online() || this.settings.ghost === false) return;
+    if (!c || !(c.score > 0) || !P.online() || this.settings.ghost === false || c.ghost) return;
     P.getGhost((c.seed >>> 0).toString(36), c.score, c.v || 1).then((res) => {
+      if (this.challenge !== c) return;
+      if (res && res.offline && retry > 0) { setTimeout(() => this.ghostFetch(retry - 1), 3000); return; }
       const track = res && res.ok && res.data && decodeTrack(res.data.b);
-      if (track && this.challenge === c && track.s[track.n - 1] <= c.score) c.ghost = { track, s: c.score };
+      if (track && track.s[track.n - 1] <= c.score) c.ghost = { track, s: c.score };
     }).catch(() => {});
   }
 }

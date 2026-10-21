@@ -146,7 +146,7 @@ async function req(method, path, body, ms = 5000) {
 // Challenge ghosts (Ghost Racing): the sharer's compact track, keyed by the link's seed (base 36) and score.
 // v: course version of the run (1 classic, 2 zones + turns); the Worker keys ghosts by (seed, score, v).
 export const postGhost = (c, s, v, b) => req("POST", "/ghost", { c, s, v, b }, 8000);
-export const getGhost = (c, s, v) => req("GET", `/ghost?c=${encodeURIComponent(c)}&s=${encodeURIComponent(s)}&v=${encodeURIComponent(v || 1)}`);
+export const getGhost = (c, s, v) => req("GET", `/ghost?c=${encodeURIComponent(c)}&s=${encodeURIComponent(s)}&v=${encodeURIComponent(v || 1)}`, null, 15000);
 
 // board: "all" (default), "daily" (today's Daily Run) or "weekly" (since Monday 00:00 Vancouver).
 export const topScores = (board = "all") => req("GET", board === "all" ? "/scores" : `/scores?board=${board}`);
