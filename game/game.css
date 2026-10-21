@@ -761,6 +761,6 @@ html.fr-open, html.fr-open body { overscroll-behavior: none; }
 .fr__mark-icon svg { width: 14px; height: 14px; fill: none; stroke: #3ddcff; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; display: block; }
 .fr__mark.is-gold { border-color: #ffc93c; } .fr__mark.is-gold .fr__mark-icon svg { stroke: #ffc93c; } .fr__mark.is-gold::after { border-top-color: #ffc93c; }
 .fr__mark.is-near { opacity: 0; }
-.fr__style { margin: 8px 0 0; font: 400 12px/1.4 var(--fr-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ss-ink-2, rgba(242, 240, 234, .78)); text-align: center; }
+.fr__style { margin: 6px 0 0; font: 400 11px/1.3 var(--fr-mono); letter-spacing: .04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; color: var(--ss-ink-2, rgba(242, 240, 234, .78)); text-align: center; }
 .fr.is-still .fr__flow.is-bump { animation: none; }
 .fr:not(.is-playing) .fr__marks { display: none; }

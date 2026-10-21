@@ -321,7 +321,7 @@ export class Panels {
     const r = this.lastRun, I = OVER_ICON;
     const st = [["gears", fmt(r.gears), "Gears"], ["time", clock(r.time), "Time"], ["dist", r.dist >= 1000 ? `${(r.dist >= 100000 ? Math.round(r.dist / 1000) : r.dist >= 10000 ? Math.round(r.dist / 100) / 10 : Math.round(r.dist / 10) / 100).toFixed(r.dist >= 100000 ? 0 : r.dist >= 10000 ? 1 : 2)}<small>km</small>` : `${fmt(r.dist)}<small>m</small>`, "Distance"],
       ["tools", fmt(r.tools), "Tools"], ["mult", `×${(Math.round(r.bestMult * 10) / 10).toString()}`, "Multiplier"], ["smash", fmt(r.smashes), "Smashed"]];
-    const y = r.style, sl = y && (y.near || y.clear || y.zones) ? [y.zones ? `In the zone ×${y.zones}` : `Flow ×${y.flow}`, y.near ? `${y.near} near ${y.near === 1 ? "miss" : "misses"}` : "", y.weave ? `${y.weave} ${y.weave === 1 ? "weave" : "weaves"}` : "", y.clear ? `${y.clear} clean` : ""].filter(Boolean).join(" · ") : "";
+    const y = r.style, sl = y && (y.near || y.clear || y.zones) ? [y.zones ? `Zone ×${y.zones}` : `Flow ×${y.flow}`, y.near ? `${y.near} near` : "", y.weave ? `${y.weave} weave` : "", y.clear ? `${y.clear} clean` : ""].filter(Boolean).join(" · ") : "";
     return `<ul class="fr__stats">${st.map(([k, v, n], i) => `<li style="--i:${i}"><span class="fr__sicon">${I[k]}</span><b>${v}</b><span>${n}</span></li>`).join("")}</ul>${sl ? `<p class="fr__style">${sl}</p>` : ""}`;
   }
 
