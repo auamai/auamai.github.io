@@ -170,7 +170,7 @@ export function readChallenge(search = location.search) {
 // A 1080x1350 image: score, rank, the robot (a frame of the game canvas), and a short "Beat N at <host>" line.
 // Share card (1080 x 1350), in the Servo Sprint identity: graphite, off-white numerals, the wordmark,
 // a yellow hazard rule, cyan for the rank line. Uses the bundled Inter Tight (300/400) and Plex Mono.
-export async function shareCard({ canvas, score, rank, best, daily, day, name, link, wordmark, passed }) {
+export async function shareCard({ canvas, score, rank, best, daily, day, name, link, wordmark, passed, focusY }) {
   const W = 1080, H = 1350, c = document.createElement("canvas");
   c.width = W; c.height = H;
   const x = c.getContext("2d");
@@ -183,7 +183,10 @@ export async function shareCard({ canvas, score, rank, best, daily, day, name, l
     const BY = 456, BH = 680, s = Math.max(W / canvas.width, BH / canvas.height);
     const w = canvas.width * s, h = canvas.height * s;
     x.save(); x.beginPath(); x.rect(0, BY, W, BH); x.clip();
-    try { x.globalAlpha = 0.9; x.drawImage(canvas, (W - w) / 2, BY + (BH - h) * 0.62, w, h); x.globalAlpha = 1; } catch { /* tainted or lost */ }
+    // Vertical crop: put the robot (focusY, from the camera) a little below the band's middle; the old fixed 62 %
+    // crop cut the robot off on tall phone frames. Clamped so the frame always covers the band.
+    const oy = Number.isFinite(focusY) ? Math.min(0, Math.max(BH - h, BH * 0.6 - focusY * h)) : (BH - h) * 0.62;
+    try { x.globalAlpha = 0.9; x.drawImage(canvas, (W - w) / 2, BY + oy, w, h); x.globalAlpha = 1; } catch { /* tainted or lost */ }
     x.restore();
     const g = x.createLinearGradient(0, BY, 0, BY + BH);
     g.addColorStop(0, "rgba(20,22,27,1)"); g.addColorStop(0.22, "rgba(20,22,27,0.15)"); g.addColorStop(0.75, "rgba(20,22,27,0.15)"); g.addColorStop(1, "rgba(20,22,27,1)");

@@ -77,9 +77,16 @@ export class Net {
     if (this.lastCard && /^blob:/.test(this.lastCard.url || "")) { try { URL.revokeObjectURL(this.lastCard.url); } catch { /* ignore */ } }
     this.lastCard = null;
     this.renderer.render(this.scene, this.camera); // a fresh frame to copy (the buffer isn't kept); shareCard copies it before any await
+    // Where the robot is on screen (0 top .. 1 bottom), so the card's crop keeps it in frame on tall phone canvases.
+    let focusY = null;
+    try {
+      const v = this.robot.root.position.clone(); v.y += 1.1;
+      if (this.robot.root.parent) this.robot.root.parent.localToWorld(v);
+      v.project(this.camera); if (Number.isFinite(v.y)) focusY = Math.min(1, Math.max(0, (1 - v.y) / 2));
+    } catch { /* keep the default crop */ }
     const link = this.shareLink(r), c = r.challenge, passed = c && r.score > c.score ? { name: c.name, by: r.score - c.score } : null;
     this.cardRun = r;
-    this.cardJob = MT.shareCard({ canvas: this.canvas, score: r.score, rank: r.dailyRank || r.rank, best: r.best, daily: r.mode === "daily", day: this.day, name: this.profile.username, link, wordmark: WORDMARK, passed })
+    this.cardJob = MT.shareCard({ canvas: this.canvas, score: r.score, rank: r.dailyRank || r.rank, best: r.best, daily: r.mode === "daily", day: this.day, name: this.profile.username, link, wordmark: WORDMARK, passed, focusY })
       .then((card) => { if (this.cardRun === r && this.cardKey === key) this.lastCard = card; return card; });
     return this.cardJob;
   }
