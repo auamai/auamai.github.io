@@ -113,7 +113,7 @@ export const missionInfo = (m) => ({ ...MISSIONS.find((x) => x.id === m.id), pro
 /* ---------- gear shop ---------- */
 // Cosmetic only. Prices in gears; the wallet is gears earned minus gears spent.
 export const SHOP = [
-  { id: "trim-navy", kind: "trim", name: "Graphite line", price: 200, light: 0x4f63c4, deep: 0x262d4d },
+  { id: "trim-navy", kind: "trim", name: "Cyan pinstripe", price: 200, light: 0x4f63c4, deep: 0x262d4d },
   { id: "trim-ice", kind: "trim", name: "Cyan frost", price: 350, light: 0xdfe6ff, deep: 0xa9bcff },
   { id: "trail-ribbon", kind: "trail", name: "Cyan arc", price: 250, color: 0xa9bcff },
   { id: "trail-navy", kind: "trail", name: "Steel dash", price: 300, color: 0x262d4d },

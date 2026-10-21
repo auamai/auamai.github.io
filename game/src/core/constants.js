@@ -110,7 +110,7 @@ export const TIPS = {
   slide: { icon: "down", touch: ["Swipe down", "to slide under"], keys: ["↓  or  S", "to slide under"] },
   wheel: { icon: "wheel", all: ["Grab the wheel", "Roller Mode for 8 s"] },
   rolling: { icon: "wheel", all: ["Roller Mode", "grind rails, hit ramps, chain drifts"] },
-  screw: { icon: "tool", all: ["Screws +25", "grab the line"] },
+  screw: { icon: "tool", all: ["Screws +25", "worth more than a gear"] },
   wrench: { icon: "tool", all: ["Wrench magnet", "pulls gears and screws for 6 s"] },
   drill: { icon: "tool", all: ["Drill", "bores through arms for 5 s"] },
   hammer: { icon: "tool", all: ["Hammer", "smash crates and robots for 6 s"] },
@@ -118,10 +118,10 @@ export const TIPS = {
   over: { icon: "star", all: ["Overdrive ×2", "toolbox full"] },
   pb: { icon: "star", all: ["New best", "golden wrench incoming"] },
 };
-export const NO_SLOW = new Set(["lanes", "rolling", "over", "pb", "screw"]);
+export const NO_SLOW = new Set(["lanes", "rolling", "over", "pb", "screw", "ms"]);
 export const TOOL_NAME = { wrench: "Magnet", drill: "Drill", hammer: "Hammer", gold: "Golden" };
 export const MILESTONES = [
-  { at: 1000, id: "pearl", name: "Cyan halo trim", light: 0xe9edff, deep: 0xc3cdff },
+  { at: 1000, id: "pearl", name: "Cyan halo", light: 0xe9edff, deep: 0xc3cdff },
   { at: 2500, id: "deep", name: "Deep cyan", light: 0x6f84e0, deep: 0x4f63c4 },
   { at: 5000, id: "star", name: "Starlight", light: 0xf4f6fb, deep: 0x8fa2f0 },
 ];
@@ -136,15 +136,15 @@ export const OVER_ICON = {
   dare: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 12h8M12 8l4 4-4 4M4 5v14M20 5v14"/></svg>',
   daily: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5.5" width="16" height="14" rx="2.5"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/></svg>',
 };
-export const CAUSE = { crate: "Clipped a crate", stack: "Into the stack", arm: "Caught by the arm", bot: "Rear-ended a robot", gap: "Fell through the line" };
+export const CAUSE = { crate: "Clipped a crate", stack: "Into the stack", arm: "Caught by the arm", bot: "Hit an oncoming rover", gap: "Fell through the line" };
 // Game-over headlines, per hazard: {v} speed in m/s, {bay} the bay you went down in. Picked at random.
 export const HEADLINES = {
-  crate: ["Clipped a crate at {v} m/s", "That crate wasn't moving. You were, at {v} m/s", "Boxed in at {bay}", "Crate 1, robot 0"],
-  stack: ["Ran into a wall of crates at {bay}", "The stack won at {v} m/s", "Two crates high, one jump short", "Stacked up at {bay}"],
+  crate: ["Clipped a crate at {v} m/s", "That crate wasn't moving. You were, at {v} m/s", "Boxed in at {bay}", "Shipped early from {bay}"],
+  stack: ["Ran into a wall of crates at {bay}", "The stack won at {v} m/s", "Two crates high. That one goes around", "Stacked up at {bay}"],
   arm: ["Swept by the arm at {bay}", "The arm saw you first", "Should have slid under that one", "Picked up by the line at {bay}"],
-  bot: ["Rear-ended a rover at {v} m/s", "Right of way: the rover at {bay}", "Robot traffic at {bay}", "Met a rover head-on at {v} m/s"],
+  bot: ["Met a rover head-on at {v} m/s", "Right of way: the rover at {bay}", "Robot traffic at {bay}", "The rover had the lane at {bay}"],
   gap: ["Dropped through the line at {bay}", "Missed the floor by a jump", "Down the gap at {v} m/s", "The belt ran out at {bay}"],
-  drill: ["Drill cooled, wall didn't"], hammer: ["Hammer's down, the stack wasn't"],
+  drill: ["Drill went cold. The arm didn't"], hammer: ["Hammer's down. The stack wasn't"],
 };
 export const BAY = { weld: "the weld cell", laser: "the laser cutters", test: "the test bay", inventory: "inventory", window: "the windows", assembly: "final assembly", door: "the loading door" };
 
