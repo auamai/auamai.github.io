@@ -2,7 +2,7 @@
 // Installed onto Game.prototype by game.js (methods use `this`, the Game).
 import * as P from "../../profile.js?v=20261020r6d";
 import * as MT from "../../meta.js?v=20261020r6d";
-import { START_SPEED, M_PER_U, MORPH_T, DRIVE_T, GRACE_T, DRIFT_CASH, DRIFT_MULT, RATE_CAP, OVER_LOCK, COUNT_BEAT, SCREW_POINTS, DRILL_POINTS, HAMMER_POINTS, MAGNET_T, DRILL_T, HAMMER_T, GOLD_T, OVER_T, MULT_CAP, GOLD_MIN, GOLD_MAX, METER_N, HIT_STOP, PB_GOLD_DELAY, allowedScore, TOOL_NAME, MILESTONES, CAUSE, HEADLINES, BAY, TIPS } from "./constants.js?v=20261020r6d";
+import { START_SPEED, M_PER_U, MORPH_T, DRIVE_T, GRACE_T, DRIFT_CASH, DRIFT_MULT, RATE_CAP, OVER_LOCK, COUNT_BEAT, SCREW_POINTS, DRILL_POINTS, HAMMER_POINTS, MAGNET_T, DRILL_T, HAMMER_T, GOLD_T, OVER_T, MULT_CAP, GOLD_MIN, GOLD_MAX, METER_N, HIT_STOP, PB_GOLD_DELAY, allowedScore, TOOL_NAME, MILESTONES, CAUSE, HEADLINES, BAY, TIPS, REVIVE_T, REVIVE_CLEAR } from "./constants.js?v=20261020r6d";
 import { fmt, RNG, LOOT, clock } from "./util.js?v=20261020r6d";
 
 export class Run {
@@ -98,6 +98,7 @@ export class Run {
     const d = this.driftS;
     if (d && d.level > 0 && this.runTime - d.last > DRIFT_CASH) this.cashDrift();
     if (this.r.landRoll > 0) this.r.landRoll = Math.max(0, this.r.landRoll - dt);
+    if (this.reviveT > 0) this.reviveT = Math.max(0, this.reviveT - dt);
   }
 
   // Passing the old best mid-run: a 3D "New best", gear confetti, a chime, and a golden wrench soon after.
@@ -172,7 +173,12 @@ export class Run {
     // First run (until lanes, jump and slide are learned): a gentler start and roomier rows.
     this.tutorial = !(this.tips.lanes && this.tips.jump && this.tips.slide);
     this.deathT = 0;
-    this.fps.frames = 0; this.fps.acc = 0; this.fps.slow = 0; // a slow window left over from the last run must not count toward this one
+    // Spare Servo (r7): armed in the Garage, one per run, never in the Daily Run (equal for all).
+    this.reviveT = 0;
+    this.servoUsed = false;
+    this.servoReady = this.mode !== "daily" && !!this.settings.servoArm && MT.servoCount(this.profile) > 0;
+    this.elServo.hidden = !this.servoReady;
+        this.fps.frames = 0; this.fps.acc = 0; this.fps.slow = 0; // a slow window left over from the last run must not count toward this one
     this.shown = { score: -1, gears: -1, mult: -1, meter: -1, chips: "", pb: -1 };
     this.elPb.hidden = !(this.pbFrom > 0);
     this.elPb.classList.remove("is-past");
@@ -245,7 +251,31 @@ export class Run {
 
   get driving() { return this.pw.phase === "in" || this.pw.phase === "drive" || this.pw.phase === "out"; }
 
-  get invulnerable() { const p = this.pw.phase; return p === "in" || p === "out" || p === "grace" || this.r.launch || this.r.landRoll > 0; }
+  get invulnerable() { const p = this.pw.phase; return p === "in" || p === "out" || p === "grace" || this.r.launch || this.r.landRoll > 0 || this.reviveT > 0; }
+
+  // Spare Servo: the fatal hit reboots the robot in place instead. Clears what's close ahead,
+  // gives REVIVE_T of invulnerability, and spends the servo right away (closing the tab after
+  // a revive can't keep it). No prompt, no pause: the run just keeps going.
+  revive(kind, type) {
+    this.servoReady = false;
+    this.servoUsed = true;
+    this.reviveT = REVIVE_T;
+    for (let i = this.obstacles.length - 1; i >= 0; i--) {
+      const o = this.obstacles[i];
+      if (o.z > -REVIVE_CLEAR && o.z - o.h < 1.5) { o.g.visible = false; this.pools[o.type].push(o.g); this.obstacles.splice(i, 1); }
+    }
+    const r = this.r;
+    if (r.y < 0) { r.y = 0; r.vy = 0; r.ground = true; }
+    const cos = MT.cosClean(this.profile.cos);
+    cos.sv.u = Math.min(cos.sv.b, cos.sv.u + 1);
+    this.profile.cos = cos; P.save(this.profile);
+    this.elServo.hidden = true;
+    this.shake = this.reduceMotion ? 0 : 0.2;
+    this.buzz(40);
+    this.sfx(type === "crate" || type === "stack" ? "crash_wood" : "crash_steel", r.x);
+    this.sfx("power");
+    this.sr("Spare Servo. Rebooted.");
+  }
 
   // Every point goes through here: at most RATE_CAP in any one-second window, and never more
   // than AVG_CAP per second of run plus BURST (the leaderboard Worker checks the same line).
@@ -352,6 +382,7 @@ export class Run {
 
   die(kind, type) {
     if (this.state !== "play") return;
+    if (this.servoReady) return this.revive(kind, type);
     this.state = "dying";
     this.deathKind = kind;
     this.deathType = type;
@@ -408,7 +439,7 @@ export class Run {
     const prevRank = this.settings.rank || null;
     this.lastRun = { mode: this.mode, seed: this.seed, headline, prevRank, dist: Math.round((this.runDist || 0) * M_PER_U), bestMult: this.bestMult || 1, missionsDone: ms.done, reward, challenge: this.mode === "challenge" ? this.challenge : null,
       score, gears: this.gearsRun, time: this.runTime, best, prevBest, delta: score - prevBest, streak, badge: newBadge,
-      screws: this.screwsRun, tools: this.toolsRun, smashes: this.smashRun, rank: null, post, cause: CAUSE[this.deathType] || "Run over" };
+      screws: this.screwsRun, tools: this.toolsRun, smashes: this.smashRun, revive: !!this.servoUsed, wallet0: MT.wallet(this.profile) - this.gearsRun - reward, rank: null, post, cause: CAUSE[this.deathType] || "Run over" };
     this.showOver();
     // Screen readers hear what sighted players read: why the run ended, the score, and whether it was a best.
     this.sr(`${headline}. ${fmt(score)} points.${this.lastRun.best ? (prevBest > 0 ? ` New best, up ${fmt(score - prevBest)}.` : " New best.") : prevBest > 0 ? ` Best ${fmt(prevBest)}.` : ""}`);

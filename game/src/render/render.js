@@ -7,7 +7,7 @@ import { Ceiling } from "../../ceiling.js?v=20261020r6d";
 import { UI3D } from "../../ui3d.js?v=20261020r6d";
 import { createKit, RUNNERS, ROLLERS } from "../../robots/index.js?v=20261020r6d";
 import { toolMaterials, toolGeometries, buildTool, Burst } from "../../tools.js?v=20261020r6d";
-import { LANES, MORPH_T, COL, MILESTONES, visY } from "../core/constants.js?v=20261020r6d";
+import { LANES, MORPH_T, COL, MILESTONES, visY, REVIVE_T } from "../core/constants.js?v=20261020r6d";
 import { BOX, BOX_EDGES, CYL, CYL_EDGES, gearGeometry } from "./geometry.js?v=20261020r6d";
 import { applyGrade, regrade } from "./grade.js?v=20261020r6d";
 import { makeArmKit } from "./arm.js?v=20261020r6d";
@@ -80,6 +80,7 @@ export class Render {
     this.applyCos();
     this.applyQuality();
     applyGrade(this); // lighting + colour grade (grade.js)
+    this.applyDesign(); // Garage paint/finish/plate on top of the graded shell (r7)
   }
 
   mesh(mat, sx, sy, sz, x = 0, y = 0, z = 0, shadow = true, edge = this.edgeMat) {
@@ -281,6 +282,7 @@ export class Render {
     R.runner = runner; R.roller = roller;
     for (const o of old) o.dispose();
     oldKit.dispose();
+    if (this.plateTex) this.applyDesign();
   }
 
   resize() {
@@ -320,6 +322,30 @@ export class Render {
     if (tr && this.trail) this.trail.mat.color.setHex(tr.color);
     if (this.hammerMat) this.hammerMat.color.setHex(hm ? hm.color : 0xc9cfde);
     if (this.rig) { if (this.hammerMat) this.hammerMat.userData.graded = false; this.trail.mat.userData.graded = false; regrade(this); }
+  }
+
+  // Garage design (r7): paint and finish on the shell, plate text + pattern on the chassis plate.
+  // One shared CanvasTexture, redrawn only when the design changes (never per frame).
+  applyDesign(code) {
+    const d = MT.designParts(code ?? (MT.cosClean(this.profile && this.profile.cos).d || {}).code), KM = this.kit && this.kit.M;
+    if (!KM) return;
+    const [, hex] = MT.PAINTS[d.paint], [, rough, cc] = MT.FINISHES[d.finish];
+    // The graded default shell colours, kept per kit (the lite kit is a fresh set).
+    const p0 = KM.pearl.userData.paint0 || (KM.pearl.userData.paint0 = { pearl: KM.pearl.color.getHex(), shade: KM.pearlShade.color.getHex(), rough: [KM.pearl.roughness, KM.pearlShade.roughness] });
+    KM.pearl.color.setHex(d.paint === 0 ? p0.pearl : hex);
+    KM.pearlShade.color.setHex(d.paint === 0 ? p0.shade : new THREE.Color(hex).multiplyScalar(0.82).getHex());
+    [KM.pearl, KM.pearlShade].forEach((m, i) => { m.roughness = d.finish === 0 ? p0.rough[i] : rough; if ("clearcoat" in m) m.clearcoat = d.finish === 0 ? (i ? 0.7 : 1) : cc; });
+    if (KM.plate) {
+      if (!this.plateTex) {
+        const c = document.createElement("canvas"); c.width = 256; c.height = 128;
+        this.plateTex = new THREE.CanvasTexture(c); this.plateTex.colorSpace = THREE.SRGBColorSpace; this.plateTex.anisotropy = 4;
+      }
+      const c = this.plateTex.image, ctx = c.getContext("2d");
+      ctx.fillStyle = "#" + KM.graphite.color.getHexString(); ctx.fillRect(0, 0, 256, 128); // the pack's own colour (its UVs sit in the corner)
+      MT.drawPlate(ctx, 6, 6, 244, 116, MT.designCode(d));
+      this.plateTex.needsUpdate = true;
+      if (KM.plate.map !== this.plateTex) { KM.plate.map = this.plateTex; KM.plate.needsUpdate = true; }
+    }
   }
 
   // Run trail: a short ribbon of fading quads left behind the feet.
@@ -381,13 +407,24 @@ export class Render {
       R.flash.scale.setScalar(0.6 + u * 2.2);
       R.flash.children[1].rotation.x = u * 3;
       this.M.flash.opacity = Math.max(0, 0.85 * (1 - u));
+    } else if (this.reviveT > 0) {
+      // Spare Servo reboot: the rings snap out in the first 0.3 s, then hold as a slow-breathing
+      // shield (about 1.3 Hz, never a hard blink) until invulnerability ends.
+      const age = REVIVE_T - this.reviveT, k = Math.min(1, age / 0.3);
+      R.flash.visible = true;
+      R.flash.position.y = 0.8;
+      R.flash.scale.setScalar(0.6 + k * 0.9);
+      R.flash.children[1].rotation.x = age * 2.4;
+      this.M.flash.opacity = this.reviveT < 0.3 ? this.reviveT * 2 : 0.45 + 0.2 * Math.cos(age * 8);
     }
 
     const f = this.fx;
     const S = { mode: "run", t: this.t, speed: v, vy: r.vy, lean: LANES[r.lane] - r.x, ax: r.ax || 0, impact: r.landT > 0 ? r.impact : 0, hammer: f.hammer > 0, drill: f.drill > 0, swing: f.swing };
     if (st === "menu") {
-      // Faces the camera and idles.
-      R.root.rotation.y += (Math.PI - R.root.rotation.y) * Math.min(1, dt * 4);
+      // Faces the camera and idles. In the Garage it turns slowly on the spot (live preview: the
+      // chassis plate is on its back), then settles to the nearest front-facing turn after.
+      if (this.view === "shop") R.root.rotation.y += dt * (this.reduceMotion ? 0.25 : 0.7);
+      else { const y = R.root.rotation.y, to = Math.PI + Math.round((y - Math.PI) / (Math.PI * 2)) * Math.PI * 2; R.root.rotation.y += (to - y) * Math.min(1, dt * 4); }
       R.root.rotation.x = 0;
       R.root.position.y = 0;
       R.blob.scale.setScalar(1);
@@ -439,6 +476,23 @@ export class Render {
       const k = this.shake * (this.coarse ? 0.32 : 0.5), t = performance.now() / 1000;
       c.position.x += Math.sin(t * 38) * k;
       c.position.y += Math.sin(t * 45 + 1.3) * k * 0.8;
+    }
+    // Garage close-up (r7): the robot sits beside the panel on wide screens, above it on phones.
+    const gk = this.garageK = (this.garageK || 0) + ((this.view === "shop" && this.state === "menu" ? 1 : 0) - (this.garageK || 0)) * Math.min(1, dt * 8);
+    // The close-up also pulls the fog and far plane in (a studio feel), so the far hall drops out of
+    // the frustum: the Garage view draws fewer calls than the title, not more.
+    const fb = this.fogBase || (this.fogBase = { near: this.scene.fog.near, far: this.scene.fog.far, cam: c.far });
+    const cf = fb.cam + (52 - fb.cam) * gk;
+    if (Math.abs(cf - c.far) > 0.01) {
+      const k = gk < 0.002 ? 0 : gk;
+      this.scene.fog.near = fb.near + (12 - fb.near) * k; this.scene.fog.far = fb.far + (50 - fb.far) * k;
+      c.far = k ? cf : fb.cam; c.updateProjectionMatrix();
+    }
+    if (gk > 0.002) {
+      const port = c.aspect < 1, px = port ? 0 : -1.05, py = port ? 1.5 : 1.45, pz = port ? 3.6 : 3.6, ly = port ? -0.1 : 0.95;
+      c.position.set(c.position.x + (px - c.position.x) * gk, c.position.y + (py - c.position.y) * gk, c.position.z + (pz - c.position.z) * gk);
+      c.lookAt(this.r.x * 0.3 + (px - this.r.x * 0.3) * gk, (this.lookY ?? 0.9) + (ly - (this.lookY ?? 0.9)) * gk, -10 + 10 * gk);
+      return;
     }
     c.lookAt(this.r.x * 0.3, (this.lookY ?? 0.9) + (this.camLook || 0), -10);
   }

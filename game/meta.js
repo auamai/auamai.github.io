@@ -127,9 +127,113 @@ export const cosClean = (c) => {
   const owned = Array.isArray(c.owned) ? [...new Set(c.owned.filter((x) => ids.has(x)))] : [];
   const eq = {};
   for (const k of ["trim", "trail", "hammer"]) if (c.eq && typeof c.eq[k] === "string") eq[k] = c.eq[k];
-  return { spent: Number.isFinite(c.spent) && c.spent > 0 ? Math.floor(c.spent) : 0, owned, eq };
+  const n = (v) => (Number.isFinite(v) && v > 0 ? Math.floor(v) : 0);
+  // Spare Servo: b bought, u used (both only grow, so two devices merge with max).
+  const sv = c.sv && typeof c.sv === "object" ? { b: n(c.sv.b), u: Math.min(n(c.sv.u), n(c.sv.b)) } : { b: 0, u: 0 };
+  const out = { spent: n(c.spent), owned, eq, sv };
+  const d = designClean(c.d);
+  if (d) out.d = d;
+  return out;
 };
+// Toolbox: the wallet is gears earned (runs + missions) minus gears spent. Never negative.
 export const wallet = (p) => Math.max(0, (p ? p.gears : 0) - cosClean(p && p.cos).spent);
+
+/* ---------- Spare Servo ---------- */
+// One revive per run, bought with gears, never in the Daily Run. Price: a good 90 s run banks
+// ~140 gears (daily_like golden: 141) plus a mission (~60), so 450 is about 2-3 good runs.
+export const SERVO = { price: 450, max: 3 };
+export const servoCount = (p) => { const s = cosClean(p && p.cos).sv; return Math.max(0, s.b - s.u); };
+
+/* ---------- Garage design: robot name, chassis plate, paint, finish, pattern, accent ---------- */
+// Compact code shared with the Worker: 4 digits (paint finish pattern accent) + plate text.
+export const PAINTS = [["Off-white", 0xf2f0ea], ["Graphite", 0x2c3037], ["Signal yellow", 0xffc93c], ["Cyan", 0x3ddcff]];
+export const FINISHES = [["Gloss", 0.3, 1], ["Satin", 0.5, 0.45], ["Matte", 0.78, 0]];
+export const PATTERNS = ["Plain", "Hazard", "Grid", "Chevron"];
+export const ACCENTS = [["Yellow", "#FFC93C"], ["Cyan", "#3DDCFF"]];
+const DESIGN_RE = /^[0-3][0-2][0-3][01][A-Z0-9-]{0,8}$/;
+const RNAME_RE = /^[A-Za-z0-9][A-Za-z0-9 _.-]{0,15}$/;
+const BAD = ["fuck", "shit", "bitch", "cunt", "dick", "pussy", "nigg", "fag", "slut", "whore", "rape", "nazi", "hitler",
+  "porn", "penis", "vagina", "asshole", "bastard", "retard", "kike", "chink", "twat", "wank", "jizz", "dildo", "sex"];
+export function rudeText(s) {
+  const b = String(s).toLowerCase().replace(/[^a-z0-9]/g, "");
+  const leet = (x, one) => x.replace(/0/g, "o").replace(/1/g, one).replace(/3/g, "e").replace(/4/g, "a").replace(/5/g, "s").replace(/7/g, "t").replace(/8/g, "b").replace(/9/g, "g").replace(/\$/g, "s");
+  return [b, leet(b, "i"), leet(b, "l")].some((v) => BAD.some((w) => v.includes(w)));
+}
+// Tidy what a player types: trim, squash spaces, drop anything outside the allowed set, cut to length.
+export const tidyName = (s) => String(s || "").replace(/\s+/g, " ").replace(/[^A-Za-z0-9 _.-]/g, "").trim().slice(0, 16);
+export const tidyPlate = (s) => String(s || "").toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 8);
+export function checkRobotName(s) {
+  if (!s) return "";
+  if (!RNAME_RE.test(s)) return "Up to 16 letters, numbers, spaces or - _ .";
+  return rudeText(s) ? "Try a different name" : "";
+}
+export const checkPlate = (s) => (rudeText(s) ? "Try different plate text" : "");
+export function designClean(d) {
+  if (!d || typeof d !== "object") return null;
+  const name = tidyName(d.name), code = typeof d.code === "string" && DESIGN_RE.test(d.code) ? d.code : "0000";
+  const plate = code.slice(4);
+  return {
+    name: checkRobotName(name) ? "" : name,
+    code: checkPlate(plate) ? code.slice(0, 4) : code,
+    at: Number.isFinite(d.at) && d.at > 0 ? Math.floor(d.at) : 0,
+  };
+}
+export const designParts = (code) => {
+  const c = typeof code === "string" && DESIGN_RE.test(code) ? code : "0000";
+  return { paint: +c[0], finish: +c[1], pattern: +c[2], accent: +c[3], plate: c.slice(4) };
+};
+export const designCode = (o) => `${o.paint | 0}${o.finish | 0}${o.pattern | 0}${o.accent | 0}${tidyPlate(o.plate)}`;
+export const DESIGN_DEFAULT = "0000";
+// The chassis plate: machined graphite with the pattern and plate text in the accent colour.
+// Used for the robot's texture, the share card and the "Show my robot" image.
+export function drawPlate(ctx, x, y, w, h, code) {
+  const d = designParts(code), acc = ACCENTS[d.accent][1];
+  ctx.save();
+  ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, w, h, h * 0.14) : ctx.rect(x, y, w, h); ctx.clip();
+  ctx.fillStyle = "#14161B"; ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = acc; ctx.fillStyle = acc; ctx.globalAlpha = 0.32; ctx.lineWidth = h * 0.09;
+  if (d.pattern === 1) { for (let i = -h; i < w + h; i += h * 0.36) { ctx.beginPath(); ctx.moveTo(x + i, y + h); ctx.lineTo(x + i + h, y); ctx.stroke(); } }
+  else if (d.pattern === 2) { const g = h / 6; for (let i = g; i < w; i += g * 1.6) for (let j = g; j < h; j += g * 1.6) { ctx.beginPath(); ctx.arc(x + i, y + j, g * 0.22, 0, 7); ctx.fill(); } }
+  else if (d.pattern === 3) { for (let i = -h * 0.2; i < w; i += h * 0.42) { ctx.beginPath(); ctx.moveTo(x + i, y + h * 0.15); ctx.lineTo(x + i + h * 0.3, y + h * 0.5); ctx.lineTo(x + i, y + h * 0.85); ctx.stroke(); } }
+  ctx.globalAlpha = 1;
+  ctx.lineWidth = Math.max(2, h * 0.05); ctx.strokeStyle = "rgba(242,240,234,0.35)"; ctx.strokeRect(x + h * 0.06, y + h * 0.06, w - h * 0.12, h - h * 0.12);
+  const t = d.plate || "SS";
+  ctx.font = `600 ${Math.round(h * 0.5)}px "IBM Plex Mono", ui-monospace, monospace`;
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  const fit = Math.min(1, (w * 0.84) / Math.max(1, ctx.measureText(t).width));
+  ctx.translate(x + w / 2, y + h / 2); ctx.scale(fit, 1);
+  ctx.fillStyle = "#14161B"; ctx.fillText(t, 2, 2);
+  ctx.fillStyle = acc; ctx.fillText(t, 0, 0);
+  ctx.restore();
+}
+
+/* ---------- Toolbox transactions ---------- */
+// Spend gears without ever going negative or spending twice: re-read the saved profile first
+// (another tab may have spent since this one loaded), merge, check, apply, save, all in one
+// synchronous step. Returns the new wallet, or -1 when there isn't enough.
+export function spend(p, price, apply, reload, save) {
+  const disk = reload && reload();
+  if (disk && disk.username === p.username) {
+    p.gears = Math.max(p.gears, disk.gears);
+    const a = cosClean(p.cos), b = cosClean(disk.cos);
+    p.cos = { ...a, spent: Math.max(a.spent, b.spent), owned: [...new Set([...a.owned, ...b.owned])], sv: { b: Math.max(a.sv.b, b.sv.b), u: Math.max(a.sv.u, b.sv.u) }, ...(a.d || b.d ? { d: (b.d && (!a.d || b.d.at > a.d.at)) ? b.d : a.d } : {}) };
+  }
+  if (!(price >= 0) || wallet(p) < price) return -1;
+  const cos = cosClean(p.cos);
+  cos.spent += price;
+  apply(cos);
+  p.cos = cos;
+  save(p);
+  return wallet(p);
+}
+// One-time Toolbox migration (r7): the wallet already was gears minus spent, so the balance a
+// player had is kept exactly; this only stamps the profile so it never runs twice.
+export function migrateToolbox(p) {
+  if (!p || p.tb === 1) return false;
+  p.cos = cosClean(p.cos);
+  p.tb = 1;
+  return true;
+}
 
 /* ---------- near-miss nudge ---------- */
 export function nearMiss({ score, prevBest, missions, board, me }) {
@@ -170,7 +274,7 @@ export function readChallenge(search = location.search) {
 // A 1080x1350 image: score, rank, the robot (a frame of the game canvas), and a short "Beat N at <host>" line.
 // Share card (1080 x 1350), in the Servo Sprint identity: graphite, off-white numerals, the wordmark,
 // a yellow hazard rule, cyan for the rank line. Uses the bundled Inter Tight (300/400) and Plex Mono.
-export async function shareCard({ canvas, score, rank, best, daily, day, name, link, wordmark, passed, focusY }) {
+export async function shareCard({ canvas, score, rank, best, daily, day, name, link, wordmark, passed, focusY, robot, design }) {
   const W = 1080, H = 1350, c = document.createElement("canvas");
   c.width = W; c.height = H;
   const x = c.getContext("2d");
@@ -210,7 +314,9 @@ export async function shareCard({ canvas, score, rank, best, daily, day, name, l
   x.fillStyle = "#f2f0ea"; x.font = sans(300, 200); x.fillText(fmtN(score), 68, 408);
   // Lines shrink to fit the 920 px column (long names / links never clip).
   const fit = (t, w, px, max) => { x.font = sans(w, px); const m = x.measureText(t).width; if (m > max) x.font = sans(w, Math.floor(px * max / m)); };
-  const line = [best ? "New personal best" : "", passed ? (passed.name ? `Passed ${passed.name} by ${fmtN(passed.by)}` : `Challenge beaten by ${fmtN(passed.by)}`) : "", rank ? `#${rank} on the board` : "", name || ""].filter(Boolean).join("  ·  ");
+  const line = [best ? "New personal best" : "", passed ? (passed.name ? `Passed ${passed.name} by ${fmtN(passed.by)}` : `Challenge beaten by ${fmtN(passed.by)}`) : "", rank ? `#${rank} on the board` : "", robot ? `${name} · ${robot}` : name || ""].filter(Boolean).join("  ·  ");
+  // Garage (r7): the robot's chassis plate, top right, beside the wordmark row.
+  if (design && design !== DESIGN_DEFAULT) drawPlate(x, W - 80 - 200, 168, 200, 100, design);
   fit(line, 400, 40, W - 160); x.fillStyle = "#3ddcff"; x.fillText(line, 80, 1168);
   // A short call to action, not the raw challenge URL (that stays in the share/copy payload): the host is the
   // game's own origin (servosprint.xyz live; auamai.dev/game on the portfolio copy).

@@ -1,6 +1,6 @@
 // Frame loop and the fixed 120 Hz simulation step: every run advances only through update(1/120).
 // Installed onto Game.prototype by game.js (methods use `this`, the Game).
-import { LANES, DESPAWN_Z, START_SPEED, MAX_SPEED, ACCEL, GRAVITY, JUMP_V, PHYS_HZ, LANE_W, LANE_W_ROLL, SLIDE_T, GEAR_POINTS, DIST_POINTS, PERIOD, ROLL_SPEED, RAIL_H, LAND_ROLL, DRIFT_MULT, SLOW_T, SLOW_K, TUT_SPEED, TUT_EASE, visY } from "./constants.js?v=20261020r6d";
+import { LANES, DESPAWN_Z, START_SPEED, MAX_SPEED, ACCEL, GRAVITY, JUMP_V, PHYS_HZ, LANE_W, LANE_W_ROLL, SLIDE_T, GEAR_POINTS, DIST_POINTS, PERIOD, ROLL_SPEED, RAIL_H, LAND_ROLL, DRIFT_MULT, SLOW_T, SLOW_K, TUT_SPEED, TUT_EASE, visY, REVIVE_T } from "./constants.js?v=20261020r6d";
 import { report } from "../net/errors.js?v=20261020r6d";
 
 export class Loop {
@@ -157,7 +157,7 @@ export class Loop {
           if (crash && fx.drill > 0 && ty === "arm") { this.smash(o, i); continue; }
           if (crash || fall) {
             if (this.invulnerable) { if (!o.touched) { o.touched = true; this.hitGold(); } }
-            else this.die(fall ? "fall" : "crash", ty);
+            else { this.die(fall ? "fall" : "crash", ty); if (this.reviveT === REVIVE_T) break; } // a Spare Servo just cleared the list
           }
         }
       }

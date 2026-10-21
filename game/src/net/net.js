@@ -20,7 +20,7 @@ export class Net {
     const p = this.profile;
     if (this.lastRun.post === "posting") {
       const run = this.lastRun;
-      const res = await P.postScore(p, score, durationMs, { mode: this.lastRun.mode, ...(this.lastRun.mode === "daily" ? { day: this.day, seed: this.seed } : {}) });
+      const res = await P.postScore(p, score, durationMs, { mode: this.lastRun.mode, ...(this.lastRun.mode === "daily" ? { day: this.day, seed: this.seed } : {}), ...(this.lastRun.revive ? { revive: true } : {}) });
       run.post = res.ok ? "ok" : res.status === 403 ? "claimed" : res.status === 429 ? "busy" : res.offline && navigator.onLine === false ? "offline" : "error";
       if (res.ok && res.data && res.data.rank) { run.rank = res.data.rank; this.settings.rank = res.data.rank; P.setSetting("rank", this.settings.rank); this.publish(); }
       if (res.ok && res.data && res.data.dailyRank) run.dailyRank = res.data.dailyRank;
@@ -71,7 +71,8 @@ export class Net {
   // The card for the last run, built once in the background after game over (prepareCard) so a Share tap can hand
   // it to the share sheet at once, inside the tap's user activation (iOS Safari refuses share() after a long await).
   cardFor(r) {
-    const key = `${r.rank || ""}|${r.dailyRank || ""}`; // a rank that lands after the card was built rebuilds it
+    const d = MT.cosClean(this.profile.cos).d || {};
+    const key = `${r.rank || ""}|${r.dailyRank || ""}|${d.name || ""}|${d.code || ""}`; // a rank (or Garage edit) that lands after the card was built rebuilds it
     if (this.cardRun === r && this.cardKey === key && this.cardJob) return this.cardJob;
     this.cardKey = key;
     if (this.lastCard && /^blob:/.test(this.lastCard.url || "")) { try { URL.revokeObjectURL(this.lastCard.url); } catch { /* ignore */ } }
@@ -86,7 +87,7 @@ export class Net {
     } catch { /* keep the default crop */ }
     const link = this.shareLink(r), c = r.challenge, passed = c && r.score > c.score ? { name: c.name, by: r.score - c.score } : null;
     this.cardRun = r;
-    this.cardJob = MT.shareCard({ canvas: this.canvas, score: r.score, rank: r.dailyRank || r.rank, best: r.best, daily: r.mode === "daily", day: this.day, name: this.profile.username, link, wordmark: WORDMARK, passed, focusY })
+    this.cardJob = MT.shareCard({ canvas: this.canvas, score: r.score, rank: r.dailyRank || r.rank, best: r.best, daily: r.mode === "daily", day: this.day, name: this.profile.username, link, wordmark: WORDMARK, passed, focusY, robot: d.name || "", design: d.code || "" })
       .then((card) => { if (this.cardRun === r && this.cardKey === key) this.lastCard = card; return card; });
     return this.cardJob;
   }

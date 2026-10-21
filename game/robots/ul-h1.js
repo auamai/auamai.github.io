@@ -51,7 +51,9 @@ export function create({ M }) {
   // The pack hangs from a pivot at its top so it can lag a little behind the body.
   const packG = group(0, 0.52, 0.13);
   torso.add(packG);
-  const pack = mesh(keep(new THREE.CapsuleGeometry(0.12, 0.2, 6, 16)), M.graphite, 0, 0.38 - 0.52, 0);
+  const packGeo = keep(new THREE.CapsuleGeometry(0.12, 0.2, 6, 16));
+  if (M.plate) { const uv = packGeo.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, 0.004, 0.996); } // solid pack colour texel
+  const pack = mesh(packGeo, M.plate || M.graphite, 0, 0.38 - 0.52, 0);
   pack.scale.set(1.25, 1, 0.55);
   packG.add(pack);
   const strip = mesh(keep(new THREE.CapsuleGeometry(0.012, 0.2, 3, 8)), M.light, 0, 0.36 - 0.52, 0.068, false);
@@ -60,6 +62,8 @@ export function create({ M }) {
   const back = mesh(markGeo, M.light, 0, 0.5 - 0.52, 0.063, false);
   back.scale.setScalar(0.06);
   packG.add(back);
+  // Chassis plate over the light strip (Garage plate text and pattern; z clears the strip). Faces the run camera.
+  if (M.plate) packG.add(mesh(keep(new THREE.PlaneGeometry(0.19, 0.095)), M.plate, 0, -0.2, 0.084));
 
   // Neck and head.
   const neck = mesh(keep(lathe([[0, 0.6], [0.06, 0.6], [0.05, 0.68], [0.055, 0.73], [0, 0.735]], 16)), M.frame);

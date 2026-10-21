@@ -83,6 +83,9 @@ export function makeMaterials(env, lite = false) {
     light: new THREE.MeshBasicMaterial({ color: UL.light }),
     lightDeep: new THREE.MeshBasicMaterial({ color: UL.lightDeep }),
     mark: new THREE.MeshBasicMaterial({ color: 0x8ea2f6 }),
+    // Garage chassis plate (r7): the back pack and its plate share this lit graphite shell and one
+    // CanvasTexture (the game paints it), so the plate costs no extra draw call.
+    plate: Object.assign(shell(0xffffff, 0.36, 0.8), { userData: { keepUv: true } }),
   };
 }
 
@@ -176,19 +179,21 @@ export function bake(root) {
     }
     for (const list of bins.values()) {
       if (list.length < 2) continue;
-      const pos = [], nor = [];
+      const pos = [], nor = [], uvs = [], keepUv = !!list[0].material.userData.keepUv; // textured (Garage plate): keep UVs
       for (const m of list) {
         m.updateMatrix();
         const g = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone();
         g.applyMatrix4(m.matrix);
         pos.push(...g.attributes.position.array);
         nor.push(...g.attributes.normal.array);
+        if (keepUv) uvs.push(...g.attributes.uv.array);
         g.dispose();
         node.remove(m);
       }
       const geo = new THREE.BufferGeometry();
       geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
       geo.setAttribute("normal", new THREE.Float32BufferAttribute(nor, 3));
+      if (keepUv) geo.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
       geo.computeBoundingSphere();
       const out = new THREE.Mesh(geo, list[0].material);
       out.castShadow = list[0].castShadow;
