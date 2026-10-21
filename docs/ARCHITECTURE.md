@@ -463,12 +463,12 @@ sequenceDiagram
 
     A->>GA: Challenge a friend (game over)
     GA->>GA: challengeUrl(base, seed, score, name) gives ?c=seed base36&s=score&n=name
-    GA-)W: POST /ghost {c, s, v, b: compact track} (once per run, fire and forget; first write per c+s+v wins)
+    GA-)W: POST /ghost {c, s, v, b: compact track} (once per run, fire and forget, first write per c+s+v wins)
     GA->>OS: navigator.share inside the tap, else copyText, else toast with the URL
     OS-->>F: link
     F->>GF: open https://servosprint.xyz/?c=21i3v9&s=2410&n=alex_u
     GF->>GF: readChallenge: c is 1-7 chars of 0-9a-z, 0 <= s < 1e8, n must pass the name rule
-    GF-)W: GET /ghost?c&s&v (background; 200 {b} or {b: null})
+    GF-)W: GET /ghost?c&s&v (background, 200 {b} or {b: null})
     W--)GF: the challenger's track, decoded and checked by decodeTrack
     GF-->>F: who you're racing and the score to beat, button Take the challenge
     F->>GF: start
