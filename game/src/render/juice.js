@@ -367,7 +367,7 @@ export class Juice {
 
   bark(kind, force = false) {
     const J = this.jx, now = this.realT || 0;
-    if (J.barks >= 7 || (!force && now < J.barkGap && kind !== "check")) return; // a lane check always speaks
+    if (!force && (J.barks >= 7 || (now < J.barkGap && kind !== "check"))) return; // a lane check always speaks, the crash line always lands
     J.barks++; J.barkGap = now + 6;
     J.elT.textContent = BARK[kind];
     J.el.classList.remove("is-on"); void J.el.offsetWidth; J.el.classList.add("is-on");

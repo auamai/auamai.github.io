@@ -817,7 +817,7 @@ reboot; −0.07 for every hazard that passes in the robot's lane (cleared by jum
 camera, hidden, 0 draw calls) and z ≈ 4.2 at the top of the frame, with the beam and pool on the floor just ahead
 of the robot. Lane checks at 24 / 68 / 125 s of run time (+16 s on the first-ever run) pick the nearest hazard
 12-46 u ahead and hold the light on its lane for up to 2.4 s. Bark lines (≤ 7 a run, ≥ 6 s apart except lane
-checks) go to `.fr__fm` and the screen-reader line. None of it is read by the fixed step, so goldens, the Daily
+checks; the crash line always lands) go to `.fr__fm` and the screen-reader line. None of it is read by the fixed step, so goldens, the Daily
 Run and challenge courses are unchanged.
 
 ## 11. Scoring, caps and anti-cheat
@@ -1050,7 +1050,7 @@ skips the bus ducks.
 | Hot loop allocations | 0 per sub-step | HUD chips keyed by bitmask; revive and spend allocate once per event |
 | Robot meshes | 58 | 58 |
 | Ghost racer | ≤ +3 draw calls | **+2** while it shows (depth pre-pass + rim-lit colour pass on one baked geometry per form; runner and roller baked at load, only one visible), 0 when hidden |
-| Juice + Foreman (r8 juice) | ≤ +4 draw calls | Measured (same frame, juice objects on vs off): **+1** while sparks are live, **+2** while he follows (drone, floor pool), **+3** with sparks, **+4** in a lane check or the crash (beam added; one pass, `forceSinglePass`); 0 when he is behind the camera and no sparks live. Shaders warmed 1.2 s after the title draws. No per-frame allocation (typed arrays, preallocated vectors, one pooled DOM line). Payload **+7.2 KB gz** |
+| Juice + Foreman (r8 juice) | ≤ +4 draw calls | Measured (same frame, juice objects on vs off): **+1** while sparks are live, **+2** while he follows (drone, floor pool), **+3** with sparks, **+4** in a lane check or the crash (beam added; one pass, `forceSinglePass`); 0 when he is behind the camera and no sparks live. Shaders warmed 1.2 s after the title draws. No per-frame allocation (typed arrays, preallocated vectors, one pooled DOM line). Payload **+7.6 KB gz** (`juice.js` 7.5, CSS 0.2, hooks 0.1) |
 | Draw calls, in a run | see below | see below |
 
 ### Draw calls: the honest numbers
