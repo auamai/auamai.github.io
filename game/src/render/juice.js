@@ -3,7 +3,8 @@
 // the Daily Run are unchanged. Installed onto Game.prototype by game.js; loop.js calls juiceHold / juicePre /
 // juicePost around renderer.render. No allocation per frame: every vector, array and string is made once.
 //
-// Draw calls: at most +4 while the Foreman is on screen (drone, beam, floor pool, sparks), 0 when he is away
+// Draw calls: +2 while the Foreman follows (drone, floor pool), +3 in a lane check or crash (beam), +1 while sparks
+// are live, so at most +4; 0 when he is away
 // and no sparks are live (everything hides). Palette: #14161B, #F2F0EA, #FFC93C, #3DDCFF only.
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
 import { BEND } from "../world/track.js?v=20261021r8";
@@ -61,7 +62,7 @@ function beamGeo() {
   const ring = (i) => [Math.cos((i / S) * Math.PI * 2), Math.sin((i / S) * Math.PI * 2)];
   for (let i = 0; i < S; i++) {
     const [a, b] = ring(i), [e, f] = ring(i + 1), r0 = 0.16;
-    const near = 0.13, far = 0.0;
+    const near = 0.055, far = 0.0;
     pos.push(a * r0, b * r0, 0, a, b, 1, e, f, 1, a * r0, b * r0, 0, e, f, 1, e * r0, f * r0, 0);
     for (const k of [near, far, far, near, far, near]) col.push(c.r * k, c.g * k, c.b * k);
     pos.push(0, 0, 0.001, a * r0 * 0.9, b * r0 * 0.9, 0.001, e * r0 * 0.9, f * r0 * 0.9, 0.001); // the lamp
@@ -96,7 +97,7 @@ export class Juice {
     const add = { transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, vertexColors: true, fog: false };
     const M = {
       drone: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.45, metalness: 0.35 }),
-      beam: new THREE.MeshBasicMaterial({ ...add, side: THREE.DoubleSide }),
+      beam: new THREE.MeshBasicMaterial({ ...add, side: THREE.DoubleSide, forceSinglePass: true }), // one pass, not back+front
       pool: new THREE.MeshBasicMaterial({ ...add, polygonOffset: true, polygonOffsetFactor: -2 }),
     };
     // The Foreman's drone: a graphite pod, two rotor booms, ink trim, a gold lamp housing and a cyan eye slit.
@@ -108,7 +109,7 @@ export class Juice {
       box(0.34, 0.16, 0.2, 0, -0.22, -0.18, GOLD), box(0.56, 0.05, 0.02, 0, 0.03, -0.32, CYAN),
     ];
     const drone = new THREE.Mesh(merge(parts), M.drone);
-    drone.scale.setScalar(0.8);
+    drone.scale.setScalar(0.6);
     const beam = new THREE.Mesh(beamGeo(), M.beam);
     const pool = new THREE.Mesh(poolGeo(), M.pool);
     for (const m of [drone, beam, pool]) { m.frustumCulled = false; m.visible = false; m.renderOrder = 2; }
@@ -146,7 +147,7 @@ export class Juice {
       prev: { st: "", ground: true, launch: false, landT: 0, gears: 0, screws: 0, tools: 0, revive: 0, dist: 0, shown: false },
       // Foreman state: pressure 0 (far behind) .. 1 (right on you), his drawn position, the meet in progress
       p: 0.15, pos: new THREE.Vector3(0, 6, 9), aim: new THREE.Vector3(), aimTo: new THREE.Vector3(),
-      tmp: new THREE.Vector3(), col: new THREE.Color(), meet: -1, meetT: 0, meetX: 0, met: 0, closeSaid: false, on: 0, baseFov: 58,
+      tmp: new THREE.Vector3(), meet: -1, meetT: 0, meetX: 0, met: 0, closeSaid: false, on: 0, baseFov: 58,
     };
   }
 
@@ -160,7 +161,10 @@ export class Juice {
   }
 
   juicePre(dt) {
-    if (!this.jx) this.juiceBuild();
+    if (!this.jx) {
+      if (this.state === "menu" && (this.realT || 0) < 1.2) return; // build after the title has drawn: first frame stays as fast
+      this.juiceBuild();
+    }
     const J = this.jx, pv = J.prev, r = this.r, st = this.state, still = this.reduceMotion;
     if (st === "pause") return; // the frozen pause frame keeps everything where it was
     const playing = st === "play" || st === "dying";
@@ -242,7 +246,7 @@ export class Juice {
 
   /* ---------- sparks (pooled Points) ---------- */
   sparks(x, y, z, n, col) {
-    const J = this.jx, c = J.col.setHex(col);
+    const J = this.jx, cr = ((col >> 16) & 255) / 255, cg = ((col >> 8) & 255) / 255, cb = (col & 255) / 255; // sRGB as is: the spark shader writes its colour straight out
     n = Math.round(n * (this.coarse ? 0.7 : 1));
     for (let k = 0; k < n; k++) {
       const i = J.next; J.next = (J.next + 1) % NP;
@@ -250,7 +254,7 @@ export class Juice {
       J.P[i * 3] = x; J.P[i * 3 + 1] = y; J.P[i * 3 + 2] = z;
       J.V[i * 3] = Math.cos(a) * sp; J.V[i * 3 + 1] = 1.5 + Math.sin(a) * sp * 0.8 + Math.random(); J.V[i * 3 + 2] = -0.6 + Math.random() * 1.2;
       J.L[i] = 1; J.Z[i] = (this.coarse ? 0.15 : 0.12) * (0.8 + Math.random() * 0.5);
-      J.C[i * 3] = c.r; J.C[i * 3 + 1] = c.g; J.C[i * 3 + 2] = c.b;
+      J.C[i * 3] = cr; J.C[i * 3 + 1] = cg; J.C[i * 3 + 2] = cb;
     }
     J.live = NP;
     J.sparks.geometry.attributes.aCol.needsUpdate = true;
@@ -328,8 +332,10 @@ export class Juice {
       ax = J.meetX; az = oz; rad = 1.25;
       if (J.meetT > MEET_T || !o || o.z > -1) { J.meet = -1; this.fmPush(-0.1); }
     } else {
-      const p = J.p, side = r.x > 0.5 ? -1 : 1;
-      pos.set(r.x * 0.6 + side * 1.1, 5.6 - p * 0.3, 8.6 - p * 4.4); // closest: z 4.2, high at the top of the frame
+      // Over your shoulder, clear of the HUD: the upper-left corner on wide screens (score is centred, buttons
+      // right), high and centred on phones (score left, buttons right). Closest he gets: about 3.6 u from the camera.
+      const p = J.p, port = this.camera.aspect < 0.75;
+      pos.set(r.x * 0.45 + (port ? 0 : -1.9), (port ? 6.1 : 5.4) - p * 0.3, 8.6 - p * 4.0);
     }
     // Dropping back from ahead (after a meet), he climbs over the camera instead of flying through it.
     if (pos.z > J.pos.z + 1) pos.y = Math.min(7.2, pos.y + (pos.z - J.pos.z) * 0.45);
@@ -339,7 +345,10 @@ export class Juice {
     J.aim.lerp(J.aimTo, Math.min(1, dt * 6));
 
     const D = J.drone, near = J.pos.z < 6.4 || J.meet >= 0 || st === "dying";
-    D.visible = J.beam.visible = J.pool.visible = near;
+    // Following, he shows as the drone and a pool of light on your lane; the beam itself only comes on for a lane
+    // check and the crash (a long shaft across the hall in every frame would hide hazards behind it).
+    D.visible = J.pool.visible = near;
+    J.beam.visible = near && (J.meet >= 0 || st === "dying");
     if (!near) return;
     const t = this.realT || 0;
     D.position.set(J.pos.x, J.pos.y + (still ? 0 : Math.sin(t * 2.3) * 0.08), J.pos.z);
