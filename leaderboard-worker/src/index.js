@@ -59,8 +59,8 @@ const LIMITS = {
   passkey: 20,
   backup: 5,
   err: 20,
-  nameFail: 10,
-  ghost: 6,       // challenge ghost uploads per IP per minute   // wrong code/token tries per NAME per minute, from any number of IPs
+  nameFail: 10,   // wrong code/token tries per NAME per minute, from any number of IPs
+  ghost: 6,       // challenge ghost uploads per IP per minute
 };
 
 // Browser origins that may call the API (wrangler.toml ALLOWED_ORIGINS overrides). Exact matches only.
@@ -271,12 +271,16 @@ const GHOST_MAX_B64 = Math.ceil((GHOST_MAX_N * GHOST_SB) / 3) * 4;
 const GHOST_MAX_UPS = 50; // units per second: top speed 38 x 1.2 in Roller Mode, plus ramp launches
 const SEED36_RE = /^[0-9a-z]{1,7}$/, B64_RE = /^[A-Za-z0-9+/]+={0,2}$/;
 
-function ghostKey(c, s) {
+// v: course version (1 classic straight hall, 2 Factory Zones + turns). Absent = 1, like a challenge link
+// without &v. Part of the key, so a classic link never gets a v2 ghost (or the other way round).
+function ghostKey(c, s, v) {
   if (typeof c !== "string" || !SEED36_RE.test(c)) return null;
   const seed = parseInt(c, 36);
   const score = typeof s === "string" ? (/^\d{1,8}$/.test(s) ? Number(s) : NaN) : s;
   if (!(seed >= 0 && seed <= 0xffffffff) || !Number.isInteger(score) || score < 1 || score >= 1e8) return null;
-  return { seed, score };
+  const cv = v === undefined || v === null || v === "" ? 1 : typeof v === "string" ? (/^[1-9]$/.test(v) ? Number(v) : NaN) : v;
+  if (!Number.isInteger(cv) || cv < 1 || cv > 9) return null;
+  return { seed, score, cv };
 }
 
 export function checkGhostTrack(b, score) {
@@ -304,12 +308,12 @@ export function checkGhostTrack(b, score) {
 async function handleGhostPost(request, env, cors) {
   const body = await readJson(request, GHOST_MAX_B64 + 256);
   if (!body) return json({ error: "bad request" }, 400, cors);
-  const k = ghostKey(body.c, body.s);
+  const k = ghostKey(body.c, body.s, body.v);
   if (!k) return json({ error: "bad challenge" }, 400, cors);
   const err = checkGhostTrack(body.b, k.score);
   if (err) return json({ error: err }, 400, cors);
   try {
-    await env.DB.prepare("INSERT OR IGNORE INTO ghosts (seed, score, track, created_at) VALUES (?1, ?2, ?3, ?4)").bind(k.seed, k.score, body.b, Date.now()).run();
+    await env.DB.prepare("INSERT OR IGNORE INTO ghosts (seed, score, course_v, track, created_at) VALUES (?1, ?2, ?3, ?4, ?5)").bind(k.seed, k.score, k.cv, body.b, Date.now()).run();
   } catch (e) {
     // migrate_ghost.sql not applied yet: a quiet 200 (a 5xx would print an error in every sharer's console).
     if (noTable(e)) return json({ ok: false, error: "ghosts unavailable" }, 200, cors);
@@ -319,10 +323,10 @@ async function handleGhostPost(request, env, cors) {
 }
 
 async function handleGhostGet(url, env, cors) {
-  const k = ghostKey(url.searchParams.get("c"), url.searchParams.get("s"));
+  const k = ghostKey(url.searchParams.get("c"), url.searchParams.get("s"), url.searchParams.get("v"));
   if (!k) return json({ error: "bad challenge" }, 400, cors);
   let row = null;
-  try { row = await env.DB.prepare("SELECT track FROM ghosts WHERE seed = ?1 AND score = ?2").bind(k.seed, k.score).first(); } catch (e) { if (!noTable(e)) throw e; }
+  try { row = await env.DB.prepare("SELECT track FROM ghosts WHERE seed = ?1 AND score = ?2 AND course_v = ?3").bind(k.seed, k.score, k.cv).first(); } catch (e) { if (!noTable(e)) throw e; }
   // No ghost for this link (older links, or the sharer's upload failed): 200 with b: null, not a 404, so opening
   // a challenge never prints a network error. Short cache, since the sharer's upload may land a moment later.
   if (!row) return json({ b: null }, 200, { ...cors, "Cache-Control": "public, max-age=60" });

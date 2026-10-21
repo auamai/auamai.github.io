@@ -463,12 +463,12 @@ sequenceDiagram
 
     A->>GA: Challenge a friend (game over)
     GA->>GA: challengeUrl(base, seed, score, name) gives ?c=seed base36&s=score&n=name
-    GA-)W: POST /ghost {c, s, b: compact track} (once per run, fire and forget; first write per c+s wins)
+    GA-)W: POST /ghost {c, s, v, b: compact track} (once per run, fire and forget; first write per c+s+v wins)
     GA->>OS: navigator.share inside the tap, else copyText, else toast with the URL
     OS-->>F: link
     F->>GF: open https://servosprint.xyz/?c=21i3v9&s=2410&n=alex_u
     GF->>GF: readChallenge: c is 1-7 chars of 0-9a-z, 0 <= s < 1e8, n must pass the name rule
-    GF-)W: GET /ghost?c&s (background; 200 {b} or {b: null})
+    GF-)W: GET /ghost?c&s&v (background; 200 {b} or {b: null})
     W--)GF: the challenger's track, decoded and checked by decodeTrack
     GF-->>F: who you're racing and the score to beat, button Take the challenge
     F->>GF: start
@@ -676,6 +676,10 @@ and is baked into the same mesh (+0 draw calls). The texture is redrawn only whe
   with or without a stored ghost. Playback is keyed by `runTime`: ghost z = `runDist - ghostDist(t)` (negative
   = ahead). Ahead/behind compares score at the same `runTime` (speed is a function of time, so distance only
   differs through Roller Mode and ramps); after the ghost's track ends the chip shows metres past it.
+  A stored or downloaded ghost is matched by seed **and** course version (`cv` / `v`), so a v1 ghost never races
+  on a v2 course. The ghost is drawn with the same world-space bend as the hall (§6): the depth pass gets it from the
+  material patch, the rim-lit `ShaderMaterial` applies the same `ssBend` formula in its own vertex shader, so it
+  follows turns and climbs.
   Overtake = gap goes above +25 after at least 1 s below −25, at most once per 6 s (pop, `tool` chime, 15 ms buzz).
 - `fx.goldStep` (golden ladder callouts) and `passMilestone()` (badge moments, `Math.random` headlines) are
   presentation only and never read the course RNG.
@@ -895,7 +899,7 @@ against `durationMs`), or replay verification using the deterministic sim (seed 
 | `sessions` | `token_hash` (PK, SHA-256), `username`, `created_at`, `expires_at` (400 days) |
 | `webauthn_challenges` | `id`, `challenge`, `kind`, `username`, `expires_at` (5 min, deleted on read) |
 | `rate_limits` | `key` (hash of bucket + IP or name + minute), `win`, `count` |
-| `ghosts` | `(seed, score)` PK, `track` (base64, ≤ 24 KB), `created_at` (pruned after 60 days by the cron); index `ghosts_created` |
+| `ghosts` | `(seed, score, course_v)` PK (`course_v` 1 classic / 2 zones + turns, default 1), `track` (base64, ≤ 24 KB), `created_at` (pruned after 60 days by the cron); index `ghosts_created` |
 | `visit_salt`, `visits`, `daily_uniques` | Portfolio unique-visitor count (salted hashes, 30 days) |
 
 Indexes: `idx_scores_score`, `idx_scores_user`, `idx_scores_daily (mode, day, score DESC)`,
@@ -952,10 +956,11 @@ The fallback in `handleScore` and `handleTop` runs only when `noColumn(e)` match
   `public, max-age=15`. `?board=` is normalised to `all | daily | weekly`.
 - **Body caps** (bytes, streamed): 2 KB; 16 KB for passkey routes; 4 KB for `/err`; 24,256 for `/ghost`.
 - **Rate limits** per IP per minute: score 10, claim 5, restore 10, sync 20, passkey 20, backup-code 5, err 20, hit 30, ghost 6.
-- **Challenge ghosts** (`POST /ghost {c, s, b}`, `GET /ghost?c&s`): cosmetic, never read by scoring. `c` 1-7 chars
-  `0-9a-z`, `s` integer 1..1e8; `b` strict base64, whole 6-byte samples, 30-3000 samples (3-300 s), flag byte ≤ 7,
+- **Challenge ghosts** (`POST /ghost {c, s, v, b}`, `GET /ghost?c&s&v`): cosmetic, never read by scoring. `c` 1-7 chars
+  `0-9a-z`, `s` integer 1..1e8, `v` course version 1-9 (absent = 1, like a link without `&v`; part of the key, so a
+  classic v1 link never gets a v2 ghost); `b` strict base64, whole 6-byte samples, 30-3000 samples (3-300 s), flag byte ≤ 7,
   distance ≤ 50 u/s on average, score steps sum to `s` within max(250, 5 %) and `s ≤ allowedScore(secs + 1)` (same
-  caps as `/score`). `INSERT OR IGNORE`: the first upload per (seed, score) is permanent until pruned, so nobody can
+  caps as `/score`). `INSERT OR IGNORE`: the first upload per (seed, score, v) is permanent until pruned, so nobody can
   overwrite a friend's ghost. GET is public (no Origin needed) and cacheable (1 day; 60 s for `{b: null}`).
   Missing ghost or unmigrated table answers 200, so no player ever sees a network error in the console.
   Tests: `test/ghost.test.mjs` (`npm test` runs it).

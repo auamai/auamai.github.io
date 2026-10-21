@@ -11,8 +11,12 @@ import { M_PER_U, visY } from "../core/constants.js?v=20261021r7";
 import { fmt } from "../core/util.js?v=20261021r7";
 import { mergeParts } from "./geometry.js?v=20261021r7";
 import * as P from "../../profile.js?v=20261021r7";
+import { BEND } from "../world/track.js?v=20261021r7";
 
-const GKEY = "au_factory_ghost_v1";  // new key: { v: 1, list: [{ k: seed, m: mode, s: score, b: base64, at }] }
+const GKEY = "au_factory_ghost_v1";  // new key: { v: 1, list: [{ k: seed, cv: course version, m: mode, s: score, b: base64, at }] }
+// A ghost belongs to one course: seed AND course version (1 classic straight hall, 2 zones + turns; absent = 1),
+// so a classic challenge link never races a v2 ghost and the other way round.
+const sameCourse = (e, seed, cv) => e.k === seed && (e.cv || 1) === (cv || 1);
 const HZ = 10, MAX_N = 300 * HZ, SB = 6, KEEP = 4, GAP_HYST = 25;
 const GHOST_COL = [0x3d / 255, 0xdc / 255, 0xff / 255]; // #3DDCFF
 
@@ -45,8 +49,13 @@ function readStore() {
   try { const j = JSON.parse(localStorage.getItem(GKEY) || "null"); return j && j.v === 1 && Array.isArray(j.list) ? j : { v: 1, list: [] }; } catch { return { v: 1, list: [] }; }
 }
 
-const VERT = `varying vec3 vN; varying vec3 vV;
-void main() { vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalize(normalMatrix * normal); vV = -mv.xyz; gl_Position = projectionMatrix * mv; }`;
+// The ghost follows the drawn track: the same world-space bend as every world material (track.js, ssBend), so it
+// rides round corners and over climbs with the hall. The depth pass (a MeshBasicMaterial) gets the bend from
+// track.js's material patch; this colour pass applies the identical formula itself (ShaderMaterials are skipped there).
+const VERT = `uniform vec3 ssBend; varying vec3 vN; varying vec3 vV;
+void main() { vec4 w = modelMatrix * vec4(position, 1.0);
+  { float d_ = max(0.0, -w.z - ssBend.z); w.xy += ssBend.xy * (d_ * d_); }
+  vec4 mv = viewMatrix * w; vN = normalize(normalMatrix * normal); vV = -mv.xyz; gl_Position = projectionMatrix * mv; }`;
 const FRAG = `uniform vec3 uCol; uniform float uA; varying vec3 vN; varying vec3 vV;
 void main() {
   float r = 1.0 - abs(dot(normalize(vN), normalize(vV)));
@@ -78,7 +87,7 @@ export class Ghost {
     R.runner.root.visible = vis[0]; R.roller.root.visible = vis[1];
     const depth = new THREE.MeshBasicMaterial({ colorWrite: false, transparent: true, depthWrite: true });
     const col = new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: FRAG, transparent: true, depthWrite: false, depthFunc: THREE.LessEqualDepth,
-      uniforms: { uCol: { value: new THREE.Vector3(...GHOST_COL) }, uA: { value: 1 } } });
+      uniforms: { uCol: { value: new THREE.Vector3(...GHOST_COL) }, uA: { value: 1 }, ssBend: BEND } });
     this.M.ghostDepth = depth; this.M.ghost = col;
     const g = new THREE.Group(), forms = [];
     for (const geo of geos) {
@@ -111,7 +120,7 @@ export class Ghost {
     // challenge runs keep it on this device, since a free run's course never comes back.
     G.rec = true;
     if ((this.mode === "daily" || this.mode === "challenge") && this.settings.ghost !== false) {
-      const mine = readStore().list.find((e) => e.k === this.seed);
+      const mine = readStore().list.find((e) => sameCourse(e, this.seed, this.courseV));
       const ch = this.mode === "challenge" && this.challenge && this.challenge.ghost;
       if (ch && (!mine || mine.s < ch.s)) { G.track = ch.track; G.kind = "rival"; G.name = this.challenge.name || "Rival"; }
       else if (mine) { G.track = decodeTrack(mine.b); G.kind = "pb"; G.name = "PB"; }
@@ -216,13 +225,13 @@ export class Ghost {
     this.lastGhost = null;
     if (G.n < HZ * 3 || score <= 0) return res;
     const b = encodeTrack(this.gRec, G.n);
-    this.lastGhost = { seed: this.seed, score, b, sent: false, cut: G.n >= MAX_N }; // a cut track wouldn't add up to the score // the share flow can attach it to a challenge
+    this.lastGhost = { seed: this.seed, cv: this.courseV || 1, score, b, sent: false, cut: G.n >= MAX_N }; // a cut track wouldn't add up to the score // the share flow can attach it to a challenge
     if (this.mode !== "daily" && this.mode !== "challenge") return res;
-    const S = readStore(), old = S.list.find((e) => e.k === this.seed);
+    const S = readStore(), cv = this.courseV || 1, old = S.list.find((e) => sameCourse(e, this.seed, cv));
     if (old && old.s >= score) return res;
-    const ent = { k: this.seed, m: this.mode, s: score, b, at: Date.now() };
+    const ent = { k: this.seed, cv, m: this.mode, s: score, b, at: Date.now() };
     // One Daily ghost (today's course replaces yesterday's) plus the newest challenge courses.
-    S.list = [ent, ...S.list.filter((e) => e.k !== this.seed && !(this.mode === "daily" && e.m === "daily"))];
+    S.list = [ent, ...S.list.filter((e) => !sameCourse(e, this.seed, cv) && !(this.mode === "daily" && e.m === "daily"))];
     S.list.sort((p, q) => q.at - p.at); S.list.length = Math.min(S.list.length, KEEP);
     try { localStorage.setItem(GKEY, JSON.stringify(S)); } catch { /* full or private mode: no ghost, play on */ }
     return res;
@@ -232,9 +241,9 @@ export class Ghost {
   // first one per seed and score). Nothing waits on it and a failure changes nothing for the player.
   ghostUpload(r) {
     const L = this.lastGhost;
-    if (!L || L.sent || L.cut || !P.online() || L.seed !== r.seed || L.score !== r.score || this.settings.ghost === false) return;
+    if (!L || L.sent || L.cut || !P.online() || L.seed !== r.seed || L.score !== r.score || L.cv !== (r.courseV || 1) || this.settings.ghost === false) return;
     L.sent = true;
-    P.postGhost((L.seed >>> 0).toString(36), L.score, L.b).catch(() => {});
+    P.postGhost((L.seed >>> 0).toString(36), L.score, L.cv, L.b).catch(() => {});
   }
 
   // Opening a challenge link: fetch the sharer's ghost in the background. If it lands before the run starts,
@@ -242,7 +251,7 @@ export class Ghost {
   ghostFetch() {
     const c = this.challenge;
     if (!c || !(c.score > 0) || !P.online() || this.settings.ghost === false) return;
-    P.getGhost((c.seed >>> 0).toString(36), c.score).then((res) => {
+    P.getGhost((c.seed >>> 0).toString(36), c.score, c.v || 1).then((res) => {
       const track = res && res.ok && res.data && decodeTrack(res.data.b);
       if (track && this.challenge === c && track.s[track.n - 1] <= c.score) c.ghost = { track, s: c.score };
     }).catch(() => {});

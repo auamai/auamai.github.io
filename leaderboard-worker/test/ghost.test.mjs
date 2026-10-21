@@ -75,12 +75,20 @@ ok(r.s === 403, "foreign origin rejected");
 let last = 0;
 for (let i = 0; i < 8; i++) last = (await call("POST", "/ghost", { c: "zz" + i, s: 1500, b: good }, { ip: "10.1.1.1" })).s;
 ok(last === 429, "rate limited per IP");
-// Database without migrate_ghost.sql: POST answers 503, GET 404, nothing throws.
+// Database without migrate_ghost.sql: POST answers 200 ok:false, GET 200 b:null, nothing throws.
 const old = { ...env, DB: mkdb(false) };
 r = await call("POST", "/ghost", { c: "q1", s: 1500, b: good }, { e: old });
 ok(r.s === 200 && r.b.ok === false, "unmigrated DB: POST answers 200 ok:false");
 r = await call("GET", "/ghost?c=q1&s=1500", undefined, { e: old });
 ok(r.s === 200 && r.b.b === null, "unmigrated DB: GET answers b: null");
+// Course version is part of the key (r8): a classic (v1) link never gets a v2 ghost, nor the other way round.
+const v2t = track(200, 1500, { flags: 1 });
+r = await call("POST", "/ghost", { c: "cv1", s: 1500, v: 2, b: v2t });
+ok(r.s === 200 && r.b.ok, "v2 ghost stored");
+ok((await call("GET", "/ghost?c=cv1&s=1500")).b.b === null && (await call("GET", "/ghost?c=cv1&s=1500&v=1")).b.b === null && (await call("GET", "/ghost?c=cv1&s=1500&v=2")).b.b === v2t, "v2 ghost only answers v=2 (a link without v reads as v1)");
+r = await call("POST", "/ghost", { c: "cv1", s: 1500, b: good });
+ok(r.s === 200 && r.b.ok && (await call("GET", "/ghost?c=cv1&s=1500")).b.b === good && (await call("GET", "/ghost?c=cv1&s=1500&v=2")).b.b === v2t, "v1 and v2 ghosts on the same seed and score are kept apart");
+ok((await call("POST", "/ghost", { c: "cv2", s: 1500, v: 0, b: good })).s === 400 && (await call("GET", "/ghost?c=cv1&s=1500&v=x")).s === 400, "bad course version rejected");
 // Scores are untouched by the ghost routes.
 ok((await call("GET", "/scores")).s === 200, "GET /scores still answers");
 // A real game track (written by the game in the browser probe) passes.
