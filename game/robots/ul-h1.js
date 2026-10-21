@@ -63,7 +63,7 @@ export function create({ M }) {
   back.scale.setScalar(0.06);
   packG.add(back);
   // Chassis plate across the light strip (Garage plate text and pattern). Faces the run camera.
-  if (M.plate) packG.add(mesh(keep(new THREE.PlaneGeometry(0.19, 0.095)), M.plate, 0, -0.2, 0.075, false));
+  if (M.plate) packG.add(mesh(keep(new THREE.PlaneGeometry(0.19, 0.095)), M.plate, 0, -0.2, 0.075));
 
   // Neck and head.
   const neck = mesh(keep(lathe([[0, 0.6], [0.06, 0.6], [0.05, 0.68], [0.055, 0.73], [0, 0.735]], 16)), M.frame);
