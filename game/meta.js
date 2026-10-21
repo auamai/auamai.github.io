@@ -167,7 +167,7 @@ export function readChallenge(search = location.search) {
 }
 
 /* ---------- share card ---------- */
-// A 1080x1350 image: score, rank, the robot (a frame of the game canvas), and the Daily Run link.
+// A 1080x1350 image: score, rank, the robot (a frame of the game canvas), and a short "Beat N at <host>" line.
 // Share card (1080 x 1350), in the Servo Sprint identity: graphite, off-white numerals, the wordmark,
 // a yellow hazard rule, cyan for the rank line. Uses the bundled Inter Tight (300/400) and Plex Mono.
 export async function shareCard({ canvas, score, rank, best, daily, name, link, wordmark }) {
@@ -177,15 +177,16 @@ export async function shareCard({ canvas, score, rank, best, daily, name, link, 
   try { await document.fonts.load('300 200px "Inter Tight"'); await document.fonts.load('400 40px "IBM Plex Mono"'); } catch { /* fallback */ }
   x.fillStyle = "#14161b"; x.fillRect(0, 0, W, H);
   if (canvas) {
-    // Cover-fit the frame into its band (y 400-1160) and clip, so a tall phone canvas can't spill behind the type.
-    const BY = 400, BH = 760, s = Math.max(W / canvas.width, BH / canvas.height);
+    // Cover-fit the frame into its band (y 456-1136) and clip, so a tall phone canvas can't spill behind the type
+    // and the score numerals (baseline 408, comma descender to ~440) always sit on flat graphite above it.
+    const BY = 456, BH = 680, s = Math.max(W / canvas.width, BH / canvas.height);
     const w = canvas.width * s, h = canvas.height * s;
     x.save(); x.beginPath(); x.rect(0, BY, W, BH); x.clip();
     try { x.globalAlpha = 0.9; x.drawImage(canvas, (W - w) / 2, BY + (BH - h) * 0.62, w, h); x.globalAlpha = 1; } catch { /* tainted or lost */ }
     x.restore();
-    const g = x.createLinearGradient(0, 380, 0, 1170);
+    const g = x.createLinearGradient(0, BY, 0, BY + BH);
     g.addColorStop(0, "rgba(20,22,27,1)"); g.addColorStop(0.22, "rgba(20,22,27,0.15)"); g.addColorStop(0.75, "rgba(20,22,27,0.15)"); g.addColorStop(1, "rgba(20,22,27,1)");
-    x.fillStyle = g; x.fillRect(0, 380, W, 790);
+    x.fillStyle = g; x.fillRect(0, BY, W, BH);
   }
   const sans = (w, px) => `${w} ${px}px "Inter Tight", system-ui, sans-serif`, mono = (px) => `400 ${px}px "IBM Plex Mono", ui-monospace, monospace`;
   // Wordmark (SVG, currentColor -> off-white), 64 px cap height, top left on the 8 px grid.
@@ -206,9 +207,12 @@ export async function shareCard({ canvas, score, rank, best, daily, name, link, 
   const fit = (t, w, px, max) => { x.font = sans(w, px); const m = x.measureText(t).width; if (m > max) x.font = sans(w, Math.floor(px * max / m)); };
   const line = [best ? "New personal best" : "", rank ? `#${rank} on the board` : "", name || ""].filter(Boolean).join("  ·  ");
   fit(line, 400, 40, W - 160); x.fillStyle = "#3ddcff"; x.fillText(line, 80, 1168);
-  x.fillStyle = "#f2f0ea"; x.font = sans(300, 36); x.fillText("Beat it:", 80, 1240);
-  const bw = x.measureText("Beat it:").width + 24, url = link.replace(/^https?:\/\//, "");
-  fit(url, 400, 36, W - 80 - (80 + bw)); x.fillText(url, 80 + bw, 1240);
+  // A short call to action, not the raw challenge URL (that stays in the share/copy payload): the host is the
+  // game's own origin (servosprint.xyz live; auamai.dev/game on the portfolio copy).
+  let where = "servosprint.xyz";
+  try { const u = new URL(link); where = (u.host + u.pathname).replace(/\/+$/, ""); } catch { /* keep default */ }
+  const cta = daily ? `Play today's Daily Run at ${where}` : `Beat ${fmtN(score)} at ${where}`;
+  x.fillStyle = "#f2f0ea"; fit(cta, 300, 40, W - 160); x.fillText(cta, 80, 1240);
   // Hazard rule: 45 degree stripes, 16 px bands, pixel-aligned.
   x.save(); x.beginPath(); x.rect(80, 1272, 240, 16); x.clip(); x.fillStyle = "#ffc93c"; x.fillRect(80, 1272, 240, 16); x.fillStyle = "#14161b";
   for (let i = -1; i < 9; i++) { const x0 = 80 + i * 32; x.beginPath(); x.moveTo(x0, 1288); x.lineTo(x0 + 16, 1288); x.lineTo(x0 + 32, 1272); x.lineTo(x0 + 16, 1272); x.closePath(); x.fill(); }
