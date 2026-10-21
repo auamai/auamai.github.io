@@ -2,9 +2,9 @@
 // POST {API_BASE}/err. No PII: no names, codes, tokens or URLs with a query; only the message, the top
 // stack frames (file:line, query stripped), the build id and coarse context. At most 5 reports a session,
 // each distinct message once. Works offline (silently drops) and never throws.
-import { API_BASE } from "../../config.js?v=20261021r8";
+import { API_BASE } from "../../config.js?v=20261021r9";
 
-export const BUILD = "20261021r8";
+export const BUILD = "20261021r9";
 const MAX = 5;
 const seen = new Set();
 let sent = 0, installed = false, ctx = () => ({});

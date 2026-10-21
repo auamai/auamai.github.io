@@ -509,7 +509,7 @@ mirror `game/meta.js` `SERVO`. A client cannot sync servos its spent gears did n
 
 ## 5. Module map
 
-All paths under `game/`. Every local import carries `?v=<build>` (r8: `?v=20261021r8`, on all 135 local
+All paths under `game/`. Every local import carries `?v=<build>` (r9: `?v=20261021r9`, on all 146 local
 references); bump it on every release, and keep the `modulepreload` list in `index.html` in step with the import graph.
 
 | Path | Role |
@@ -818,7 +818,7 @@ Everything is pooled (obstacles, gears, tools, rails, ramps, debris, popups); 3D
 - **Render:** each part is a unit-box instance in one of two `InstancedMesh`es: a Lambert body (casts shadow) and a Basic glow, with per-instance palette colours (#14161B, #F2F0EA, #FFC93C, #3DDCFF and two graphite/off-white steels). Matrices and colours are written straight into the instance arrays every frame, with no allocation. The bend comes through the patched materials (`USE_INSTANCING` path): `track.js` re-traverses the scene when its child count changes, and `buildHazards` runs lazily on the first set-piece row, so both meshes are patched before they first draw. Hazards don't touch `scene.onBeforeRender` (instances are written in `drawHazards` from the sim step), so perf pass 2's chain (track bend → factory/arm-kit/pickup instance sync) is unchanged. Shadows: only the body casts (lamps, chevrons and flames are light, so the glow mesh neither casts nor receives); like every other world caster, the shadow pass uses unbent positions, which inside the shadow box (≤ 16 u ahead) is off by under a unit at the tightest bend. Both meshes are hidden while empty, so between set pieces they cost 0 draws, main or shadow (since integration/r9). Lamps blink at 2.5 Hz, under the 3-flashes-a-second rule. Measured: +2 draw calls with a set piece on screen (desktop 159→161, phone 162→164 to 180→182), at most 24 body and 76 glow instances. Payload: +7.9 KB gz.
 - **Goldens (v3,** `review/val_h/out_ob/golden_v3.json`**):** real_run 472/421f6f04, god_180s 11571/ce3ca41b, daily_like 4012/b93c2004. v2 and v1 replay unchanged.
 
-### The Foreman (presentation only, r8 juice)
+### The Foreman (presentation only, juice)
 
 `src/render/juice.js` keeps a pressure `p` in [0, 1] per run, stepped once per drawn frame from what the run already
 did. It starts at 0.15 and rises 0.012/s; +0.035 for every gear that passes z = 1 untaken, +0.45 on a Spare Servo
@@ -1060,7 +1060,7 @@ skips the bus ducks.
 | Hot loop allocations | 0 per sub-step | HUD chips keyed by bitmask; revive and spend allocate once per event |
 | Robot meshes | 58 | 58 |
 | Ghost racer | ≤ +3 draw calls | **+2** while it shows (depth pre-pass + rim-lit colour pass on one baked geometry per form; runner and roller baked at load, only one visible), 0 when hidden |
-| Juice + Foreman (r8 juice) | ≤ +4 draw calls | Measured (same frame, juice objects on vs off): **+1** while sparks are live, **+2** while he follows (drone, floor pool), **+3** with sparks, **+4** in a lane check or the crash (beam added; one pass, `forceSinglePass`); 0 when he is behind the camera and no sparks live. Shaders warmed 1.2 s after the title draws. No per-frame allocation (typed arrays, preallocated vectors, one pooled DOM line). Payload **+7.6 KB gz** (`juice.js` 7.5, CSS 0.2, hooks 0.1) |
+| Juice + Foreman | ≤ +4 draw calls | Measured (same frame, juice objects on vs off): **+1** while sparks are live, **+2** while he follows (drone, floor pool), **+3** with sparks, **+4** in a lane check or the crash (beam added; one pass, `forceSinglePass`); 0 when he is behind the camera and no sparks live. Shaders warmed 1.2 s after the title draws. No per-frame allocation (typed arrays, preallocated vectors, one pooled DOM line). Payload **+7.6 KB gz** (`juice.js` 7.5, CSS 0.2, hooks 0.1) |
 | Draw calls, in a run | see below | see below |
 
 ### Draw calls: the honest numbers
@@ -1195,7 +1195,7 @@ busiest, its rover rows x1.9). Shader programs: 17 at the start of a run, up to 
 drawn (not compared against base). No allocation in the per-frame path (`updateTrack` writes into
 preallocated objects; camera rotations use three's module scratch quaternions).
 
-### integration/r8 (levels + missions + ghost): measured
+### Factory Zones + missions + ghost racing: measured
 
 Same probe (`dcrun.py`, 150 s god run, renderer.info once a second; free run, so no ghost): desktop 640x400 median
 **185** / p95 229 / max 245, phone 390x844 DPR 2 median **172** / p95 207 / max 218 (d5cc027: 190 / 221 / 234 and
@@ -1209,16 +1209,16 @@ and stepwise heap growth consistent with pools warming (19.7 to 22.2 MB).
 
 ---
 
-### integration/r9 (perf pass 2 + course v3 + Foreman/juice): measured
+### Perf pass 2 + course v3 machines + Foreman/juice: measured
 
 Probe: perf pass 2's seeded god Daily run (`init2.py` streams), real GL draws per sample, 1187 `--headless=new`. The Daily
-is v3 on r9 and v2 on edb9125, so the course mix differs. Desktop 1280x800, 150 s, before juice: main median **148** /
+is v3 on this build (course v3 machines) and v2 on edb9125 (Factory Zones), so the course mix differs. Desktop 1280x800, 150 s, before juice: main median **148** /
 p95 175, main+shadow median 164 / p95 **194**, shadow median 14 (edb9125 187 / 222 and 221 / 259; perf2 158 / 179 and
 175 / 196). Per zone, main median 145-157, main+shadow p95 176-200. Set piece on screen vs not: main median 149 vs 146.
 First 60 s with juice on (Rocket Factory + Bakery Line): desktop main 149 / p95 177, main+shadow 164 / 195 (without juice
 148 / 176, 163 / 195); phone 390x844 DPR 3 (tier lo) main 145 / 174, main+shadow 160 / 191 (edb9125 174 / 214, 209 /
 254). Hazard meshes are hidden while empty (0 draws between set pieces). Payload vs edb9125: **+18.85 KB gz** (perf2
-+2.92, course v3 +7.76, r9 fixes +0.18, juice +7.99). Main median is now at or under 152 on these probes; p95 and
++2.92, course v3 +7.76, machine fixes +0.18, juice +7.99). Main median is now at or under 152 on these probes; p95 and
 main+shadow are still over.
 
 ---

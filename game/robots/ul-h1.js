@@ -1,7 +1,7 @@
 // Uamai Labs UL-H1: the runner. Pearl shells over a navy frame, a rounded
 // helmet with a wraparound visor and a periwinkle light strip, visible joint
 // rings at every hinge, and a UL mark on the chest plate and the back pack.
-import { THREE, bake, UL, taper, lathe, ring, ball, ulMark, mesh, group, damp } from "./kit.js?v=20261021r8";
+import { THREE, bake, UL, taper, lathe, ring, ball, ulMark, mesh, group, damp } from "./kit.js?v=20261021r9";
 
 export const info = { id: "ul-h1", name: "UL-H1", lab: "Uamai Labs", kind: "humanoid" };
 

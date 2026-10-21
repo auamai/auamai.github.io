@@ -1,10 +1,10 @@
 // Leaderboard and sharing: post a run, hold it offline, refresh boards, share and dare links.
 // Installed onto Game.prototype by game.js (methods use `this`, the Game).
-import * as P from "../../profile.js?v=20261021r8";
-import * as MT from "../../meta.js?v=20261021r8";
-import { GAME_URL } from "../../config.js?v=20261021r8";
-import { WORDMARK } from "../ui/brand.js?v=20261021r8";
-import { fmt } from "../core/util.js?v=20261021r8";
+import * as P from "../../profile.js?v=20261021r9";
+import * as MT from "../../meta.js?v=20261021r9";
+import { GAME_URL } from "../../config.js?v=20261021r9";
+import { WORDMARK } from "../ui/brand.js?v=20261021r9";
+import { fmt } from "../core/util.js?v=20261021r9";
 
 export class Net {
   // Read-only summary for the portfolio's teaser (game/README.md).

@@ -3,7 +3,7 @@
 // pooled and recycled along the run, so the whole hall costs a few dozen
 // draw calls. Nothing here ever enters the three lanes (|x| < 5.2).
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
-import { BEND } from "./src/world/track.js?v=20261021r8";
+import { BEND } from "./src/world/track.js?v=20261021r9";
 
 export const HALF = 16;      // hall half-width (wall plane)
 export const ROOF = 9;       // ceiling height
