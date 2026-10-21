@@ -1,9 +1,9 @@
 // Meta layer in the game: missions strip, Garage (cosmetics), milestone badges.
 // Installed onto Game.prototype by game.js (methods use `this`, the Game).
-import * as P from "../../profile.js?v=20261020r6c";
-import * as MT from "../../meta.js?v=20261020r6c";
-import { MILESTONES, OVER_ICON } from "../core/constants.js?v=20261020r6c";
-import { fmt, esc } from "../core/util.js?v=20261020r6c";
+import * as P from "../../profile.js?v=20261020r6d";
+import * as MT from "../../meta.js?v=20261020r6d";
+import { MILESTONES, OVER_ICON } from "../core/constants.js?v=20261020r6d";
+import { fmt, esc } from "../core/util.js?v=20261020r6d";
 
 export class Garage {
   missionsHtml() {

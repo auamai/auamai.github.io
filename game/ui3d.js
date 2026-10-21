@@ -5,7 +5,7 @@
 // stays crisp when the hall drops resolution to hold frame rate. Only renders while something is on
 // screen; at the lowest quality the game uses the 2D fallback.
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
-import { GLYPHS } from "./glyphs.js?v=20261020r6c";
+import { GLYPHS } from "./glyphs.js?v=20261020r6d";
 
 // r6b release: on the graphite hall the 3D text is off-white with a graphite extrusion and a dark halo
 // (the navy-on-pearl set was for the old white hall; the grade had turned it dark-on-dark).

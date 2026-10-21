@@ -360,9 +360,13 @@ async function handlePasskey(path, request, env, cors, origin) {
   return passkeyLoginVerify(body, env, cors, origin);
 }
 
-// Only pages on auamai.dev (and its subdomains) can use passkeys for this RP ID.
+// Only pages on auamai.dev (and its subdomains) plus the related origins above can use passkeys for this RP ID.
+// WebAuthn Related Origin Requests: these origins may use the auamai.dev RP ID because
+// https://auamai.dev/.well-known/webauthn lists them. RP_ID stays auamai.dev, so existing passkeys keep working.
+// Keep this list and that file in step.
+const RELATED_ORIGINS = ["https://servosprint.xyz", "https://www.servosprint.xyz"];
 function passkeyOrigins(env) {
-  return allowedOrigins(env).filter((o) => /^https:\/\/([a-z0-9-]+\.)*auamai\.dev$/.test(o));
+  return allowedOrigins(env).filter((o) => /^https:\/\/([a-z0-9-]+\.)*auamai\.dev$/.test(o) || RELATED_ORIGINS.includes(o));
 }
 
 async function userHandle(username) {

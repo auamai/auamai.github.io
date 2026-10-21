@@ -1,8 +1,8 @@
 // The always-visible speaker button: tap (or M) mutes and unmutes the music; hold it on touch,
 // or hover / click-and-hold on desktop, for a small popover with the Music and Effects sliders.
 // Installed onto Game.prototype by game.js (methods use `this`, the Game).
-import * as P from "../../profile.js?v=20261020r6c";
-import { ICON } from "../core/constants.js?v=20261020r6c";
+import * as P from "../../profile.js?v=20261020r6d";
+import { ICON } from "../core/constants.js?v=20261020r6d";
 
 const HOLD_MS = 420;   // long-press to open the sliders
 const HOVER_MS = 350;  // desktop hover delay

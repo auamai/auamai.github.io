@@ -34,6 +34,16 @@ Daily Run same course, streaks + missions, PB moment, near-miss text, teaser key
 1.65 units, hang 1.067 vs 1.069 s), fixed timestep (same score at 60 and 144 Hz), lane spring, wheel touch.
 Round-4/5 logic suite: all pass, no console errors. Worker: 15/15 new + 31/31 round-4/5 tests on the r6 bundle.
 
+## Release check r6d (2026-10-20, servosprint.xyz)
+
+Golden replays unchanged: real_run 432 `acd66776`, god_180s 8353 `e970d5ce`, daily_like 3057 `ded68c93`.
+Browser suite (`r6/tests.js`) 17/17; r6b suite (`r6b/tests_b.js`) 9/9 (fuzz input, dt clamp, WebGL context loss,
+error boundary, gamepad, speaker button, share + challenge, garage/daily board, iOS audio guard); no console errors.
+Worker (r6b bundle with related-origin passkeys): 15/15 r6 + 9/9 `/err` + 31/31 round-4/5 tests.
+Passkeys: RP ID stays `auamai.dev`; servosprint.xyz and www.servosprint.xyz are listed in
+`https://auamai.dev/.well-known/webauthn` (Related Origin Requests) and in the Worker's passkey origins.
+The game only offers passkeys there once the browser reports related-origin support; the backup code works everywhere.
+
 ## Review rounds
 
 - **Round 1 (screenshots):** game over read as a form. Rewrote headlines per hazard and bay, score count-up,

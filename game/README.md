@@ -1,21 +1,35 @@
-# Factory Run
+# Servo Sprint
 
-The portfolio's three.js runner. Opens as an overlay from the site (`script.js`) or on its own at `/game/`.
-Everything is procedural: geometry, the robot's animation, the music and sound. No third-party assets.
+A three.js robot runner (formerly Factory Run). Opens as an overlay from the portfolio (`script.js`) or on its own at
+`/game/`, and is ready to be hosted standalone at `https://servosprint.xyz/` (copy this folder to a repo root and add
+`CNAME`; nothing outside the folder is referenced). Everything is procedural: geometry, the robot's animation, the
+music and sound. No third-party assets.
 
 ## Files
 
 | File | What it is |
 | --- | --- |
-| `game.js` | The game: state, spawning, collisions, scoring, HUD, menus, boards |
-| `ui3d.js` | 3D hints and countdown, drawn on their own transparent canvas at the screen's pixel ratio (cap 2) |
-| `tools.js` | Tool pickups (screws, wrench, drill, hammer, golden torque wrench), held props, particle bursts |
-| `audio.js` | WebAudio music and sound, synthesised at run time |
-| `meta.js` | Daily Run, streaks, missions, gear shop, near-miss nudges, share card, challenge links, teaser summary |
-| `profile.js` | Local save, leaderboard API calls, passkeys |
+| `index.html` | Standalone page: boot screen, meta (absolute `og:image` on servosprint.xyz), loads `game.js` |
+| `game.js` | Entry: `openGame()`, lifecycle, dispose; mixes in the modules under `src/` |
+| `src/core/` | `loop.js` (fixed 120 Hz step, quality ladder), `run.js` (run start/end, scoring events), `constants.js`, `util.js` |
+| `src/sim/physics.js` | Runner physics (g = 9.81, jumps, slides, rails, ramps) |
+| `src/world/worldgen.js` | Seeded course spawning (COURSE / LOOT streams), pooled obstacles |
+| `src/render/render.js` | Scene, quality tiers, camera, trail; `grade.js` (brand colour grade + light rig, AgX); `arm.js` (rigid machined arm gantry, merged per material); `geometry.js` |
+| `src/input/input.js` | Touch swipes, wheel pad, keyboard, gamepad |
+| `src/ui/` | `hud.js`, `panels.js` (menus, game over, garage), `brand.js` (wordmark), `sound-ui.js` |
+| `src/net/` | `net.js` (board, share), `errors.js` (error boundary + `/err` reporting, no PII) |
+| `src/meta/garage.js`, `meta.js` | Daily Run, streaks, missions, gear shop, near-miss nudges, share card, challenge links |
+| `audio.js` | WebAudio music ("Line Shift", fixed 106 BPM Afrobeat with a sax lead) and SFX, synthesised at run time |
+| `ui3d.js` | 3D hints and countdown on their own transparent canvas (DPR cap 2) |
+| `tools.js` | Tool pickups, held props, particle bursts (0.6x on touch) |
+| `profile.js` | Local save, leaderboard API calls, passkeys (RP ID auamai.dev; servosprint.xyz and www use it through WebAuthn Related Origin Requests) |
 | `factory.js`, `ceiling.js` | The hall around the line |
-| `robots/` | UL-H1 runner and UL-W1 roller (procedural models and procedural animation) |
+| `robots/` | UL-H1 runner and UL-W1 roller (procedural models and animation) |
 | `glyphs.js` | Inter Tight outlines for the 3D text (SIL OFL 1.1, see `OFL-InterTight.txt`) |
+| `brand/`, `fonts/` | Wordmark, icons, og image; bundled Inter Tight + IBM Plex Mono (OFL) |
+
+Brand rules (palette, type, wordmark, buttons): `robotgame/brand/SERVO_SPRINT_BRAND.md` in the working tree.
+Cache-busting: every local import carries `?v=20261020r6d`; bump it on every release.
 
 ## Licences
 
@@ -95,5 +109,5 @@ day-1 and day-7 return, runs per session, and Daily Run participation per day.
 
 ## Links
 
-- Daily Run: `https://auamai.dev/game/?daily=1`
+- Daily Run: `https://auamai.dev/game/?daily=1` (standalone: `https://servosprint.xyz/?daily=1`)
 - Beat my run: `https://auamai.dev/game/?c=<seed base36>&s=<score>&n=<name>`: the same course, with the score to beat.

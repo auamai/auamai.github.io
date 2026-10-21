@@ -1,8 +1,8 @@
 // Player profile: saved on this device, optionally linked to the Worker with a passkey
 // (Face ID / Touch ID / fingerprint, synced by iCloud Keychain or Google Password Manager)
 // or, as a fallback, a backup code.
-import { cosClean } from "./meta.js?v=20261020r6c";
-import { API_BASE } from "./config.js?v=20261020r6c";
+import { cosClean } from "./meta.js?v=20261020r6d";
+import { API_BASE } from "./config.js?v=20261020r6d";
 
 const KEY = "au_factory_profile_v1";
 const NAME_RE = /^[A-Za-z0-9_]{3,16}$/;
@@ -145,10 +145,24 @@ export const sync = (p) =>
 const auth = (p) => ({ ...(p.code ? { code: p.code } : {}), ...(p.token ? { token: p.token } : {}) });
 
 /* ---------- passkeys ---------- */
-// The Worker's RP ID is auamai.dev, so passkeys work on auamai.dev pages only
-// (not on auamai.github.io or a local preview). Elsewhere the backup code still works.
+// The Worker's RP ID is auamai.dev. Pages on auamai.dev use it directly; servosprint.xyz (and www) use it through
+// WebAuthn Related Origin Requests (https://auamai.dev/.well-known/webauthn lists them). Elsewhere (workers.dev
+// preview, github.io, local) and on browsers without related-origin support, the backup code is the way in.
+const RELATED = /^(www\.)?servosprint\.xyz$/;
+let relatedOk = null; // null = not checked yet; getClientCapabilities() is async, so cache the answer
+export async function checkRelatedOrigins() {
+  if (!RELATED.test(location.hostname)) return (relatedOk = false);
+  try {
+    const caps = window.PublicKeyCredential && PublicKeyCredential.getClientCapabilities ? await PublicKeyCredential.getClientCapabilities() : null;
+    // Chrome 128+ supports related origins but older builds do not list the capability; Safari 18 lists it.
+    relatedOk = caps ? caps.relatedOrigins === true : /Chrome\/(\d+)/.test(navigator.userAgent) && +RegExp.$1 >= 128;
+  } catch { relatedOk = false; }
+  return relatedOk;
+}
 export function passkeysOk() {
-  return online() && /(^|\.)auamai\.dev$/.test(location.hostname) && window.isSecureContext
+  const host = location.hostname;
+  const allowedHost = /(^|\.)auamai\.dev$/.test(host) || (RELATED.test(host) && relatedOk === true);
+  return online() && allowedHost && window.isSecureContext
     && typeof window.PublicKeyCredential === "function" && !!navigator.credentials;
 }
 
