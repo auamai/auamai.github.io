@@ -279,7 +279,10 @@ export class WorldGen {
     const botK = !Z ? 1 : teach && Z.sig === "bot" ? 2.6 : Z.bot;
     // Mobile robots get their own row so they never close the last open lane:
     // at most two, and every bot is low enough to jump.
-    if (this.runTime >= BOT_FROM && COURSE() < (0.18 + diff * 0.32) * botK) {
+    // Course v3: this zone's set piece (hazards.js) may take the row. Earlier courses never get here, so their COURSE stream is unchanged.
+    if (this.courseV >= 3 && this.setPieceRow(Z, f, z)) return;
+    const botOk = !(this.courseV >= 3 && (this.runDist || 0) < (this.hzNoBot || 0));
+    if (botOk && this.runTime >= BOT_FROM && COURSE() < (0.18 + diff * 0.32) * botK) {
       const lanes = shuffle([0, 1, 2]);
       const n = diff > 0.45 && COURSE() < 0.4 ? 2 : 1;
       for (const ln of lanes.slice(0, n)) this.spawnObstacle("bot", ln, z - COURSE() * 3);
@@ -332,6 +335,7 @@ export class WorldGen {
 
   clearWorld() {
     this.ghostHide?.();
+    this.clearHazards(); this.resetTricks();
     if (this.token) { this.token = null; this.tokenMesh.g.visible = false; }
     for (const it of this.items) { it.g.visible = false; this.pools[it.kind].push(it.g); }
     this.items.length = 0;

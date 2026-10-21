@@ -17,6 +17,8 @@ import { Panels } from "./src/ui/panels.js?v=20261021r8";
 import { Garage } from "./src/meta/garage.js?v=20261021r8";
 import { Net } from "./src/net/net.js?v=20261021r8";
 import { Ghost } from "./src/render/ghost.js?v=20261021r8";
+import { Hazards } from "./src/world/hazards.js?v=20261021r8";
+import { Tricks } from "./src/sim/tricks.js?v=20261021r8";
 import { SoundUi } from "./src/ui/sound-ui.js?v=20261021r8";
 import { installErrorReporting } from "./src/net/errors.js?v=20261021r8";
 export { allowedScore } from "./src/core/constants.js?v=20261021r8";
@@ -171,5 +173,5 @@ function install(target, ...sources) {
     }
   }
 }
-install(Game, Loop, Run, Physics, Input, WorldGen, Track, Render, Sound, Hud, Panels, Garage, Net, SoundUi, Ghost);
+install(Game, Loop, Run, Physics, Input, WorldGen, Track, Render, Sound, Hud, Panels, Garage, Net, SoundUi, Ghost, Hazards, Tricks);
 installErrorReporting(() => current ? { state: current.state, q: current.quality, touch: !!current.coarse } : {});

@@ -165,6 +165,8 @@ export class Loop {
       if (o.z > DESPAWN_Z) { o.g.visible = false; this.pools[o.type].push(o.g); this.obstacles.splice(i, 1); }
     }
 
+    if (this.hz) this.updateHazards(dt, v, st, sliding); // course v3 set pieces (hazards.js); empty on v1/v2
+
     // Gears
     const top = r.y + (sliding ? 0.8 : this.driving ? 1.25 : 1.9);
     for (let i = this.gears.length - 1; i >= 0; i--) {
@@ -255,6 +257,7 @@ export class Loop {
     this.ghostTick(dt, sliding);
     this.animateRobot(dt, v, sliding);
     this.updateTrack(dt);
+    this.updateTricks(dt, v); // course v3 flips, spins, grind lines (tricks.js); after the pose so a flip wins
     this.updateCamera(dt);
 
     if (this.audio && this.audio.started) {

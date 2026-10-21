@@ -387,8 +387,8 @@ const unit = (stat, n) => ({ smash: n === 1 ? "smash" : "smashes", screws: "scre
 
 /* ---------- beat-my-run links ---------- */
 // v: course version (r7 levels). Links without it were made before Factory Zones (v1, the straight hall)
-// and still replay that exact course; new links carry v=2.
-export function challengeUrl(base, seed, score, name, v = 2) {
+// and still replay that exact course; v=2 links replay zones + turns; new links carry v=3 (set pieces + tricks).
+export function challengeUrl(base, seed, score, name, v = 3) {
   const u = new URL("./", base); // base: the game's own folder (config.js GAME_URL)
   u.searchParams.set("c", (seed >>> 0).toString(36));
   u.searchParams.set("s", String(Math.floor(score)));
@@ -400,7 +400,7 @@ export function readChallenge(search = location.search) {
   const q = new URLSearchParams(search);
   const c = q.get("c"), s = parseInt(q.get("s") || "", 10), n = q.get("n") || "";
   if (!c || !/^[0-9a-z]{1,7}$/.test(c) || !(s >= 0 && s < 1e8)) return null;
-  const v = q.get("v") === "2" ? 2 : 1; // unknown or future versions: the classic course, never an error
+  const qv = q.get("v"), v = qv === "2" ? 2 : qv === "3" ? 3 : 1; // unknown or future versions: the classic course, never an error
   return { seed: parseInt(c, 36) >>> 0, score: s, name: /^[A-Za-z0-9_]{3,16}$/.test(n) ? n : "", v };
 }
 

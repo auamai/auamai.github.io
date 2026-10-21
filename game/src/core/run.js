@@ -267,6 +267,7 @@ export class Run {
       const o = this.obstacles[i];
       if (o.z > -REVIVE_CLEAR && o.z - o.h < 1.5) { o.g.visible = false; this.pools[o.type].push(o.g); this.obstacles.splice(i, 1); }
     }
+    this.reviveHazards?.();
     const r = this.r;
     if (r.y < 0) { r.y = 0; r.vy = 0; r.ground = true; }
     const cos = MT.cosClean(this.profile.cos);

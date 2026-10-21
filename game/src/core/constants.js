@@ -145,7 +145,7 @@ export const OVER_ICON = {
   dare: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 12h8M12 8l4 4-4 4M4 5v14M20 5v14"/></svg>',
   daily: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5.5" width="16" height="14" rx="2.5"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/></svg>',
 };
-export const CAUSE = { crate: "Clipped a crate", stack: "Into the stack", arm: "Caught by the arm", bot: "Hit an oncoming rover", gap: "Fell through the line" };
+export const CAUSE = { crate: "Clipped a crate", stack: "Into the stack", arm: "Caught by the arm", bot: "Hit an oncoming rover", gap: "Fell through the line", door: "Shut in the oven door", press: "Under the press", crane: "Under the crane", fire: "Into the test fire" };
 // Game-over headlines, per hazard: {v} speed in m/s, {bay} the bay you went down in. Picked at random.
 export const HEADLINES = {
   crate: ["Clipped a crate at {v} m/s", "That crate wasn't moving. You were, at {v} m/s", "Took a crate at {bay}", "Shipped early from {bay}"],
@@ -153,6 +153,10 @@ export const HEADLINES = {
   arm: ["Swept by the arm at {bay}", "The arm saw you first", "Should have slid under that one", "Picked up by the line at {bay}"],
   bot: ["Met a rover head-on at {v} m/s", "Right of way: the rover at {bay}", "Robot traffic at {bay}", "The rover had the lane at {bay}"],
   gap: ["Dropped through the line at {bay}", "Missed the floor by a jump", "Down the gap at {v} m/s", "The belt ran out at {bay}"],
+  door: ["The oven door shut first", "Closed for baking at {bay}", "Watch the lamp: yellow shuts"],
+  press: ["Stamped at {v} m/s", "The press keeps time. You didn't", "Pressed flat at {bay}"],
+  crane: ["The crane delivered. On you", "Containerised at {v} m/s", "Lift zone at {bay}"],
+  fire: ["Walked into the test fire", "Engine test: passed. Robot: not", "Too hot at {v} m/s"],
   drill: ["Drill went cold. The arm didn't"], hammer: ["Hammer's down. The stack wasn't"],
 };
 export const BAY = { weld: "the weld cell", laser: "the laser cutters", test: "the test bay", inventory: "the parts racks", window: "the window wall", assembly: "final assembly", door: "the loading dock" };

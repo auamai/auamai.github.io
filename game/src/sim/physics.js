@@ -4,6 +4,7 @@ import { DESPAWN_Z, JUMP_V, COYOTE, SLIDE_T, RAIL_H, RAMP_DEG, RAMP_H, RAMP_L, H
 
 export class Physics {
   act(move) {
+    if (this.trickAct(move)) return; // v3: in the air off a ramp, up = flip, down = spin (tricks.js)
     const r = this.r;
     if (move === "left" || move === "right") {
       const to = move === "left" ? Math.max(0, r.lane - 1) : Math.min(2, r.lane + 1);

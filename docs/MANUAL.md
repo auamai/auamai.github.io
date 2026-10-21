@@ -251,6 +251,26 @@ hazards for everyone.
 
 ---
 
+### Machines of the line (course v3)
+
+Each zone has its own machine. You meet it alone first on a roomy stretch, then mixed with the zone's obstacles, then in a harder form near the end of the zone.
+
+| Zone | Machine | How to read it |
+| --- | --- | --- |
+| Bakery Line | Oven door | Yellow lamp: the shutter drops shut just before you get there. Change lanes. Cyan lamp: it stays open. |
+| Auto Plant | Stamping press | Keeps a steady beat. The lamp blinks yellow for 0.6 s before the ram slams. Gears sit under it: time it, or slide under a ram that is still rising. Late in the zone, two presses work on opposite beats. |
+| Chip Fab | Wafer conveyor | Cyan chevrons push you one lane the way they point. Jump over it to stay in your lane. |
+| Night Port | Gantry crane | A container hangs over a marked bay. The marking turns yellow, then the container drops ahead of you. Jump it like a crate or go round. |
+| Rocket Factory | Engine test fire | A wall engine glows for 0.7 s, then fires across one lane (two lanes later in the zone). The yellow line on the floor shows how far it reaches. |
+
+**Close shave:** get through a press or past a test fire within a quarter of a second of it going off and you earn +40 and a notch on the Overdrive meter.
+
+### Tricks (course v3)
+
+- **Ramp tricks:** in the air off a Roller Mode ramp, jump to front flip or slide to spin. You can queue one more trick while one is turning. Land square for Flip +120 or Spin +90, and every extra trick in the same jump adds half again. If you land mid-turn, that's Sloppy: no bonus, but no crash either.
+- **Grind lines:** a rail pays 3 points per metre when you leave it. There's no balance to keep. Hop onto the next rail within 0.7 s and the line carries on at ×1.5, then ×2.
+- All of these count toward the normal score limits.
+
 ## Daily Run and streaks
 
 The **Daily Run** is one course a day, the same for every player.
