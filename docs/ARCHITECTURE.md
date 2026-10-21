@@ -910,21 +910,48 @@ skips the bus ducks.
 
 ### Draw calls: the honest numbers
 
-`renderer.info` summed over every `renderer.render` in a frame, shadow pass included.
+Measured on `review/instancing` (`f925086`, merged into `integration/r7`) with real GL draw calls on the game canvas
+(WebGL `draw*` hooked, shadow pass split out by wrapping `renderer.shadowMap.render`, 3D UI overlay excluded).
+Daily seed, god mode, one render every 0.2 s for 45 s; busy window t = 10 to 18 s; desktop 1280x800 ("hi" tier),
+phone 390x844 DPR 3 ("lo" tier), quality locked at q0. Session-to-session variance is about ±10 because side-hall zone
+picks use `Math.random`.
 
-| Situation | Phone | Desktop |
-| --- | --- | --- |
-| Early run (2 to 2.5 s), median | ~130 to 135 | ~146 to 157 |
-| Busy mid-run, shadows on | ~225 to 275 | ~225 to 275 |
-| Garage close-up | 115 to 125 | 132 to 135 |
+| Metric | Desktop before → after | Phone before → after | Budget |
+| --- | --- | --- | --- |
+| Run median, main pass | 263 → **198** | 249 → **176** | ≤140 / ≤125 (not met) |
+| Run p95, main pass | 316 → 218 | 298 → 205 | — |
+| Busy p95 incl. shadow | 318 to 338 → **240 to 258** | 298 to 300 → **244** | ≤170 (not met) |
+| Empty lane (t = 0.2 s), main / shadow | 151 / 29 → ~146 / 29 | — | — |
+| Early run `renderer.info` (2.5 s) | run 146, Garage 142 | | ≤156 |
 
-The old "152" budget was measured 2 s into a run and does not hold mid-run: busy frames reach **~225 to 275**, of which
-**+50 to 74** is the shadow pass. Integrated build (`integration/r7`, `b1ea002`): median draw calls **phone 138, desktop 155**.
-A perf-instancing pass (instance gears and screws, merge obstacle meshes) on the integrated build is in progress
-on `review/instancing`.
+The old "152" budget was measured about 2 s into a run with empty lanes and does not hold mid-run. The earlier
+integration figures (median phone 138, desktop 155) were early-run `renderer.info` readings, which only report the last
+`render()` call. The instancing pass cut run draws by about 25%, but **the draw-call budget is not yet met**.
 
-> **TODO (perf-instancing):** replace this note with the instancing pass's measured numbers (early-run median,
-> busy mid-run with shadows, Garage close-up; phone and desktop) and its commit, in the same PR that merges it.
+**Draw-call budget.** Repeated things are drawn in batches. Gears and screws are pooled bare transforms (`Object3D`; a
+screw is a group with a `spin` and a `halo` child) that the sim and frame loop move like any object. One
+`InstancedMesh` per part draws them all: gears (1 draw, +1 shadow on the "hi" tier), screw steel, screw threads and
+screw halo (3 draws total). `Render.syncInstances()` runs from `scene.onBeforeRender`, after three's matrix update and
+before the shadow pass. It copies each live proxy's `matrixWorld` into the instance buffer with no allocation, sets
+`count`, and hides empty sets. Buffers start at 96 gears and 32 screws and double only if exceeded. Pooled obstacles
+are built from boxes, then `WorldGen.collapse()` bakes every static part into one mesh per material and one
+`LineSegments` per outline material, in the obstacle's own frame. The merged geometry is cached per type and shared by
+the pool. Animated joints (arm pivot/elbow) and material-flipping parts (bot blinkers) stay separate. Lanes and side
+rails are single merged meshes. Shared helper: `mergeParts([{ geo, mx }])` in render/geometry.js (positions + normals,
+indexed). `scene.onBeforeRender` is now in use: anything else that needs it must chain, not overwrite. Measure with
+real GL draws as above; `renderer.info` only reports the last `render()` call.
+
+Where a busy desktop frame goes after the pass (t = 14.2 s, 231 main draws): side-hall zones 86 mesh + 16 outline,
+robot 49, arm gantries 24 (about 3 arms x 8), static hall 13, crates + stacks 21 + 7 lines, ceiling 3, screws 3,
+gears 1. Shadow pass 31, of which the robot is 29.
+
+**Next steps to reach the budget:**
+1. Side-hall zones (~100 draws for 16 slots): instance zones per type, merge zone outlines into one line set per side,
+   and hide zones whose near edge is beyond the fog far (128) after a pixel check.
+2. Robot (49 main + 29 shadow): limit shadow casting to torso, legs and head (about −20 shadow draws; the contact blob
+   carries grounding), and merge static sub-groups that never animate in the runner pose set.
+3. Arm gantries (8 draws each): one `InstancedMesh` per material across all live arms.
+4. Confirm frame time on a real mid-range phone (4x CPU throttle p95 ≤ 16.7 ms).
 
 Not yet measured on this box (2 CPUs, shared): 4x CPU-throttle p95 frame time, Fast-3G first frame, a 30-minute soak
 at full speed. These need a quiet machine or a real phone before release. The 10-minute soak at r6d showed 0 errors
