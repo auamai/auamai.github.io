@@ -1,4 +1,4 @@
-// Factory run: a small endless runner. Loaded only when someone presses Play.
+// Servo Sprint: a small endless runner. Loaded only when someone presses Play.
 // Entry point: builds the Game from its modules (src/). See README.md for the module map.
 import * as P from "./profile.js?v=20261020r6b";
 import * as MT from "./meta.js?v=20261020r6b";
@@ -15,6 +15,7 @@ import { Hud } from "./src/ui/hud.js?v=20261020r6b";
 import { Panels } from "./src/ui/panels.js?v=20261020r6b";
 import { Garage } from "./src/meta/garage.js?v=20261020r6b";
 import { Net } from "./src/net/net.js?v=20261020r6b";
+import { SoundUi } from "./src/ui/sound-ui.js?v=20261020r6b";
 import { installErrorReporting } from "./src/net/errors.js?v=20261020r6b";
 export { allowedScore } from "./src/core/constants.js?v=20261020r6b";
 
@@ -29,13 +30,6 @@ function loadCss() {
       link.href = new URL("./game.css?v=20261020r6b", import.meta.url).href;
       link.onload = link.onerror = () => resolve();
       document.head.appendChild(link);
-      // Semibold Inter Tight for the score (the page ships 300/400 only).
-      if (!document.querySelector("link[data-fr-font]")) {
-        const f = document.createElement("link");
-        f.rel = "stylesheet"; f.dataset.frFont = "1";
-        f.href = "https://fonts.googleapis.com/css2?family=Inter+Tight:wght@600&display=swap";
-        document.head.appendChild(f);
-      }
     });
   }
   return cssLoaded;
@@ -112,6 +106,7 @@ class Game {
     if (window.visualViewport) window.visualViewport.removeEventListener("resize", this.onResize);
     this.ro?.disconnect();
     if (this.onPop) window.removeEventListener("popstate", this.onPop);
+    if (this.onDocDown) document.removeEventListener("pointerdown", this.onDocDown, true);
 
     this.scene.traverse((o) => { if (o.geometry && o.geometry !== BOX) o.geometry.dispose(); });
     Object.values(this.M).forEach((m) => m.dispose());
@@ -142,10 +137,10 @@ function install(target, ...sources) {
   for (const S of sources) {
     for (const [k, d] of Object.entries(Object.getOwnPropertyDescriptors(S.prototype))) {
       if (k === "constructor") continue;
-      if (Object.prototype.hasOwnProperty.call(target.prototype, k)) throw new Error(`Factory Run: ${k} defined twice`);
+      if (Object.prototype.hasOwnProperty.call(target.prototype, k)) throw new Error(`Servo Sprint: ${k} defined twice`);
       Object.defineProperty(target.prototype, k, d);
     }
   }
 }
-install(Game, Loop, Run, Physics, Input, WorldGen, Render, Sound, Hud, Panels, Garage, Net);
+install(Game, Loop, Run, Physics, Input, WorldGen, Render, Sound, Hud, Panels, Garage, Net, SoundUi);
 installErrorReporting();

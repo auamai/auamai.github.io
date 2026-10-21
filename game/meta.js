@@ -1,4 +1,4 @@
-// Factory run: everything around a run that brings you back. The Daily Run (one seeded course a
+// Servo Sprint: everything around a run that brings you back. The Daily Run (one seeded course a
 // day, America/Vancouver), the daily streak with one free miss a week, missions, the gear shop,
 // near-miss nudges, the share card, beat-my-run links, and the read-only summary the site teaser
 // reads. Pure helpers plus small state kept in the settings bag; see game/README.md for the keys.
@@ -153,7 +153,7 @@ const unit = (stat, n) => ({ smash: n === 1 ? "smash" : "smashes", screws: "scre
 
 /* ---------- beat-my-run links ---------- */
 export function challengeUrl(base, seed, score, name) {
-  const u = new URL("game/", base);
+  const u = new URL("./", base); // base: the game's own folder (config.js GAME_URL)
   u.searchParams.set("c", (seed >>> 0).toString(36));
   u.searchParams.set("s", String(Math.floor(score)));
   if (name) u.searchParams.set("n", name);
@@ -168,40 +168,53 @@ export function readChallenge(search = location.search) {
 
 /* ---------- share card ---------- */
 // A 1080x1350 image: score, rank, the robot (a frame of the game canvas), and the Daily Run link.
-export async function shareCard({ canvas, score, rank, best, daily, name, link }) {
+// Share card (1080 x 1350), in the Servo Sprint identity: graphite, off-white numerals, the wordmark,
+// a yellow hazard rule, cyan for the rank line. Uses the bundled Inter Tight (300/400) and Plex Mono.
+export async function shareCard({ canvas, score, rank, best, daily, name, link, wordmark }) {
   const W = 1080, H = 1350, c = document.createElement("canvas");
   c.width = W; c.height = H;
   const x = c.getContext("2d");
-  x.fillStyle = "#f4f6fb"; x.fillRect(0, 0, W, H);
+  try { await document.fonts.load('300 200px "Inter Tight"'); await document.fonts.load('400 40px "IBM Plex Mono"'); } catch { /* fallback */ }
+  x.fillStyle = "#14161b"; x.fillRect(0, 0, W, H);
   if (canvas) {
     const s = Math.max(W / canvas.width, 760 / canvas.height);
     const w = canvas.width * s, h = canvas.height * s;
-    try { x.drawImage(canvas, (W - w) / 2, 330 - (h - 760) / 2, w, h); } catch { /* tainted or lost */ }
-    const g = x.createLinearGradient(0, 300, 0, 1090);
-    g.addColorStop(0, "rgba(244,246,251,1)"); g.addColorStop(0.18, "rgba(244,246,251,0)"); g.addColorStop(0.82, "rgba(244,246,251,0)"); g.addColorStop(1, "rgba(244,246,251,1)");
-    x.fillStyle = g; x.fillRect(0, 300, W, 790);
+    try { x.globalAlpha = 0.9; x.drawImage(canvas, (W - w) / 2, 400 - (h - 760) / 2, w, h); x.globalAlpha = 1; } catch { /* tainted or lost */ }
+    const g = x.createLinearGradient(0, 380, 0, 1170);
+    g.addColorStop(0, "rgba(20,22,27,1)"); g.addColorStop(0.22, "rgba(20,22,27,0.15)"); g.addColorStop(0.75, "rgba(20,22,27,0.15)"); g.addColorStop(1, "rgba(20,22,27,1)");
+    x.fillStyle = g; x.fillRect(0, 380, W, 790);
   }
-  const font = (w, px) => `${w} ${px}px "Inter Tight", "Inter", system-ui, sans-serif`;
-  x.fillStyle = "#10162f"; x.textBaseline = "alphabetic";
-  x.font = font(400, 44); x.fillText(daily ? "Factory Run · Daily Run" : "Factory Run", 80, 120);
-  x.font = font(600, 190); x.fillText(fmtN(score), 72, 300);
-  x.font = font(400, 40); x.fillStyle = "#4f63c4";
-  x.fillText([best ? "New personal best" : "", rank ? `#${rank} on the board` : "", name || ""].filter(Boolean).join("  ·  "), 80, 1160);
-  x.fillStyle = "#10162f"; x.font = font(400, 36);
-  x.fillText("Beat it:", 80, 1240);
-  x.font = font(600, 36); x.fillText(link.replace(/^https?:\/\//, ""), 230, 1240);
-  x.fillStyle = "#a9bcff"; x.fillRect(80, 1280, 160, 8);
+  const sans = (w, px) => `${w} ${px}px "Inter Tight", system-ui, sans-serif`, mono = (px) => `400 ${px}px "IBM Plex Mono", ui-monospace, monospace`;
+  // Wordmark (SVG, currentColor -> off-white), 64 px cap height, top left on the 8 px grid.
+  if (wordmark) {
+    try {
+      const svg = wordmark.replace("currentColor", "#f2f0ea").replace("<svg ", '<svg width="604" height="64" ');
+      const img = new Image(); img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+      await img.decode(); x.drawImage(img, 80, 80, 604, 64);
+    } catch { /* skip */ }
+  }
+  x.textBaseline = "alphabetic"; x.fillStyle = "rgba(242,240,234,.64)";
+  x.font = mono(32); x.fillText(daily ? "DAILY RUN" : "SCORE", 80, 232);
+  x.fillStyle = "#f2f0ea"; x.font = sans(300, 200); x.fillText(fmtN(score), 68, 408);
+  x.font = sans(400, 40); x.fillStyle = "#3ddcff";
+  x.fillText([best ? "New personal best" : "", rank ? `#${rank} on the board` : "", name || ""].filter(Boolean).join("  ·  "), 80, 1168);
+  x.fillStyle = "#f2f0ea"; x.font = sans(300, 36); x.fillText("Beat it:", 80, 1240);
+  x.font = sans(400, 36); x.fillText(link.replace(/^https?:\/\//, ""), 220, 1240);
+  // Hazard rule: 45 degree stripes, 16 px bands, pixel-aligned.
+  x.save(); x.beginPath(); x.rect(80, 1272, 240, 16); x.clip(); x.fillStyle = "#ffc93c"; x.fillRect(80, 1272, 240, 16); x.fillStyle = "#14161b";
+  for (let i = -1; i < 9; i++) { const x0 = 80 + i * 32; x.beginPath(); x.moveTo(x0, 1288); x.lineTo(x0 + 16, 1288); x.lineTo(x0 + 32, 1272); x.lineTo(x0 + 16, 1272); x.closePath(); x.fill(); }
+  x.restore();
   const blob = await new Promise((r) => c.toBlob(r, "image/png"));
   return { blob, url: c.toDataURL("image/png") };
 }
 export async function shareOrDownload({ blob, url }, text, link) {
-  const file = blob && typeof File === "function" ? new File([blob], "factory-run.png", { type: "image/png" }) : null;
+  const file = blob && typeof File === "function" ? new File([blob], "servo-sprint.png", { type: "image/png" }) : null;
   try {
     if (file && navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text, url: link }); return "shared"; }
     if (navigator.share) { await navigator.share({ text, url: link }); return "shared"; }
   } catch (e) { if (e && e.name === "AbortError") return "cancelled"; }
   const a = document.createElement("a");
-  a.href = url; a.download = "factory-run.png";
+  a.href = url; a.download = "servo-sprint.png";
   document.body.appendChild(a); a.click(); a.remove();
   return "downloaded";
 }

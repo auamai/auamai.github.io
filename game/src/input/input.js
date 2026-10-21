@@ -22,6 +22,7 @@ export class Input {
         return;
       }
       if (typing) return;
+      if (k === "m" && !e.ctrlKey && !e.metaKey && !e.altKey) { if (!e.repeat) this.toggleMusic(); return; }
       if (this.state === "play") {
         if (MOVES[k]) { e.preventDefault(); if (!e.repeat) this.act(MOVES[k]); }
         else if (k === "p") this.pause();
@@ -132,6 +133,9 @@ export class Input {
     window.addEventListener("orientationchange", this.onTurn);
     if (window.visualViewport) window.visualViewport.addEventListener("resize", this.onResize);
     if ("ResizeObserver" in window) { this.ro = new ResizeObserver(this.onResize); this.ro.observe(this.root); }
+
+    this.bindSound();
+    this.bindGamepad?.();
 
     // Back button closes the overlay instead of leaving the page.
     if (!this.opts.standalone) {

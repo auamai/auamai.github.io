@@ -1,0 +1,4 @@
+Inter Tight (variable, wght 100-900) and IBM Plex Mono Regular are licensed under the SIL Open Font License, Version 1.1.
+Full licence text: ../OFL-InterTight.txt and https://openfontlicense.org/open-font-license-official-text/
+Copyright 2022 The Inter Project Authors (https://github.com/rsms/inter). Copyright 2017 IBM Corp. (IBM Plex).
+Files here are Latin subsets (pyftsubset) made for Servo Sprint and self-hosted; no font CDN is used.

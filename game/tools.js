@@ -1,4 +1,4 @@
-// Factory run: tool pickups (screws, wrench, drill, hammer, golden torque wrench), the props the
+// Servo Sprint: tool pickups (screws, wrench, drill, hammer, golden torque wrench), the props the
 // runner holds, and a small pooled particle burst for smashes, overdrive and new-best confetti.
 // Low-poly, gear palette only: navy, periwinkle, pearl and steel. No orange.
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";

@@ -67,7 +67,7 @@ export class Run {
     this.shake = this.reduceMotion ? 0 : Math.max(this.shake, 0.12);
     f.swing = 0.32;
     this.buzz(18);
-    this.sfx(drill ? "drill" : "hammer", o.x);
+    this.sfx(drill ? "drill" : o.type === "bot" ? "hammer" : "crate", o.x);
     this.hitGold();
     if (f.smashCredit > 0) { f.smashCredit = 0; this.fillMeter(1); }
   }
@@ -338,7 +338,7 @@ export class Run {
     this.root.classList.remove("is-playing");
     this.pbLine.visible = false;
     this.buzz(60);
-    this.sfx("hit", this.r.x);
+    this.sfx(kind === "fall" ? "fall" : type === "crate" || type === "stack" ? "crash_wood" : "crash_steel", this.r.x);
     this.audio?.mood("over");
   }
 

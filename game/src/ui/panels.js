@@ -6,6 +6,7 @@ import { Factory } from "../../factory.js?v=20261020r6b";
 import { FactoryAudio } from "../../audio.js?v=20261020r6b";
 import { OVER_LOCK, ICON, OVER_ICON } from "../core/constants.js?v=20261020r6b";
 import { fmt, esc, clock } from "../core/util.js?v=20261020r6b";
+import { WORDMARK } from "./brand.js?v=20261020r6b";
 
 export class Panels {
   /* ---------- DOM ---------- */
@@ -14,7 +15,7 @@ export class Panels {
     root.className = "fr";
     root.setAttribute("role", "dialog");
     root.setAttribute("aria-modal", "true");
-    root.setAttribute("aria-label", "Factory run");
+    root.setAttribute("aria-label", "Servo Sprint");
     root.innerHTML = `
       <canvas class="fr__canvas" aria-hidden="true"></canvas>
       <div class="fr__pops" aria-hidden="true"></div>
@@ -32,8 +33,12 @@ export class Panels {
         </span>
       </div>
       <div class="fr__corner">
+        <div class="fr__soundwrap">
+          <button class="fr__icon" type="button" data-act="sound" aria-pressed="false" aria-label="Mute music" aria-keyshortcuts="M" title="Music (M) · hold for volume">${ICON.sound}</button>
+          <div class="fr__volpop" role="group" aria-label="Volume" hidden></div>
+        </div>
         <button class="fr__icon" type="button" data-act="pause" aria-label="Pause" hidden>${ICON.pause}</button>
-        <button class="fr__icon" type="button" data-act="close" aria-label="Close game">${ICON.close}</button>
+        ${this.opts.standalone && !this.opts.exitUrl ? "" : `<button class="fr__icon" type="button" data-act="close" aria-label="Close game">${ICON.close}</button>`}
       </div>
       <div class="fr__pad" hidden>
         <div class="fr__wheelpad" role="group" aria-label="Controls">
@@ -82,8 +87,17 @@ export class Panels {
     for (const k of ["music", "sfx"]) if (this.settings[k] === undefined) this.settings[k] = true;
     this.audio = new FactoryAudio(this.settings);
     // Sound starts on the first tap or key (browsers block it before), then follows the tab.
-    const unlock = () => { this.audio.unlock(); this.audio.mood(this.state === "play" || this.state === "count" ? "run" : this.state === "pause" ? "pause" : this.state === "over" || this.state === "dying" ? "over" : "menu"); };
+    // iOS guard: older Safari only treats touchend/click as an unlock gesture, and a call or Siri can leave the
+    // context "interrupted"; every gesture retries until it is running. mood() runs only on a real (re)start, so
+    // ordinary taps never cancel a running sweep.
+    const unlock = () => {
+      const was = this.audio.started && this.audio.ctx && this.audio.ctx.state === "running";
+      this.audio.unlock();
+      if (!was) this.audio.mood(this.state === "play" || this.state === "count" ? "run" : this.state === "pause" ? "pause" : this.state === "over" || this.state === "dying" ? "over" : "menu");
+    };
     root.addEventListener("pointerdown", unlock, { capture: true });
+    root.addEventListener("touchend", unlock, { capture: true });
+    root.addEventListener("click", unlock, { capture: true });
     window.addEventListener("keydown", unlock, { capture: true, once: true });
 
     this.savedOverflow = [document.documentElement.style.overflow, document.body.style.overflow];
@@ -157,7 +171,8 @@ export class Panels {
     const list = this.coarse
       ? [row("Swipe ‹ ›", "lanes"), row("Swipe up", "jump"), row("Swipe down", "slide")]
       : [row("<kbd>←</kbd><kbd>→</kbd>", "lanes"), row("<kbd>↑</kbd><kbd>Space</kbd>", "jump"), row("<kbd>↓</kbd>", "slide"), row("<kbd>P</kbd>", "pause")];
-    return `<ul class="fr__controls" aria-label="Controls">${list.join("")}</ul>
+    const desk = this.coarse ? "" : `<p class="fr__muted fr__desk-line">Made for the keyboard: arrows or WASD, Space to jump. A gamepad works too.</p>`;
+    return `<ul class="fr__controls" aria-label="Controls">${list.join("")}</ul>${desk}
       <p class="fr__muted fr__wheel-note"><span class="fr__mini-wheel">${ICON.wheel}</span>Wheel tokens: Roller Mode for 8&nbsp;s. Faster, grinds rails, launches off ramps, chains drifts for a combo. No slide, just a low hop.</p>
       <p class="fr__muted fr__wheel-note"><span class="fr__mini-wheel">${ICON.tool}</span>Screws +25. Wrench: magnet. Drill: bores arms. Hammer: smashes crates and robots. Five tools fill the toolbox for Overdrive ×2.</p>`;
   }
@@ -225,7 +240,7 @@ export class Panels {
     }
     if (!this.saveUi || this.saveUi.ctx !== "menu") this.saveUi = { open: "", msg: "", busy: false, code: "", ctx: "menu" };
     this.renderPanel(`
-      <h2 class="fr__title">Factory Run</h2>
+      <h2 class="fr__title fr__brand"><span class="fr__sr-only">Servo Sprint</span>${WORDMARK}</h2>
       <p class="fr__sub">Sprint the line. Bank the gears. Don't meet the machines.</p>
       ${body}
       ${!fresh ? `<div data-slot="save">${this.saveHtml("menu")}</div>` : ""}
@@ -267,8 +282,8 @@ export class Panels {
 
   statsHtml() {
     const r = this.lastRun, I = OVER_ICON;
-    const st = [["gears", fmt(r.gears), "Gears"], ["time", clock(r.time), "Time"], ["dist", r.dist >= 1000 ? `${(r.dist / 1000).toFixed(r.dist >= 10000 ? 0 : 1)} km` : `${fmt(r.dist)} m`, "Distance"],
-      ["tools", fmt(r.tools), "Tools"], ["mult", `×${(Math.round(r.bestMult * 10) / 10).toString()}`, "Top multiplier"], ["smash", fmt(r.smashes), "Smashed"]];
+    const st = [["gears", fmt(r.gears), "Gears"], ["time", clock(r.time), "Time"], ["dist", r.dist >= 1000 ? `${(r.dist >= 100000 ? Math.round(r.dist / 1000) : r.dist >= 10000 ? Math.round(r.dist / 100) / 10 : Math.round(r.dist / 10) / 100).toFixed(r.dist >= 100000 ? 0 : r.dist >= 10000 ? 1 : 2)}<small>km</small>` : `${fmt(r.dist)}<small>m</small>`, "Distance"],
+      ["tools", fmt(r.tools), "Tools"], ["mult", `×${(Math.round(r.bestMult * 10) / 10).toString()}`, "Multiplier"], ["smash", fmt(r.smashes), "Smashed"]];
     return `<ul class="fr__stats">${st.map(([k, v, n], i) => `<li style="--i:${i}"><span class="fr__sicon">${I[k]}</span><b>${v}</b><span>${n}</span></li>`).join("")}</ul>`;
   }
 
@@ -494,7 +509,7 @@ export class Panels {
   saveMsg(res, what) {
     if (res.cancelled) return "";
     if (res.status === 409) return what === "save" ? "That name is already saved by someone. Sign in if it's yours, or use a different name." : "That didn't work. Try again.";
-    if (res.status === 401) return what === "login" ? "That passkey isn't saved for Factory Run." : "That name and code don't match.";
+    if (res.status === 401) return what === "login" ? "That passkey isn't saved for Servo Sprint." : "That name and code don't match.";
     if (res.status === 429) return "Too many tries. Give it a minute.";
     if (res.offline) return "Couldn't reach the server. Check your connection.";
     if (res.exists) return "This device already has a passkey for this name.";
@@ -639,7 +654,7 @@ export class Panels {
       b.setAttribute("aria-pressed", this.settings[k] ? "true" : "false");
       if (k === "haptics" && this.settings[k]) this.buzz(15);
       if (k === "lefty") this.root.classList.toggle("is-lefty", !!this.settings.lefty);
-      if (k === "music" || k === "sfx") { this.audio.applyVolumes(); if (k === "sfx" && this.settings[k]) this.sfx("tap"); }
+      if (k === "music" || k === "sfx") { this.audio.applyVolumes(); this.paintSound(); if (k === "sfx" && this.settings[k]) this.sfx("tap"); }
     } else if (a === "copy") {
       try { await navigator.clipboard.writeText(b.dataset.code); this.toast("Copied"); } catch { this.toast("Couldn't copy. Write it down instead."); }
     } else if (a === "doclaim") {

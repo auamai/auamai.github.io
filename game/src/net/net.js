@@ -2,7 +2,8 @@
 // Installed onto Game.prototype by game.js (methods use `this`, the Game).
 import * as P from "../../profile.js?v=20261020r6b";
 import * as MT from "../../meta.js?v=20261020r6b";
-import { Factory } from "../../factory.js?v=20261020r6b";
+import { GAME_URL } from "../../config.js?v=20261020r6b";
+import { WORDMARK } from "../ui/brand.js?v=20261020r6b";
 import { fmt } from "../core/util.js?v=20261020r6b";
 
 export class Net {
@@ -71,19 +72,19 @@ export class Net {
     const r = this.lastRun;
     if (!r) return;
     this.renderer.render(this.scene, this.camera); // a fresh frame to copy (the buffer isn't kept)
-    const link = r.mode === "daily" ? "https://auamai.dev/game/?daily=1" : MT.challengeUrl("https://auamai.dev/", r.seed, r.score, this.profile.username);
-    const card = await MT.shareCard({ canvas: this.canvas, score: r.score, rank: r.dailyRank || r.rank, best: r.best, daily: r.mode === "daily", name: this.profile.username, link });
+    const link = r.mode === "daily" ? new URL("?daily=1", GAME_URL).href : MT.challengeUrl(GAME_URL, r.seed, r.score, this.profile.username);
+    const card = await MT.shareCard({ canvas: this.canvas, score: r.score, rank: r.dailyRank || r.rank, best: r.best, daily: r.mode === "daily", name: this.profile.username, link, wordmark: WORDMARK });
     this.lastCard = card;
-    const how = await MT.shareOrDownload(card, `I scored ${fmt(r.score)} in Factory Run.`, link);
+    const how = await MT.shareOrDownload(card, `I scored ${fmt(r.score)} in Servo Sprint.`, link);
     if (how === "downloaded") this.toast("Card saved");
   }
 
   async dare() {
     const r = this.lastRun;
     if (!r) return;
-    const link = MT.challengeUrl("https://auamai.dev/", r.seed, r.score, this.profile.username);
+    const link = MT.challengeUrl(GAME_URL, r.seed, r.score, this.profile.username);
     try {
-      if (navigator.share) await navigator.share({ text: `Beat my ${fmt(r.score)} in Factory Run`, url: link });
+      if (navigator.share) await navigator.share({ text: `Beat my ${fmt(r.score)} in Servo Sprint`, url: link });
       else { await navigator.clipboard.writeText(link); this.toast("Challenge link copied"); }
     } catch (e) { if (!e || e.name !== "AbortError") this.toast(link); }
   }

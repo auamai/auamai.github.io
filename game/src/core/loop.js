@@ -101,6 +101,7 @@ export class Loop {
           // Landing: absorb and camera shake scale with the impact speed.
           r.impact = -r.vy; r.landT = 0.22;
           if (!this.reduceMotion && r.impact > 7) this.shake = Math.max(this.shake, Math.min(0.25, (r.impact - 7) * 0.03));
+          if (r.impact > 3 && !r.launch) this.sfx("land", r.x); // sound only: no sim state
           if (r.launch) { r.launch = false; r.landRoll = LAND_ROLL; this.addScore(50, { x: r.x, y: 1, z: 0 }); this.sfx("slide", r.x); }
           r.hopRail = null;
           r.y = 0; r.vy = 0; r.ground = true;

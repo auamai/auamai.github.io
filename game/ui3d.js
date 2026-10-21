@@ -1,4 +1,4 @@
-// Factory run: 3D hints and countdown, drawn in a small overlay scene on top of the hall.
+// Servo Sprint: 3D hints and countdown, drawn in a small overlay scene on top of the hall.
 // Extruded Inter Tight text in deep navy with a lighter navy-periwinkle extrusion, on a soft pearl glow,
 // with gesture icons that move the way the swipe does. One geometry per string, cached.
 // Drawn on its own small transparent canvas at the screen's pixel ratio (capped at 2) with MSAA, so it
