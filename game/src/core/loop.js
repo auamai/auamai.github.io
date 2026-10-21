@@ -24,7 +24,11 @@ export class Loop {
       if (this.ctxLost) return;
       // A paused frame doesn't change: draw it once, then let the GPU rest.
       if (this.state === "pause" && this.drawn) return;
+      // Game feel (render/juice.js, render only): a crash holds its impact frame; kicks/squash wrap the draw.
+      if (this.juiceHold(dt)) return;
+      this.juicePre(dt);
       this.renderer.render(this.scene, this.camera);
+      this.juicePost();
       this.ui.render();
       this.drawn = this.state === "pause";
       this.measure(dt);

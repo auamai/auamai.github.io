@@ -778,3 +778,15 @@ html.fr-open, html.fr-open body { overscroll-behavior: none; }
 @keyframes fr-ghost-chase { 0% { transform: scale(1); } 40% { transform: scale(1.12); box-shadow: 0 0 0 2px #3ddcff; } 100% { transform: scale(1); } }
 .fr.is-still .fr__ghost.is-chase { animation: none; }
 @media (prefers-reduced-motion: reduce) { .fr__ghost.is-chase { animation: none; } }
+
+/* The Foreman's bark (render/juice.js): one mono line under the HUD, gold name tag, fades in and out. */
+.fr__fm {
+  position: absolute; left: 50%; top: calc(var(--fr-safe-t, 0px) + 96px); z-index: 3; pointer-events: none;
+  display: flex; align-items: baseline; gap: 10px; padding: 8px 12px; border-radius: 6px; white-space: nowrap;
+  background: rgba(20, 22, 27, .82); border: 1px solid rgba(255, 201, 60, .35);
+  font: 400 12px/1 var(--fr-mono); letter-spacing: .06em; color: #f2f0ea;
+  opacity: 0; transform: translate(-50%, -4px); transition: opacity .2s, transform .2s;
+}
+.fr__fm b { font-weight: 400; text-transform: uppercase; font-size: 10px; letter-spacing: .14em; color: #ffc93c; }
+.fr__fm.is-on { opacity: 1; transform: translate(-50%, 0); }
+@media (max-width: 520px) { .fr__fm { top: calc(var(--fr-safe-t, 0px) + 118px); } }

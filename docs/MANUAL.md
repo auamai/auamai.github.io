@@ -22,6 +22,7 @@ computer, and you can install it like an app. There's nothing to buy with real m
 5. [Power-ups](#power-ups)
 6. [Obstacles](#obstacles)
    - [Factory zones and turns](#factory-zones-and-turns)
+   - [The Foreman](#the-foreman)
 7. [Daily Run and streaks](#daily-run-and-streaks)
 8. [Missions](#missions)
 9. [Garage: name and paint your robot](#garage-name-and-paint-your-robot)
@@ -250,6 +251,22 @@ Zones and turns come from the course's seed, so a challenge or a Daily Run has t
 hazards for everyone.
 
 ---
+
+### The Foreman
+
+The Foreman runs Line 3, and he is never far behind. His drone hangs over your shoulder with a gold
+searchlight on your lane.
+
+- **He closes in** as the run goes on and every time you let a gear go by. A Spare Servo reboot brings him
+  right up ("Saw that.").
+- **He backs off** when you play clean: every hazard you clear in its own lane, every gear, screw and tool
+  pushes him back out of view ("Fine. Carry on.").
+- **Lane check.** A few times a run (about 25 s, 70 s and 2 minutes in) he overtakes you and holds his light
+  on the next real hazard coming at you, then drops back. Use it: the lit lane is the one with trouble in it.
+- When you crash, he is there to say so.
+
+His lines show under the score for a couple of seconds (screen readers hear them too). He is a presence,
+not a hazard: he never blocks a lane, never changes your score and is the same in the Daily Run for everyone.
 
 ## Daily Run and streaks
 
@@ -500,7 +517,7 @@ Open **Settings** from the menu.
 | Vibration | Short buzzes on hits and pickups (only where your device supports it) |
 | Music + volume | The soundtrack, "Line Shift". **M** toggles it; hold the speaker button for volume |
 | Sound effects + volume | Pickups, crashes, chimes |
-| **Reduce motion** | Turns off screen shake, hit-stop, hint slow-motion, the score count-up and menu animations. It starts from your system's reduced-motion setting until you change it here |
+| **Reduce motion** | Turns off screen shake, hit-stop (smash and crash), camera kicks, the robot's squash and stretch, hint slow-motion, the score count-up and menu animations; the Foreman's drone still shows but drifts gently instead of swooping. It starts from your system's reduced-motion setting until you change it here |
 | Ghost racer | Shows the ghost of your best run on the Daily Run and challenge courses (on by default) |
 | Player manual | Opens this manual in a new tab |
 
