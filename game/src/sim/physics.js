@@ -11,7 +11,8 @@ export class Physics {
       this.learned("lanes");
     } else if (move === "jump" && this.driving) {
       // The roller only hops (a rail hop lands back on the rail).
-      if (r.ground || r.rail || r.coyote > 0) { r.coyote = 0; r.vy = HOP_V; r.ground = false; r.hopRail = r.rail; r.rail = null; this.sfx("jump", r.x); if (this.stat) this.stat.jumps++; }
+      if (r.ground || r.rail || r.coyote > 0) this.hop();
+      else { r.jumpBuf = JUMP_BUF; r.queueSlide = false; } // buffered like the runner's jump: hops on touchdown
       this.learned("jump");
     } else if (move === "slide" && this.driving) {
       // No slide in Roller Mode (the wheel already rolls under the arms).
@@ -24,6 +25,13 @@ export class Physics {
       else { r.vy = Math.min(r.vy, -16); r.queueSlide = true; r.jumpBuf = 0; }
       this.learned("slide");
     }
+  }
+
+  // The roller's hop (also fired by a buffered press on touchdown, floor or rail).
+  hop() {
+    const r = this.r;
+    r.coyote = 0; r.jumpBuf = 0; r.vy = HOP_V; r.ground = false; r.hopRail = r.rail; r.rail = null;
+    this.sfx("jump", r.x); if (this.stat) this.stat.jumps++;
   }
 
   // Magnet: anything within reach ahead, in any lane, flies to the runner. Returns true while pulled.
@@ -59,6 +67,7 @@ export class Physics {
       if (this.state === "play" && this.driving && under && r.lane === rl.lane && !r.rail && !r.launch && r.hopRail !== rl && Math.abs(r.x - rl.x) < 0.5 && (r.vy <= 0 || r.y > RAIL_H - 0.2)) {
         r.rail = rl; r.ground = true; r.vy = 0; r.hopRail = null; r.y = Math.max(r.y, RAIL_H - 0.08); // snap
         this.sfx("tool", r.x);
+        if (r.jumpBuf > 0) this.hop();
       }
       if (r.rail === rl && (!under || r.lane !== rl.lane)) { r.rail = null; r.ground = false; r.vy = Math.min(r.vy, 0); r.coyote = COYOTE; }
       if (rl.zNear - rl.len > DESPAWN_Z) { rl.g.visible = false; this.pools.rail.push(rl.g); this.rails.splice(i, 1); }
