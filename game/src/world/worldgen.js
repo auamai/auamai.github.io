@@ -1,10 +1,10 @@
 // Course generation from the seeded COURSE stream, pickups from LOOT, pooling.
 // Installed onto Game.prototype by game.js (methods use `this`, the Game).
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
-import { buildTool } from "../../tools.js?v=20261020r6d";
-import { LANES, SPAWN_Z, START_SPEED, MAX_SPEED, GRAVITY, WHEEL_FROM, WHEEL_GAP, WHEEL_CHANCE, DRIVE_T, ROLL_SPEED, RAIL_H, RAIL_GEAR_GAP, RAMP_DEG, RAMP_H, RAMP_L, TOOL_FROM, TOOL_GAP, TOOL_KIND_GAP, TOOL_CHANCE, BOT_SPEED, BOT_FROM, BOT_TURN_T, BOT_TURN_MIN_Z, visY } from "../core/constants.js?v=20261020r6d";
-import { COURSE, LOOT, pick, shuffle } from "../core/util.js?v=20261020r6d";
-import { BOX } from "../render/geometry.js?v=20261020r6d";
+import { buildTool } from "../../tools.js?v=20261021r7";
+import { LANES, SPAWN_Z, START_SPEED, MAX_SPEED, GRAVITY, WHEEL_FROM, WHEEL_GAP, WHEEL_CHANCE, DRIVE_T, ROLL_SPEED, RAIL_H, RAIL_GEAR_GAP, RAMP_DEG, RAMP_H, RAMP_L, TOOL_FROM, TOOL_GAP, TOOL_KIND_GAP, TOOL_CHANCE, BOT_SPEED, BOT_FROM, BOT_TURN_T, BOT_TURN_MIN_Z, visY } from "../core/constants.js?v=20261021r7";
+import { COURSE, LOOT, pick, shuffle } from "../core/util.js?v=20261021r7";
+import { BOX } from "../render/geometry.js?v=20261021r7";
 
 export class WorldGen {
   spawnItem(kind, lane, z, y = 1.05) {

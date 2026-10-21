@@ -1,6 +1,6 @@
 // Player movement: lane moves, jump, slide, rails, drift, magnet pull.
 // Installed onto Game.prototype by game.js (methods use `this`, the Game).
-import { DESPAWN_Z, JUMP_V, COYOTE, SLIDE_T, RAIL_H, RAMP_DEG, RAMP_H, RAMP_L, HOP_V, DRIFT_CHAIN, DRIFT_MULT, JUMP_BUF, MAGNET_R } from "../core/constants.js?v=20261020r6d";
+import { DESPAWN_Z, JUMP_V, COYOTE, SLIDE_T, RAIL_H, RAMP_DEG, RAMP_H, RAMP_L, HOP_V, DRIFT_CHAIN, DRIFT_MULT, JUMP_BUF, MAGNET_R } from "../core/constants.js?v=20261021r7";
 
 export class Physics {
   act(move) {

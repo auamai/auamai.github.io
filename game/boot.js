@@ -2,7 +2,7 @@
 const boot = document.getElementById("fr-boot");
 // Under the portfolio (/game/) the close button goes back to the site; on its own domain there is nothing to close to.
 const nested = /\/game\/?$/.test(location.pathname.replace(/index\.html$/, ""));
-import("./game.js?v=20261020r6d")
+import("./game.js?v=20261021r7")
   .then(({ openGame }) => openGame({ standalone: true, exitUrl: nested ? "../" : null }))
   .then(() => boot.remove())
   .catch((err) => {

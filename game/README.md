@@ -29,7 +29,7 @@ music and sound. No third-party assets.
 | `brand/`, `fonts/` | Wordmark, icons, og image; bundled Inter Tight + IBM Plex Mono (OFL) |
 
 Brand rules (palette, type, wordmark, buttons): `robotgame/brand/SERVO_SPRINT_BRAND.md` in the working tree.
-Cache-busting: every local import carries `?v=20261020r6d`; bump it on every release.
+Cache-busting: every local import carries `?v=20261021r7`; bump it on every release.
 
 ## Licences
 
