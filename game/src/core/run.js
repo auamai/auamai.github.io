@@ -147,7 +147,7 @@ export class Run {
     // First run (until lanes, jump and slide are learned): a gentler start and roomier rows.
     this.tutorial = !(this.tips.lanes && this.tips.jump && this.tips.slide);
     this.deathT = 0;
-    this.fps.frames = 0; this.fps.acc = 0;
+    this.fps.frames = 0; this.fps.acc = 0; this.fps.slow = 0; // a slow window left over from the last run must not count toward this one
     this.shown = { score: -1, gears: -1, mult: -1, meter: -1, chips: "", pb: -1 };
     this.elPb.hidden = !(this.pbFrom > 0);
     this.elPb.classList.remove("is-past");
