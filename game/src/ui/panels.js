@@ -185,7 +185,7 @@ export class Panels {
   challengeHtml() {
     const c = this.challenge;
     if (!c) return "";
-    return `<p class="fr__challenge"><span class="fr__badge fr__badge--pb">Challenge</span>${c.name ? `${esc(c.name)} scored` : "Beat"} <b>${fmt(c.score)}</b> on this course.${c.v === 1 ? `<span class="fr__muted"> Classic straight hall, as it was when they ran it.</span>` : ""}</p>`;
+    return `<p class="fr__challenge"><span class="fr__badge fr__badge--pb">Challenge</span>${c.name ? `${esc(c.name)} scored` : "Beat"} <b>${fmt(c.score)}</b> on this course.${c.v === 1 ? `<span class="fr__muted"> Classic straight hall, as it was when they ran it.</span>` : c.v === 2 ? `<span class="fr__muted"> Factory zones before the machines, as it was when they ran it.</span>` : ""}</p>`;
   }
 
   dailyHtml() {

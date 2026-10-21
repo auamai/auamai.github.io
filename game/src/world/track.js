@@ -8,7 +8,7 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
 import { M_PER_U, SPAWN_Z, TIPS } from "../core/constants.js?v=20261021r8";
 
-export const COURSE_V = 2;      // course version: 1 = classic straight hall (old links), 2 = zones + turns
+export const COURSE_V = 3;      // course version: 1 = classic straight hall (old links), 2 = zones + turns, 3 = + set pieces and tricks (hazards.js, tricks.js)
 export const ZONE_LEN = 1100;   // units per zone (935 m: ~60 s early in a run, ~30 s at top speed)
 export const SLOT = 220;        // one turn per slot, five per zone: entry straight, teach, test, test, twist
 const SLOTS = ZONE_LEN / SLOT;
@@ -199,7 +199,8 @@ export class Track {
   // Per run (startRun): course version, zone rotation and the first zone.
   initTrack() {
     const c = this.mode === "challenge" ? this.challenge : null;
-    this.courseV = c && c.v === 1 ? 1 : COURSE_V;
+    // A link replays the course it was made on (v1, v2); v3 and links without a known version get the current course.
+    this.courseV = c && (c.v === 1 || c.v === 2) ? c.v : COURSE_V;
     // Daily Run rotates the starting zone by date; free runs and challenges start on the Bakery Line.
     this.zoneStart = this.mode === "daily" ? (this.seed >>> 3) % ZONES.length : 0;
     this.zoneIdx = this.courseV >= 2 ? this.zoneStart : -1;
