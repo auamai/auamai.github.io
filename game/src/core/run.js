@@ -178,7 +178,7 @@ export class Run {
     this.servoUsed = false;
     this.servoReady = this.mode !== "daily" && !!this.settings.servoArm && MT.servoCount(this.profile) > 0;
     this.elServo.hidden = !this.servoReady;
-        this.fps.frames = 0; this.fps.acc = 0; this.fps.slow = 0; // a slow window left over from the last run must not count toward this one
+    this.fps.frames = 0; this.fps.acc = 0; this.fps.slow = 0; // a slow window left over from the last run must not count toward this one
     this.shown = { score: -1, gears: -1, mult: -1, meter: -1, chips: "", pb: -1 };
     this.elPb.hidden = !(this.pbFrom > 0);
     this.elPb.classList.remove("is-past");
