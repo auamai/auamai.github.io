@@ -177,13 +177,13 @@ export class Render {
     this.edgeMat = this.M.edge; // obstacles and mobile robots keep their thin outline
   }
 
-  // The wheel token: a glowing periwinkle wheel in a soft halo. One at a time.
+  // The wheel token: a glowing wheel in a soft cyan halo (#9beaff = G.CY3, tint of brand cyan #3DDCFF). One at a time.
   buildToken() {
     const g = new THREE.Group();
     const glow = new THREE.MeshBasicMaterial({ color: 0xa9bcff });
     const deep = new THREE.MeshBasicMaterial({ color: 0x6f84e0 });
     const white = new THREE.MeshBasicMaterial({ color: 0xf4f6fb });
-    const halo = new THREE.MeshBasicMaterial({ color: 0xa9bcff, transparent: true, opacity: 0.28, depthWrite: false });
+    const halo = new THREE.MeshBasicMaterial({ color: 0x9beaff, transparent: true, opacity: 0.28, depthWrite: false });
     const wheel = new THREE.Group();
     wheel.add(new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.085, 12, 36), glow));
     wheel.add(new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.12, 18).rotateX(Math.PI / 2), white));

@@ -391,7 +391,7 @@ export class Factory {
       edge: edgeMaterial || new THREE.LineBasicMaterial({ color: 0x262d4d, transparent: true, opacity: 0.2 }),
       spark: new THREE.PointsMaterial({ color: 0xe9eeff, size: 0.13, sizeAttenuation: true, transparent: true, opacity: 0.95, depthWrite: false, map: dotTexture() }),
       arc: new THREE.MeshBasicMaterial({ color: 0xffffff }),
-      arcHalo: new THREE.MeshBasicMaterial({ color: 0xc9d4ff, transparent: true, opacity: 0.55, depthWrite: false }),
+      arcHalo: new THREE.MeshBasicMaterial({ color: 0x9beaff, transparent: true, opacity: 0.55, depthWrite: false }),
       beam: new THREE.MeshBasicMaterial({ color: 0x8fa5ff }),
       lightOn: new THREE.MeshBasicMaterial({ color: 0x9fb3ff }),
       lightOff: new THREE.MeshLambertMaterial({ color: 0x3a4262 }),
