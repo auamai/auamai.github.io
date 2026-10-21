@@ -272,19 +272,25 @@ export class WorldGen {
     const z = SPAWN_Z;
     if (this.driving && this.pw.t < DRIVE_T - 2.2) return this.rollerRow(z);
     const diff = (this.speed - START_SPEED) / (MAX_SPEED - START_SPEED);
+    // Factory Zones (course v2, track.js): each zone teaches its signature obstacle alone on roomy rows
+    // (first quarter), tests the full mix, then twists it with extra pairs (last quarter). Classic courses
+    // (old challenge links, v1) skip all of this and lay out exactly as before.
+    const Z = this.zoneRow(), f = this.zoneF, teach = !!Z && f < 0.25, twist = !!Z && f >= 0.75;
+    const botK = !Z ? 1 : teach && Z.sig === "bot" ? 2.6 : Z.bot;
     // Mobile robots get their own row so they never close the last open lane:
     // at most two, and every bot is low enough to jump.
-    if (this.runTime >= BOT_FROM && COURSE() < 0.18 + diff * 0.32) {
+    if (this.runTime >= BOT_FROM && COURSE() < (0.18 + diff * 0.32) * botK) {
       const lanes = shuffle([0, 1, 2]);
       const n = diff > 0.45 && COURSE() < 0.4 ? 2 : 1;
       for (const ln of lanes.slice(0, n)) this.spawnObstacle("bot", ln, z - COURSE() * 3);
       if (COURSE() < 0.6) { const ln = lanes[2]; this.fillLane(ln, z, false); }
-      this.toNext = Math.max(16, this.speed * 0.7) + COURSE() * 10;
+      this.toNext = (Math.max(16, this.speed * 0.7) + COURSE() * 10) * (Z ? Z.gap : 1);
       return;
     }
-    const n = !this.tutorial && COURSE() < 0.35 + diff * 0.35 ? 2 : 1; // never all three lanes; one at a time while learning
+    const extra = !Z ? 0 : twist ? 0.15 + Z.pair : Z.pair;
+    const n = !this.tutorial && !teach && COURSE() < 0.35 + diff * 0.35 + extra ? 2 : 1; // never all three lanes; one at a time while learning
     const lanes = shuffle([0, 1, 2]);
-    const types = diff < 0.15 ? ["crate", "gap", "arm"] : ["crate", "gap", "arm", "stack", "stack"];
+    const types = Z ? Z.mix[(teach ? 2 : 0) + (diff < 0.15 ? 1 : 0)] : diff < 0.15 ? ["crate", "gap", "arm"] : ["crate", "gap", "arm", "stack", "stack"];
     let crateLane = -1;
     for (const ln of lanes.slice(0, n)) {
       const t = pick(types);
@@ -298,7 +304,7 @@ export class WorldGen {
       const ln = pick(lanes.slice(n));
       this.fillLane(ln, z, true);
     }
-    this.toNext = (Math.max(14, this.speed * 0.62) + COURSE() * 10) * (this.tutorial ? 1.35 : 1);
+    this.toNext = (Math.max(14, this.speed * 0.62) + COURSE() * 10) * (this.tutorial ? 1.35 : 1) * (Z ? Z.gap * (teach ? 1.15 : 1) : 1);
   }
 
   // What an open lane carries: a wheel token, the golden wrench, a tool, a screw line or gears.

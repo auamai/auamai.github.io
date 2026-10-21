@@ -81,6 +81,7 @@ export class Render {
     this.applyQuality();
     applyGrade(this); // lighting + colour grade (grade.js)
     this.applyDesign(); // Garage paint/finish/plate on top of the graded shell (r7)
+    this.initBend(); // turns + climbs: one shared bend uniform on every world material (track.js)
   }
 
   mesh(mat, sx, sy, sz, x = 0, y = 0, z = 0, shadow = true, edge = this.edgeMat) {
@@ -552,5 +553,9 @@ export class Render {
       return;
     }
     c.lookAt(this.r.x * 0.3, (this.lookY ?? 0.9) + (this.camLook || 0), -10);
+    // Turns (track.js): look into the corner and bank with the robot's lean. No allocation.
+    if (this.camYaw) c.rotateY(this.camYaw);
+    if (this.camPitch) c.rotateX(this.camPitch);
+    if (this.lean && !this.reduceMotion) c.rotateZ(this.lean * 0.18);
   }
 }

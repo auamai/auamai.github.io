@@ -9,6 +9,7 @@ import { Run } from "./src/core/run.js?v=20261021r7";
 import { Physics } from "./src/sim/physics.js?v=20261021r7";
 import { Input } from "./src/input/input.js?v=20261021r7";
 import { WorldGen } from "./src/world/worldgen.js?v=20261021r7";
+import { Track } from "./src/world/track.js?v=20261021r7";
 import { Render } from "./src/render/render.js?v=20261021r7";
 import { Sound } from "./src/audio/sound.js?v=20261021r7";
 import { Hud } from "./src/ui/hud.js?v=20261021r7";
@@ -161,5 +162,5 @@ function install(target, ...sources) {
     }
   }
 }
-install(Game, Loop, Run, Physics, Input, WorldGen, Render, Sound, Hud, Panels, Garage, Net, SoundUi);
+install(Game, Loop, Run, Physics, Input, WorldGen, Track, Render, Sound, Hud, Panels, Garage, Net, SoundUi);
 installErrorReporting(() => current ? { state: current.state, q: current.quality, touch: !!current.coarse } : {});

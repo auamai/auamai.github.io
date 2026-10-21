@@ -1,5 +1,6 @@
 // Run lifecycle and rules: start, countdown, pause, scoring with its caps, tools, multipliers, power-ups, death.
 // Installed onto Game.prototype by game.js (methods use `this`, the Game).
+import { ZONE_LEN } from "../world/track.js?v=20261021r7";
 import * as P from "../../profile.js?v=20261021r7";
 import * as MT from "../../meta.js?v=20261021r7";
 import { START_SPEED, M_PER_U, MORPH_T, DRIVE_T, GRACE_T, DRIFT_CASH, DRIFT_MULT, RATE_CAP, OVER_LOCK, COUNT_BEAT, SCREW_POINTS, DRILL_POINTS, HAMMER_POINTS, MAGNET_T, DRILL_T, HAMMER_T, GOLD_T, OVER_T, MULT_CAP, GOLD_MIN, GOLD_MAX, METER_N, HIT_STOP, PB_GOLD_DELAY, allowedScore, TOOL_NAME, MILESTONES, CAUSE, HEADLINES, BAY, TIPS, REVIVE_T, REVIVE_CLEAR } from "./constants.js?v=20261021r7";
@@ -142,6 +143,7 @@ export class Run {
     this.seed = this.mode === "daily" ? MT.dailySeed(this.day) : this.mode === "challenge" ? this.challenge.seed : (Math.random() * 4294967296) >>> 0;
     RNG.course = MT.rng(this.seed);
     RNG.loot = MT.rng(this.seed ^ 0x9e3779b9);
+    this.initTrack(); // course version, zone rotation (track.js)
     this.stat = { smash: 0, goldT: 0, screws: 0, gearsRun: 0, tools: 0, over: 0, daily: this.mode === "daily" ? 1 : 0, jumps: 0, score: 0 };
     const fromMenu = this.view === "menu";
     this.clearWorld();
@@ -437,7 +439,7 @@ export class Run {
     let headline = pool[li].replace("{v}", mps).replace("{bay}", bay);
     headline = headline[0].toUpperCase() + headline.slice(1);
     const prevRank = this.settings.rank || null;
-    this.lastRun = { mode: this.mode, seed: this.seed, headline, prevRank, dist: Math.round((this.runDist || 0) * M_PER_U), bestMult: this.bestMult || 1, missionsDone: ms.done, reward, challenge: this.mode === "challenge" ? this.challenge : null,
+    this.lastRun = { mode: this.mode, seed: this.seed, courseV: this.courseV, zone: this.courseV >= 2 ? this.zoneName() : "", zoneN: 1 + Math.floor((this.runDist || 0) / ZONE_LEN), headline, prevRank, dist: Math.round((this.runDist || 0) * M_PER_U), bestMult: this.bestMult || 1, missionsDone: ms.done, reward, challenge: this.mode === "challenge" ? this.challenge : null,
       score, gears: this.gearsRun, time: this.runTime, best, prevBest, delta: score - prevBest, streak, badge: newBadge,
       screws: this.screwsRun, tools: this.toolsRun, smashes: this.smashRun, revive: !!this.servoUsed, wallet0: MT.wallet(this.profile) - this.gearsRun - reward, rank: null, post, cause: CAUSE[this.deathType] || "Run over" };
     this.showOver();
