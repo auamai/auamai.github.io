@@ -138,7 +138,7 @@ function strip(core, detail, glow) {
 }
 // Bay signs on truss faces, toward the camera: [x, atlas row] per truss slot of the
 // 96-unit sign pattern. Slots 2, 5, 8, 11 are column lines (no truss); 4 and 10 carry the catwalk.
-const SIGN_LABELS = ["LINE 3", "BODY SHOP", "MAIN AISLE", "BAY 12", "WELD", "BAY 14", "FINAL ASSEMBLY", "BAY 16"];
+const SIGN_LABELS = ["BODY SHOP", "LINE 3", "MAIN AISLE", "BAY 12", "WELD", "NO RUNNING", "FINAL ASSEMBLY", "FOREMAN'S OFFICE"];
 const SIGN_AT = { 0: [[0, 0]], 1: [[10.4, 3], [-10.4, 4]], 3: [[0, 1]], 6: [[10.4, 5], [-10.4, 2]], 7: [[0, 6]], 9: [[-10.4, 7]] };
 function signList() {
   const out = [];
