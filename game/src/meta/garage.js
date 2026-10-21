@@ -174,10 +174,12 @@ export class Garage {
     c.width = W; c.height = H;
     const x = c.getContext("2d");
     x.fillStyle = "#14161B"; x.fillRect(0, 0, W, H);
-    // Crop the live frame around the robot (beside the panel on desktop, above it on phones).
-    const port = src.width < src.height, sw = port ? src.width * 0.9 : src.height * 0.62 * 0.8, sh = sw / 0.8;
-    const sx = port ? src.width * 0.05 : src.width * 0.5 + src.width * 0.155 - sw / 2, sy = port ? src.height * 0.08 : src.height * 0.12;
-    try { x.drawImage(src, sx, sy, sw, Math.min(sh, src.height - sy), 0, 0, W, Math.min(H - 300, (Math.min(sh, src.height - sy) / sw) * W)); } catch { /* tainted or lost: card without the frame */ }
+    // Crop the live frame around the robot: project its feet and head to find it on screen.
+    const v = this.camera.position.clone(), R = this.robot.root.position;
+    const at = (y) => { v.set(R.x, y, R.z).project(this.camera); return [(v.x + 1) / 2 * src.width, (1 - v.y) / 2 * src.height]; };
+    const [fx, fy] = at(0), [, hy] = at(1.9), bh = Math.max(40, fy - hy), sh = bh * 1.45, sw = sh * (W / (H - 260));
+    const sx = Math.max(0, Math.min(src.width - sw, fx - sw / 2)), sy = Math.max(0, Math.min(src.height - sh, hy - bh * 0.22));
+    try { x.drawImage(src, sx, sy, Math.min(sw, src.width), Math.min(sh, src.height), 0, 0, W, H - 260); } catch { /* tainted or lost: card without the frame */ }
     const g = x.createLinearGradient(0, H - 520, 0, H - 260); g.addColorStop(0, "rgba(20,22,27,0)"); g.addColorStop(1, "#14161B");
     x.fillStyle = g; x.fillRect(0, H - 520, W, 260); x.fillStyle = "#14161B"; x.fillRect(0, H - 260, W, 260);
     x.fillStyle = "#F2F0EA"; x.font = `300 76px "Inter Tight", system-ui, sans-serif`; x.textBaseline = "alphabetic";
