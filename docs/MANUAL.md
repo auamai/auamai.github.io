@@ -538,14 +538,23 @@ Open **Settings** from the menu.
 | Control wheel | The on-screen four-way pad (touch) |
 | Wheel on the left | Moves the pad for left thumbs |
 | Vibration | Short buzzes on hits and pickups (only where your device supports it) |
-| Music + volume | The soundtrack, "Line Shift". **M** toggles it; hold the speaker button for volume |
+| Music + volume | The soundtrack, "Rhythm Factory" by Zane Little Music, on a seamless loop. **M** toggles it; hold the speaker button for volume. If the track can't load (offline, slow connection), the game's own synthesised cue, "Line Shift", plays instead |
 | Sound effects + volume | Pickups, crashes, chimes |
 | **Reduce motion** | Turns off screen shake, hit-stop (smash and crash), camera kicks, the robot's squash and stretch, hint slow-motion, the score count-up and menu animations; the Foreman's drone still shows but drifts gently instead of swooping. It starts from your system's reduced-motion setting until you change it here |
 | Ghost racer | Shows the ghost of your best run on the Daily Run and challenge courses (on by default) |
 | Player manual | Opens this manual in a new tab |
+| Music credit | "Music: Rhythm Factory by Zane Little Music (CC0)" |
 
 Your mute and volume choices are remembered. The music dips briefly under crashes and new bests so the
-moment comes through.
+moment comes through. With music off, the track isn't downloaded at all; it loads (about 1.5 MB, once) the
+first time music plays, and keeps playing across retries rather than restarting each run.
+
+### Credits
+
+- **Music:** "Rhythm Factory" by Zane Little Music, from OpenGameArt
+  (https://opengameart.org/content/rhythm-factory), released under CC0 (public domain). Credit isn't required
+  under CC0; it's given as a thank-you. The game plays a 90-second loop cut from the track.
+- **Fallback music and all sound effects:** synthesised live by the game.
 
 ### Accessibility
 
@@ -625,5 +634,5 @@ saved with a passkey or backup code, sign in with it and your synced stats come 
   deleted after 30 days.)
 - **Error reports:** if the game hits an error it sends the error message and build number, with no personal
   details and with web addresses trimmed of their query strings.
-- **Third parties:** the 3D engine (three.js) loads from the jsDelivr CDN. Fonts, music and art are all part of
-  the game itself.
+- **Third parties:** the 3D engine (three.js) loads from the jsDelivr CDN. Fonts, music and art are all served
+  from the game itself (the music track is CC0, by Zane Little Music; see Credits).

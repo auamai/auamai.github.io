@@ -44,8 +44,10 @@ Cache-busting: every local import carries `?v=20261021r91`; bump it on every rel
 
 ## Licences
 
-- **Music and sound:** composed in code (`audio.js`), generated live with the Web Audio API. No samples, no recordings,
-  nothing licensed in. Original work, same licence as the rest of the site.
+- **Music:** "Rhythm Factory" by Zane Little Music (CC0, https://opengameart.org/content/rhythm-factory), a 90 s loop
+  in `music/` (see `music/CREDITS.txt`; credited as a courtesy). Fallback music ("Line Shift") and all sound effects
+  are composed in code (`audio.js`) and generated live with the Web Audio API: original work, same licence as the
+  rest of the site.
 - **Robot animation:** procedural (phase-driven run cycle with two-bone IK feet, blended poses). No motion capture,
   no Mixamo or other third-party clips.
 - **Font outlines:** Inter Tight, SIL Open Font License 1.1 (`OFL-InterTight.txt`).

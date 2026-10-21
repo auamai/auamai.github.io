@@ -244,6 +244,7 @@ html.fr-open, html.fr-open body { overscroll-behavior: none; }
 .fr__btn .fr__key, .fr__link .fr__key { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; flex: none; }
 .fr__link--key { display: inline-flex; align-items: center; gap: 8px; color: var(--fr-accent-ink); text-decoration-color: rgba(255, 201, 60, .35); }
 .fr__link--quiet { font-size: 13px; color: var(--fr-ink-3); }
+.fr__credit { flex-basis: 100%; font-size: 12px; color: var(--fr-ink-3); }
 
 /* Saving across devices: one inline block on the menu, pause and game-over cards. */
 .fr__save {

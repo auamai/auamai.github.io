@@ -39,7 +39,8 @@ lighting + audio, perf, a11y, story, growth, security). Player-facing behaviour 
 Servo Sprint is a three.js (r160) endless runner with a small Cloudflare backend.
 
 - **Client:** plain ES modules, no bundler, no framework. Everything is procedural: geometry, robot animation
-  (phase-driven run cycle with two-bone IK), music and SFX (Web Audio, synthesised live). The only third-party
+  (phase-driven run cycle with two-bone IK), SFX (Web Audio, synthesised live). Music is one CC0 audio file ("Rhythm Factory" by Zane Little Music,
+  `music/rhythm-factory.m4a`, loaded lazily) with the synthesised "Line Shift" cue as fallback. The only third-party
   runtime code is three.js from jsDelivr, pinned with SRI.
 - **Simulation:** a fixed 120 Hz step with two seeded RNG streams, so a seed plus an input log reproduces a run
   exactly. That property backs the Daily Run, challenge links and the golden replay tests.
@@ -167,7 +168,7 @@ flowchart LR
         ui3d["ui3d.js + glyphs.js<br/>[Component]<br/>3D hints and countdown,<br/>own canvas"]
         ui["ui/*<br/>[Component]<br/>hud.js, panels.js, brand.js,<br/>sound-ui.js"]
         meta["meta.js + meta/garage.js<br/>[Component]<br/>Daily, streaks, missions, shop,<br/>Toolbox wallet, design, share card"]
-        audio["audio.js + audio/sound.js<br/>[Component]<br/>Line Shift music, SFX, ducking"]
+        audio["audio.js + audio/sound.js<br/>[Component]<br/>Rhythm Factory loop (Line Shift fallback), SFX, ducking"]
         prof["profile.js<br/>[Component]<br/>local save, merge, API calls,<br/>passkeys, related-origin check"]
         net["net/net.js + net/errors.js<br/>[Component]<br/>board fetch, share pipeline,<br/>error boundary"]
     end
@@ -546,7 +547,8 @@ references); bump it on every release, and keep the `modulepreload` list in `ind
 | `profile.js` | Local profile + settings, merge, API calls, passkeys, related-origin check |
 | `src/net/net.js` | Board fetch and tabs, share pipeline |
 | `src/net/errors.js` | Error boundary, `POST /err` (message + build, no PII) |
-| `audio.js`, `src/audio/sound.js` | Web Audio engine ("Line Shift", 106 BPM), SFX, ducking, iOS unlock |
+| `audio.js`, `src/audio/sound.js` | Web Audio engine: file music (Rhythm Factory loop) with the synth "Line Shift" (106 BPM) as fallback, SFX, ducking, iOS unlock |
+| `music/rhythm-factory.m4a`, `music/CREDITS.txt` | "Rhythm Factory" by Zane Little Music (CC0, courtesy credit): 90 s loop, AAC-LC 128 kbps stereo 44.1 kHz, 1,531,951 bytes, -16 LUFS; credits and edit notes |
 
 Worker: `leaderboard-worker/src/index.js` (single module), `schema.sql`, `migrate_r6.sql`, `migrate_r7.sql`,
 `test/security.test.mjs`, `wrangler.toml`.
@@ -1014,7 +1016,33 @@ The fallback in `handleScore` and `handleTop` runs only when `noColumn(e)` match
 
 ## 14. Audio graph
 
-All synthesised at run time (`audio.js`): "Line Shift", fixed 106 BPM Afrobeat with a sax lead, plus SFX. No samples.
+Music: "Rhythm Factory" by Zane Little Music (CC0, https://opengameart.org/content/rhythm-factory; credited as a
+courtesy in Settings and `music/CREDITS.txt`). Fallback music and every SFX are synthesised at run time (`audio.js`):
+"Line Shift", fixed 106 BPM Afrobeat with a sax lead.
+
+**File music.** `music/rhythm-factory.m4a` (1,531,951 bytes, 90.5 s, AAC-LC 128 kbps, stereo 44.1 kHz, -16.0 LUFS
+integrated, -4.1 dBFS sample peak). It is a 90.000 s loop (36 bars at 96 BPM) cut at a bar line from 82.52 s to
+172.52 s of the original (the two points are the same spot in two passes of the same section; waveform correlation
+0.86 at zero lag), with a 20 ms equal-power crossfade baked into the loop end and 0.25 s of wrap-around padding on
+each side. The source node loops `[0.25 s, 90.25 s]`, so whether or not a browser trims the AAC encoder delay, both
+loop points shift together and the seam stays click-free.
+- Fetched once, with `fetch('music/rhythm-factory.m4a?v=<build>')` then `decodeAudioData`, on the first scheduler
+  tick with music on; never while music is off. Not preloaded and not on the page-load path, so it adds nothing to
+  first paint; it is a one-time ~1.5 MB download on the first music start (already compressed, so gzip doesn't
+  shrink it).
+- One looping `AudioBufferSourceNode` -> gain `FILE_TRIM` (2.0) -> `bus`, so the pause/over duck, `evDuck`, the
+  music volume and toggle (`musicOut`) and the mood low-pass all apply as before. It skips the kick pump (`duck`).
+- While it loads (up to 8 s) or plays, `play()` builds no synth voices (that includes the gridded machine stamps,
+  which are on the 106 BPM grid and would clash), the motor hum is silent, and the count-in drops its keys chord and
+  talking-drum pickup; the beat clock and the count-in ticks keep running. It plays across retries (no restart per
+  run) and pauses with the AudioContext (`suspend()` / visibility).
+- A failed fetch (offline, non-200), decode error or anything slower than 8 s sets the state to `failed` and the synth
+  cue plays for the rest of the session. Promises are all caught, so nothing is thrown or logged by the game.
+- `render()` (OfflineAudioContext, demo clip) never fetches: it renders the synth cue.
+- CSP: `fetch` needs `connect-src 'self'` (present); decoded audio needs no `media-src`. No `_headers` change. There
+  is no service worker or precache list. The file has no Cache-Control rule; Cloudflare's default revalidates it
+  with an ETag (a 304 on repeat visits). An immutable rule like `/fonts/*` could be added later since the URL is
+  versioned.
 
 ```mermaid
 flowchart LR
@@ -1050,6 +1078,7 @@ skips the bus ducks.
 - **iOS:** `unlock()` only from pointerdown/keydown; the first gesture also starts a 1-sample silent buffer;
   `navigator.audioSession.type = "ambient"` so the ringer switch mutes it. Suspended while hidden.
 - Mute and volumes persist in settings; **M** toggles music.
+- Payload: `audio.js` +1.65 KB gzip (file-music path and header); the track itself is a lazy 1,531,951 bytes.
 
 ---
 

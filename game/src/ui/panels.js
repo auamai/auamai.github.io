@@ -216,6 +216,8 @@ export class Panels {
     items.push(t("music", "Music"), vol("musicVol", "Music"), t("sfx", "Sound effects"), vol("sfxVol", "Effects"), t("still", "Reduce motion"), t("ghost", "Ghost racer"));
     // Player manual (docs/MANUAL.md on GitHub): a plain link, so it needs no script and no CSP change.
     items.push(`<a class="fr__link fr__link--quiet" href="${MANUAL_URL}" target="_blank" rel="noopener">Player manual</a>`);
+    // Courtesy credit (the track is CC0, so none is required): see music/CREDITS.txt.
+    items.push(`<p class="fr__muted fr__credit">Music: Rhythm Factory by Zane Little Music (CC0)</p>`);
     return `<div class="fr__settings">${items.join("")}</div>`;
   }
 
