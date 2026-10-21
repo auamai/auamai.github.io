@@ -168,6 +168,10 @@ export function create({ M }) {
     return { hip, knee, ankle };
   };
   const legL = leg(-1), legR = leg(1);
+  // Shadow casters: torso, head and the leg shells only (the contact blob carries the grounding). The arms and
+  // the small joint balls / knee caps cost 18 shadow draws for a few pixels of shadow on the lane.
+  for (const a of [armL, armR]) a.sh.traverse((o) => { if (o.isMesh) o.castShadow = false; });
+  for (const l of [legL, legR]) for (const j of [l.hip, l.knee]) for (const o of j.children) if (o.isMesh && (o.material === M.frame || o.material === M.pearlShade)) o.castShadow = false;
 
   const J = { hips, torso, head, armL, armR, legL, legR, packG };
 

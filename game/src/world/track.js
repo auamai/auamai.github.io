@@ -1,4 +1,4 @@
-// Factory Zones and turns (r7 levels). Installed onto Game.prototype by game.js (methods use `this`).
+// Factory Zones and turns. Installed onto Game.prototype by game.js (methods use `this`).
 //
 // The sim never leaves its straight, track-relative frame (lane x, distance z): turns and climbs are a
 // render-time bend of the whole world in the vertex shader, x += bend.x * d², y += bend.y * d², where d is

@@ -1,4 +1,4 @@
-// Ghost racing (r7 ghost): a translucent copy of your best run on the same course (Daily Run, challenge seeds).
+// Ghost racing (Ghost Racing): a translucent copy of your best run on the same course (Daily Run, challenge seeds).
 // Presentation only: it READS the sim (robot x/y, pose, run distance, score) ten times a second and never
 // writes to it, never touches the course or loot RNG and never uses Math.random, so golden replays and the
 // Daily Run are unchanged. Installed onto Game.prototype by game.js (methods use `this`, the Game).
@@ -128,7 +128,12 @@ export class Ghost {
     G.on = !!G.track;
     G.g.visible = false;
     this.elGhost.hidden = !G.on;
-    if (G.on) { this.elGhostName.textContent = G.kind === "pb" ? "PB ghost" : `${G.name}’s ghost`; this.elGhostGap.textContent = "±0"; this.elGhost.classList.remove("is-ahead", "is-out", "is-chase"); }
+    if (G.on) {
+      // A long rival name is cut with an ellipsis (CSS) so the chip stays on one line on a 360 px phone.
+      const nm = this.elGhostName;
+      if (G.kind === "pb") nm.textContent = "PB ghost";
+      else { const w = document.createElement("span"); w.className = "fr__ghost-who"; w.textContent = G.name; nm.replaceChildren(w, "’s ghost"); }
+      this.elGhostGap.textContent = "±0"; this.elGhost.classList.remove("is-ahead", "is-out", "is-chase"); }
   }
 
   ghostHide() { if (this.gh) { this.gh.g.visible = false; this.gh.on = false; this.elGhost.hidden = true; } }
@@ -208,7 +213,8 @@ export class Ghost {
     const G = this.gh;
     G.out = 1; G.fade = this.reduceMotion ? 0 : 1;
     this.elGhost.classList.add("is-out", "is-ahead");
-    this.elGhostName.textContent = G.kind === "pb" ? "Past your ghost" : `Past ${G.name}`;
+    if (G.kind === "pb") this.elGhostName.textContent = "Past your ghost";
+    else { const w = document.createElement("span"); w.className = "fr__ghost-who"; w.textContent = G.name; this.elGhostName.replaceChildren("Past ", w); }
     this.pop(G.kind === "pb" ? "Ghost down" : `${G.name} down`, { x: this.r.x, y: 2.2, z: 0 }, true);
     this.sfx("tool", this.r.x);
     this.buzz(20);

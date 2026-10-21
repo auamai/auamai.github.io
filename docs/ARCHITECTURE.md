@@ -463,12 +463,12 @@ sequenceDiagram
 
     A->>GA: Challenge a friend (game over)
     GA->>GA: challengeUrl(base, seed, score, name) gives ?c=seed base36&s=score&n=name
-    GA-)W: POST /ghost {c, s, v, b: compact track} (once per run, fire and forget; first write per c+s+v wins)
+    GA-)W: POST /ghost {c, s, v, b: compact track} (once per run, fire and forget, first write per c+s+v wins)
     GA->>OS: navigator.share inside the tap, else copyText, else toast with the URL
     OS-->>F: link
     F->>GF: open https://servosprint.xyz/?c=21i3v9&s=2410&n=alex_u
     GF->>GF: readChallenge: c is 1-7 chars of 0-9a-z, 0 <= s < 1e8, n must pass the name rule
-    GF-)W: GET /ghost?c&s&v (background; 200 {b} or {b: null})
+    GF-)W: GET /ghost?c&s&v (background, 200 {b} or {b: null})
     W--)GF: the challenger's track, decoded and checked by decodeTrack
     GF-->>F: who you're racing and the score to beat, button Take the challenge
     F->>GF: start
@@ -527,7 +527,7 @@ references); bump it on every release, and keep the `modulepreload` list in `ind
 | `src/core/util.js` | `fmt`, `esc`, the `RNG` holder and `COURSE()` / `LOOT()`, `pick`, `shuffle` |
 | `src/sim/physics.js` | Runner and roller physics: lane spring, jump buffer, slide, rails, ramps, drift, magnet |
 | `src/world/worldgen.js` | Row spawning from COURSE, pickups from LOOT, pooled obstacles, rovers; reads `zoneRow()` for the zone mix (course v2) |
-| `src/world/track.js` | Factory Zones and turns (r7 levels): `ZONES` table, `bendAt()` (pure turn/climb schedule from seed + distance), course version, the shared `ssBend` vertex bend, long-geometry tessellation, zone light, robot lean, camera look-into-corner |
+| `src/world/track.js` | Factory Zones and turns: `ZONES` table, `bendAt()` (pure turn/climb schedule from seed + distance), course version, the shared `ssBend` vertex bend, long-geometry tessellation, zone light, robot lean, camera look-into-corner |
 | `src/input/input.js` | Keyboard, swipes, wheel pad, gamepad (hysteresis), focus trap, blur/visibility/orientation/context loss |
 | `src/render/render.js` | Scene, quality tiers, camera, trail, `applyDesign()`, Garage close-up |
 | `src/render/grade.js` | Brand colour grade and light rig (AgX), UI-overlay lights |
@@ -597,7 +597,7 @@ emissive floor on ceiling car bodies and hall solids (r6b).
 - On coarse pointers the menu and game-over backdrop draws at about 30 fps (frames under 30 ms apart are skipped,
   dt accumulates). Runs, countdown and pause are untouched.
 
-### Turns and climbs: the world bend (r7 levels)
+### Turns and climbs: the world bend (Factory Zones)
 
 Turns are drawn, not simulated. `track.js` patches every world material once (`initBend()`, end of `buildScene`;
 newly pooled objects are patched in a chained `scene.onBeforeRender` when `scene.children.length` changes) so
@@ -710,7 +710,7 @@ state). Expected values for this build:
 The god_180s change is deliberate: the golden wrench picked up near 115 s now applies its multiplier and books the
 next one. New expectations are in `review/gameplay_golden.json`. Any other sim change must either keep all three
 or justify the new values in the PR. A Spare Servo is never used in the goldens.
-**Course v2 (r7 levels, `review/levels`).** Factory Zones change world generation on purpose (zone obstacle mixes,
+**Course v2 (Factory Zones, `review/levels`).** Factory Zones change world generation on purpose (zone obstacle mixes,
 teach/test/twist row rules, zone spacing; see [§10](#10-obstacles-and-world-generation)), so a golden challenge
 without a version field now runs course v2 and the bot's recorded inputs were re-recorded. New expectations
 (`review/levels_golden.json`, same seeds, steps and bot as before):
@@ -751,7 +751,7 @@ change (`gearShadow`) is render-only.
 
 ## 10. Obstacles and world generation
 
-### Factory Zones and turns (course v2, r7 levels)
+### Factory Zones and turns (course v2)
 
 Five zones in a fixed order, each `ZONE_LEN` = 1100 units (935 m) of run distance: Bakery Line, Auto Plant,
 Chip Fab, Night Port, Rocket Factory, then round again. Free runs and challenges start on the Bakery Line; the Daily
@@ -1072,15 +1072,79 @@ Where a busy desktop frame goes after the pass (t = 14.2 s, 231 main draws): sid
 robot 49, arm gantries 24 (about 3 arms x 8), static hall 13, crates + stacks 21 + 7 lines, ceiling 3, screws 3,
 gears 1. Shadow pass 31, of which the robot is 29.
 
-**Next steps to reach the budget:**
-1. Side-hall zones (~100 draws for 16 slots): instance zones per type, merge zone outlines into one line set per side,
-   and hide zones whose near edge is beyond the fog far (128) after a pixel check.
-2. Robot (49 main + 29 shadow): limit shadow casting to torso, legs and head (about −20 shadow draws; the contact blob
-   carries grounding), and merge static sub-groups that never animate in the runner pose set.
-3. Arm gantries (8 draws each): one `InstancedMesh` per material across all live arms.
+### Perf pass 2: side halls, robot shadow, arm gantries (`review/perf2`)
+
+Same GL-draw method as above (`review/perf2_shots/probe2.py`): Daily seed, god mode, sim stepped 0.05 s, one render
+every 0.2 s for 150 s (about 4,450 units, so all five Factory Zones), desktop 1280x800 "hi", quality locked at q0.
+`Math.random` is seeded per caller (factory.js, worldgen.js, the rest; three's UUIDs stay off it), so both builds get
+the same side-zone picks. The base run used the older single-stream seed, so its zone picks differ: compare medians,
+and use the matched moments below for like-for-like numbers.
+
+| Desktop, whole run | Base `edb9125` | perf2 | Target |
+| --- | --- | --- | --- |
+| Main pass median / p95 / max | 187 / 222 / 255 | **158 / 179 / 194** | median ≤150 (not met) |
+| Main + shadow median / p95 | 221 / 259 | **175 / 196** | p95 ≤200 ✓ |
+| Shadow pass median / p95 | 32 / 40 | **15 / 21** | |
+| Busy window t = 10 to 18 s, main median / total p95 | 175 / 234 | **149 / 178** | |
+
+| Zone (desktop, main median / total p95) | Base | perf2 |
+| --- | --- | --- |
+| Rocket Factory (Daily start zone) | 193 / 275 | **159 / 194** |
+| Bakery Line | 189 / 253 | **163 / 203** |
+| Auto Plant | 185 / 235 | **157 / 186** |
+| Chip Fab | 182 / 246 | **157 / 194** |
+| Night Port (only 8 samples in 150 s) | 199 / 237 | **158 / 183** |
+
+Matched moments (same seed, same zone picks, same sim time; main / shadow), desktop 1280 and phone 390 DPR 3:
+
+| Sample | Zone, bend | Desktop | Phone |
+| --- | --- | --- | --- |
+| t 10.2 s | Rocket Factory, straight | 167 / 30 → **133 / 12** | 151 / 29 → **130 / 11** |
+| t 20.2 s | Rocket Factory, turn | 227 / 38 → **163 / 20** | 214 / 37 → **161 / 19** |
+| t 29.2 s | Rocket Factory, turn k 0.0026 | 200 / 36 → **168 / 21** | 183 / 35 → **156 / 20** |
+| t 67.9 s | Bakery Line | 170 / 33 → **140 / 15** | 155 / 32 → **137 / 14** |
+| t 97.0 s | Auto Plant, turn | 183 / 34 → **165 / 21** | 165 / 33 → **164 / 20** |
+| t 125.7 s | Chip Fab, turn | 189 / 34 → **157 / 16** | 174 / 33 → **156 / 15** |
+| t 142.8 s | Night Port | 188 / 32 → **158 / 14** | 171 / 31 → **155 / 13** |
+
+What changed:
+- **Side halls (factory.js).** Each zone type's static mesh, glow, glass and screen is one `InstancedMesh` per type
+  per side (the side's mirror is the mesh's own `scale.x`, so triangle winding stays right; instance matrices are
+  translations along z only). Each side's outlines are one `LineSegments` with a fixed region per slot (sized for the
+  largest type, unused vertices parked at y = -1e4); a slot's region is rewritten only when it comes back into view
+  with its new zone, and the line object rides `Factory.travel` (rebased every 8192 units to keep float32 offsets
+  small). Instancing and the merge are model-space, so the world bend in the vertex shader curves them exactly as
+  before (the shader already handles `USE_INSTANCING`; the merged lines are marked `ssTess` so `initBend` never
+  re-slices them). `Factory.sync(camera)` runs from the chained `scene.onBeforeRender`: it fills the instance offsets
+  and skips everything but the silhouette (the solid batch) for a zone whose near face is wholly past the fog's far
+  edge. That test bends the near-face corners on the CPU the way the shader does and reads their view depth (+4 units
+  margin), since a fully fogged zone draws flat fog colour and only its outline against the background shows. The
+  moving parts (weld sparks, laser gantry, test lamps and arm) stay per zone. All seven templates and their batches
+  are built at load, so the colour grade sees every template.
+- **Robot shadow (robots/ul-h1.js).** Only the torso, head and leg shells cast; the arms and the small hip/knee joint
+  balls and knee caps don't (18 shadow draws). The contact blob still grounds the runner.
+- **Arm gantries (render/arm.js).** Every rigid part (base, pivot and elbow sets, one per material) is one
+  `InstancedMesh` across all live arms; `armKit.sync()` copies each joint's `matrixWorld`. They are culled as one
+  sphere round the live arms, so the shadow pass still skips them when every arm is outside the sun's box.
+- **Chaining.** `buildInstances()` now chains `scene.onBeforeRender` (factory sync, arm sync, gear/screw sync) instead
+  of overwriting it; `initBend()` wraps that.
+
+Visual check: the same seven moments, desktop and phone (`review/perf2_shots/s/`). No zone pops in or out at the fog
+edge, the turns curve every batched piece, and the robot, lane and obstacles match. The differences are the robot's
+shadow (no arm shadow), outline pixels moving by anti-aliasing amounts (the merged outlines go through a different
+float path than the instanced solids, so a few edge pixels pass or fail the depth test the other way), and DOM
+popups caught at a different real-time frame.
+
+**Still over the budget, and where it goes next:**
+1. Robot main pass: 49 draws (per joint per material). Merge static sub-groups that never animate in the runner pose
+   set; this is the largest single item left.
+2. Zone moving parts: weld sparks/arcs/halos (6 per weld zone), laser gantry/head/beam/spot/core (5), test lamps and
+   arm (4). The two spark sets of a weld zone could share one `Points`, and arcs/halos could be instanced.
+3. Phone run median was not measured over the whole run in this pass (box contention); the matched moments show
+   about 155 on phone against the ≤135 target.
 4. Confirm frame time on a real mid-range phone (4x CPU throttle p95 ≤ 16.7 ms).
 
-### Factory Zones and turns (r7 levels): measured
+### Factory Zones and turns: measured
 
 `review/val_h/out_levels/dcrun.py` on base `d5cc027` vs `review/levels`, same box, `renderer.info` (last `render()`
 call, shadow pass included; not the GL-hook method above, so compare within the table only). Run: seed 987654321,
@@ -1161,7 +1225,7 @@ At `integration/r8` (levels + missions + ghost): Worker **167** (31 + 15 + 9 + 1
 progression unit tests 26, browser 17/17, reliability 9/9, garage 11/11 (its `draw_calls` check, ≤ 156 at 2.5 s into a free
 run, is content-dependent on v2 courses and failed 2 of 5 runs (159) during the r8 gate; see §15).
 
-**Course v2 (r7 levels):** golden expectations moved to `review/levels_golden.json` ([§8](#8-seeded-rng-determinism-and-golden-replays)),
+**Course v2 (Factory Zones):** golden expectations moved to `review/levels_golden.json` ([§8](#8-seeded-rng-determinism-and-golden-replays)),
 plus a fourth check: the old r7 golden file replayed with `challenge.v = 1` must still match. The reliability suite's
 `share_and_challenge` pinned the exact link text. Since r8 the shared `review/val_h/tests_b.js` expects `&v=2` on new
 links, `v: 1` from a link without it, and `challengeUrl(..., 1)` without `v`; it detects a pre-v2 build (no `v` field

@@ -68,6 +68,7 @@ export class Render {
     this.gearGeo = gearGeometry();
     this.kit = createKit(renderer, { lite: this.lite });
     this.armKit = makeArmKit(renderer, this.kit.env, this.lite);
+    this.armKit.attach(scene); // gantry parts drawn instanced (arm.js sync)
     // 3D hints and countdown (an overlay scene drawn after the hall); 2D fallback at the lowest quality.
     this.ui = new UI3D(renderer, { still: this.reduceMotion, container: this.canvas.parentNode });
 
@@ -265,7 +266,9 @@ export class Render {
     const im = (geo, mat, n) => { const m = new THREE.InstancedMesh(geo, mat, n); m.count = 0; m.frustumCulled = false; m.castShadow = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); this.scene.add(m); return m; };
     this.inst = { gear: im(this.gearGeo, this.M.gear, 96), steel: im(steel, TM.steel, 32), navy: im(navy, TM.navy, 32), halo: im(G.halo, TM.halo, 32) };
     this.inst.halo.renderOrder = 0;
-    this.scene.onBeforeRender = () => this.syncInstances(); // after the scene's matrix update, before the shadow pass
+    // After the scene's matrix update, before the shadow pass. Chained: whatever was set before still runs.
+    const prev = this.scene.onBeforeRender;
+    this.scene.onBeforeRender = (r, sc, cam, rt) => { prev.call(this.scene, r, sc, cam, rt); this.factory.sync(cam); this.armKit.sync(); this.syncInstances(); };
   }
 
   // Same transform tree buildTool("screw") makes, minus the meshes.

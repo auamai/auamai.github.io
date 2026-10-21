@@ -165,11 +165,41 @@ export function makeArmKit(renderer, env, lite = false) {
         raw.remove(j.pivot);
         T = { base: merge(raw), pivot: merge(pv), elbow: merge(el), pPos: j.pivot.position.clone(), ePos: j.elbow.position.clone() };
       }
-      instance(T.base, g);
-      const pivot = new THREE.Group(); pivot.position.copy(T.pPos); instance(T.pivot, pivot);
-      const elbow = new THREE.Group(); elbow.position.copy(T.ePos); instance(T.elbow, elbow);
+      const pivot = new THREE.Group(); pivot.position.copy(T.pPos);
+      const elbow = new THREE.Group(); elbow.position.copy(T.ePos);
       pivot.add(elbow); g.add(pivot);
+      // With a scene attached, the parts are drawn instanced across every live arm (sync); otherwise as meshes.
+      if (kit.scene) kit.live.push({ g, pivot, elbow }); else { instance(T.base, g); instance(T.pivot, pivot); instance(T.elbow, elbow); }
       return { pivot, elbow };
+    },
+    // Instanced gantries: the parts are rigid, so one InstancedMesh per part draws every arm on the belt.
+    // Each instance is its joint's world matrix (copied in sync, before the render); culled as one sphere
+    // round the live arms, so the shadow pass still skips them when they are all out of the sun's box.
+    live: [], scene: null, ims: null,
+    attach(scene) { kit.scene = scene; },
+    makeIms(cap) {
+      for (const im of kit.ims || []) { kit.scene.remove(im); im.dispose(); }
+      kit.ims = [];
+      for (const [k, list] of [["g", T.base], ["pivot", T.pivot], ["elbow", T.elbow]]) for (const p of list) {
+        const im = new THREE.InstancedMesh(p.geo, p.mat, cap);
+        im.castShadow = p.shadow; im.receiveShadow = false; im.count = 0; im.visible = false;
+        im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); im.boundingSphere = new THREE.Sphere(); im.userData.k = k;
+        kit.scene.add(im); kit.ims.push(im);
+      }
+    },
+    sync() {
+      if (!kit.live.length) return;
+      if (!kit.ims || kit.ims[0].instanceMatrix.count < kit.live.length) kit.makeIms(Math.max(8, kit.live.length * 2));
+      const S = kit.ims[0].boundingSphere;
+      let n = 0, x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+      for (const a of kit.live) {
+        if (!a.g.visible || !a.g.parent) continue;
+        for (const im of kit.ims) a[im.userData.k].matrixWorld.toArray(im.instanceMatrix.array, n * 16);
+        const e = a.g.matrixWorld.elements; x0 = Math.min(x0, e[12]); x1 = Math.max(x1, e[12]); z0 = Math.min(z0, e[14]); z1 = Math.max(z1, e[14]);
+        n++;
+      }
+      S.center.set((x0 + x1) / 2, 1.6, (z0 + z1) / 2); S.radius = Math.hypot(x1 - x0, z1 - z0) / 2 + 3;
+      for (const im of kit.ims) { im.count = n; im.visible = n > 0; im.instanceMatrix.needsUpdate = n > 0; if (im.boundingSphere !== S) im.boundingSphere.copy(S); }
     },
     dispose() {
       for (const x of Object.values(G)) x.dispose(); for (const m of Object.values(M)) m.dispose(); brushed.dispose();
