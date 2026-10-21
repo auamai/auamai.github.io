@@ -8,6 +8,9 @@ export class Loop {
   loop(now) {
     if (this.closed) return;
     this.raf = requestAnimationFrame(this.loop);
+    // Phones on the menu or game-over screen: the slow belt behind the panel draws at ~30 fps, which
+    // halves GPU work (battery, heat) where nobody is steering. Runs, countdowns and pauses are untouched.
+    if (this.coarse && (this.state === "menu" || this.state === "over") && now - this.last < 30) return;
     // Background-tab / resume guard: one frame never advances more than 50 ms (the fixed-step
     // accumulator below is capped at 100 ms too), so a long stall can't teleport the runner.
     const raw = (now - this.last) / 1000;
