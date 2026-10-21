@@ -89,24 +89,26 @@ function clip(poly, zi, z, keepAbove) {
 }
 function tessellate(src, sz) {
   const g = src.index ? src.toNonIndexed() : src.clone();
-  const names = Object.keys(g.attributes), sizes = names.map((n) => g.attributes[n].itemSize);
+  const names = Object.keys(g.attributes), sizes = names.map((n) => g.attributes[n].itemSize), arrs = names.map((n) => g.attributes[n].array);
   const offs = []; let w = 0; for (const s of sizes) { offs.push(w); w += s; }
-  const zi = offs[names.indexOf("position")] + 2, ni = names.indexOf("normal"), lim = STEP / Math.max(1e-6, Math.abs(sz));
-  const n = g.attributes.position.count, vert = (i) => { const v = []; names.forEach((nm, a) => { const A = g.attributes[nm].array; for (let c = 0; c < sizes[a]; c++) v.push(A[i * sizes[a] + c]); }); return v; };
-  const out = [];
+  const P = g.attributes.position.array, zi = offs[names.indexOf("position")] + 2, ni = names.indexOf("normal"), lim = STEP / Math.max(1e-6, Math.abs(sz));
+  const out = names.map(() => []), n = g.attributes.position.count;
+  const copy = (i) => { for (let a = 0; a < names.length; a++) for (let c = 0, A = arrs[a], k = sizes[a]; c < k; c++) out[a].push(A[i * k + c]); };
+  const vert = (i) => { const v = []; for (let a = 0; a < names.length; a++) for (let c = 0; c < sizes[a]; c++) v.push(arrs[a][i * sizes[a] + c]); return v; };
+  const emit = (v) => { for (let a = 0; a < names.length; a++) for (let c = 0; c < sizes[a]; c++) out[a].push(v[offs[a] + c]); };
   for (let i = 0; i < n; i += 3) {
-    const tri = [vert(i), vert(i + 1), vert(i + 2)], z0 = Math.min(...tri.map((v) => v[zi])), z1 = Math.max(...tri.map((v) => v[zi]));
-    if (z1 - z0 <= lim * 1.5) { out.push(...tri); continue; }
+    const za = P[i * 3 + 2], zb = P[i * 3 + 5], zc = P[i * 3 + 8], z0 = Math.min(za, zb, zc), z1 = Math.max(za, zb, zc);
+    if (z1 - z0 <= lim * 1.5) { copy(i); copy(i + 1); copy(i + 2); continue; } // short: copied as is, no allocation
+    const tri = [vert(i), vert(i + 1), vert(i + 2)];
     for (let lo = z0; lo < z1 - 1e-6; lo += lim) {
       const poly = clip(clip(tri, zi, lo, true), zi, Math.min(z1, lo + lim), false);
-      for (let k = 1; k + 1 < poly.length; k++) out.push(poly[0], poly[k], poly[k + 1]);
+      for (let k = 1; k + 1 < poly.length; k++) { emit(poly[0]); emit(poly[k]); emit(poly[k + 1]); }
     }
   }
   const res = new THREE.BufferGeometry();
   names.forEach((nm, a) => {
-    const arr = new Float32Array(out.length * sizes[a]);
-    out.forEach((v, j) => { for (let c = 0; c < sizes[a]; c++) arr[j * sizes[a] + c] = v[offs[a] + c]; });
-    if (a === ni) for (let j = 0; j < out.length; j++) { const o = j * 3, l = Math.hypot(arr[o], arr[o + 1], arr[o + 2]) || 1; arr[o] /= l; arr[o + 1] /= l; arr[o + 2] /= l; }
+    const arr = new Float32Array(out[a]);
+    if (a === ni) for (let o = 0; o < arr.length; o += 3) { const l = Math.hypot(arr[o], arr[o + 1], arr[o + 2]) || 1; arr[o] /= l; arr[o + 1] /= l; arr[o + 2] /= l; }
     res.setAttribute(nm, new THREE.BufferAttribute(arr, sizes[a], g.attributes[nm].normalized));
   });
   g.dispose();
@@ -154,7 +156,7 @@ function bendMaterial(m) {
 export class Track {
   // Once, at the end of buildScene: patch every world material, tessellate long straight pieces.
   initBend() {
-    const geoCache = new Map();
+    const t0 = performance.now(), geoCache = new Map();
     this.bendVisit = (o) => {
       const mats = Array.isArray(o.material) ? o.material : [o.material];
       for (const m of mats) bendMaterial(m);
@@ -179,6 +181,7 @@ export class Track {
     };
     for (const bank of [this.M, this.TM, this.kit?.M, this.factory?.M, this.ceiling?.M, this.armKit?.M]) if (bank) for (const m of Object.values(bank)) bendMaterial(m);
     this.scene.traverse(this.bendVisit);
+    this.bendMs = performance.now() - t0; // build cost of the patch + tessellation (debug/perf probes read it)
     this.bendN = this.scene.children.length;
     this.bendCur = { x: 0, y: 0 }; this.bendNow = { x: 0, y: 0 }; this.bendOut = { x: 0, y: 0 };
     this.lean = 0; this.camYaw = 0; this.camPitch = 0;
