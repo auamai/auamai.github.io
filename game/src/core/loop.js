@@ -1,6 +1,6 @@
 // Frame loop and the fixed 120 Hz simulation step: every run advances only through update(1/120).
 // Installed onto Game.prototype by game.js (methods use `this`, the Game).
-import { LANES, DESPAWN_Z, START_SPEED, MAX_SPEED, ACCEL, GRAVITY, JUMP_V, PHYS_HZ, LANE_W, LANE_W_ROLL, SLIDE_T, GEAR_POINTS, DIST_POINTS, PERIOD, ROLL_SPEED, RAIL_H, LAND_ROLL, DRIFT_MULT, SLOW_T, SLOW_K, TUT_SPEED, TUT_EASE, visY, REVIVE_T } from "./constants.js?v=20261021r7";
+import { LANES, DESPAWN_Z, START_SPEED, MAX_SPEED, ACCEL, GRAVITY, JUMP_V, PHYS_HZ, LANE_W, LANE_W_ROLL, SLIDE_T, GEAR_POINTS, DIST_POINTS, PERIOD, ROLL_SPEED, RAIL_H, LAND_ROLL, DRIFT_MULT, SLOW_T, SLOW_K, TUT_SPEED, TUT_EASE, visY, REVIVE_T, BUMP_SLOW_T, BUMP_SLOW_K, NEAR_T, CLEAR_T, WEAVE_T } from "./constants.js?v=20261021r7";
 import { report } from "../net/errors.js?v=20261021r7";
 
 export class Loop {
@@ -52,12 +52,16 @@ export class Loop {
 
   // Slow-mo factor for this frame: eases to SLOW_K, holds, eases back.
   timeScale(dt) {
-    if (!(this.slowT > 0) || this.state !== "play") return 1;
+    if (this.state !== "play") return 1;
+    // Bumper pop: half speed, eased back out over BUMP_SLOW_T (fx.bump counts down in game time, so replays match).
+    const fb = this.fx && this.fx.bump > 0 ? this.fx.bump / BUMP_SLOW_T : 0;
+    const kb = 1 - (1 - BUMP_SLOW_K) * fb * fb * (3 - 2 * fb);
+    if (!(this.slowT > 0)) return kb;
     this.slowT = Math.max(0, this.slowT - dt);
     const u = 1 - this.slowT / SLOW_T; // 0 -> 1 across the slow-mo
     const k = u < 0.12 ? u / 0.12 : u > 0.7 ? 1 - (u - 0.7) / 0.3 : 1;
     const e = k * k * (3 - 2 * k);
-    return 1 - (1 - SLOW_K) * e;
+    return (1 - (1 - SLOW_K) * e) * kb;
   }
 
   update(dt) {
@@ -155,9 +159,25 @@ export class Loop {
           const fall = ty === "gap" && r.y < 0.06 && Math.abs(o.z) < o.h - 0.35;
           if (crash && fx.hammer > 0 && (ty === "crate" || ty === "stack" || ty === "bot")) { this.smash(o, i); continue; }
           if (crash && fx.drill > 0 && ty === "arm") { this.smash(o, i); continue; }
+          if (crash && fx.shield > 0 && fx.over > 0 && !this.invulnerable) { this.bump(o, i); continue; }
           if (crash || fall) {
             if (this.invulnerable) { if (!o.touched) { o.touched = true; this.hitGold(); } }
             else { this.die(fall ? "fall" : "crash", ty); if (this.reviveT === REVIVE_T) break; } // a Spare Servo just cleared the list
+          }
+        }
+      }
+      // Style: the moment an obstacle reaches you (its middle crosses z = 0) without touching you.
+      if (st === "play" && this.state === "play" && !o.styled && zPrev < 0 && o.z >= 0) {
+        o.styled = true;
+        const rt = this.runTime;
+        if (!o.touched && !this.invulnerable) {
+          if (Math.abs(r.x - o.x) < 0.95) {
+            if (rt - r.actAt < CLEAR_T && (r.y > 0.3 || sliding) && !(this.driving && o.type === "arm")) this.style("clear", { x: o.x, y: 1.6, z: 0 });
+          } else if (o.type !== "gap" && rt - r.laneAt < NEAR_T && Math.abs(LANES[r.laneFrom] - o.x) < 0.5) {
+            const w = this.flow, dir = Math.sign(r.lane - r.laneFrom);
+            this.style("near", { x: r.x, y: 1.7, z: 0 });
+            if (rt - w.lastNear < WEAVE_T && dir && dir !== w.lastDir) { this.style("weave", { x: r.x, y: 2.3, z: 0 }); w.lastNear = -1e9; w.lastDir = 0; }
+            else { w.lastNear = rt; w.lastDir = dir; }
           }
         }
       }
@@ -179,13 +199,14 @@ export class Loop {
       } else {
         g.m.rotation.y = this.t * 3 + g.x;
         if (st === "play" && this.magnetize(g, zPrev, dt)) {
-          if (this.pulled(g)) { g.taken = true; this.gearsRun++; this.addScore(GEAR_POINTS * mult, g); this.sfx("gear", g.x); }
+          if (this.pulled(g)) { g.taken = true; this.gearsRun++; this.addScore(GEAR_POINTS * mult, g); this.sfx("gear", g.x); this.flowAdd("gear"); }
           g.m.position.x = g.x; g.m.position.y = visY(g.y);
         } else if (st === "play" && Math.abs(r.x - g.x) < 0.9 && zPrev - 0.6 <= 0 && g.z + 0.6 >= 0 && g.y + 0.4 > r.y && g.y - 0.4 < top) {
           g.taken = true;
           this.gearsRun++;
           this.addScore(GEAR_POINTS * mult, g);
           this.sfx("gear", g.x);
+          this.flowAdd("gear");
         }
       }
       g.m.position.z = g.z;

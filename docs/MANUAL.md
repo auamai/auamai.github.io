@@ -115,6 +115,24 @@ Your score climbs all the time while you run, and faster when you pick things up
 | Screw | 25 |
 | Drill through a robot arm | 50 |
 | Hammer through a crate, stack or rover | 75 |
+| Clean (a jump or slide just in time over or under something in your lane) | 5, up to 15 with flow |
+| Near miss (leaving a lane just before something reaches you) | 10, up to 30 with flow |
+| Weave (two near misses in opposite directions, within 1.6 s) | 15, up to 45 with flow |
+| In the zone (reaching Flow ×5) | 150 |
+| Bumper knock (see [Combos](#combos)) | 75 |
+
+### Flow
+
+The **flow meter** (a thin cyan bar under the toolbox meter) appears the first time you pull off a style move.
+Near misses, weaves, clean clears, gears, screws, tools, smashes, rail grinds and drift cash-outs all charge it.
+Every 20 % of charge is one level, **Flow ×1** to **Flow ×5**. Style points grow with the level (×1, ×1.5, ×2,
+×2.5, ×3); flow never multiplies anything else.
+
+- Flow never drops because you missed a gear. It only cools down after about 2 s without a move, so a new
+  player loses nothing and a good run keeps it hot.
+- Reaching **Flow ×5** is **In the zone**: +150, gear confetti, a chime and a buzz. It can happen again once your
+  flow has cooled below ×3.
+- Game over shows your peak flow and how many near misses, weaves and clean clears you made.
 
 ### Multipliers
 
@@ -168,11 +186,28 @@ five and you get **Overdrive**.
 | **Drill** | Drill | 5 s | Bore straight through robot arms (+50 each) |
 | **Hammer** | Hammer | 6 s | Smash crates, stacks and rovers (+75 each). The world holds for a split second on each hit |
 | **Golden torque wrench** | Gold wrench | 10 s | ×2 rising to ×5 while you stay clean (see [Multipliers](#multipliers)). The next one comes 60 to 120 s later, or 2.5 s after you pass your best |
-| **Overdrive** | Full toolbox meter | 8 s | ×2 on everything |
+| **Overdrive** | Full toolbox meter | 8 s | ×2 on everything, plus a **Bumper** (see [Combos](#combos)) |
 | **Wheel token → Roller Mode** | Wheel | 8 s | You turn into the UL-W1 roller (see below) |
 | **Spare Servo** | Bought in the Garage | One use | A second chance when you crash (see below) |
 
 > Smashing with the hammer or drill counts as contact, so it ends a golden multiplier. Pick your moment.
+> (With a [Clean break](#combos) ready, your first smash is free.)
+
+**Incoming markers.** When a tool, golden wrench or wheel token appears far down the line, a small labelled tag
+with an arrow sits over it until it's close, so you can pick your lane early.
+
+### Combos
+
+Some power-ups do more together. Each combo gets its own cyan-edged chip next to the tools it joins.
+
+| Combo | Made of | What it does |
+| --- | --- | --- |
+| **Bumper** | Overdrive | The first crash during Overdrive knocks the obstacle away (+75) instead of ending the run. Time slows to half for a moment so you can read the next lane. Your golden multiplier holds; flow drops by half. Doesn't save you from a fall |
+| **Overclock** | Overdrive + any tool | Your tool timers stop while Overdrive runs, so the tool lasts longer |
+| **Gold rush** | Golden wrench + magnet | The magnet reaches almost twice as far ahead |
+| **Clean break** | Golden wrench + hammer or drill | Your first smash keeps the golden multiplier and pays +25 more |
+
+Combos follow the same rules for everyone on the same course, so the Daily Run and challenges stay fair.
 
 ### Roller Mode
 

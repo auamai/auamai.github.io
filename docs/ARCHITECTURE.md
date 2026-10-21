@@ -719,6 +719,36 @@ Everything is pooled (obstacles, gears, tools, rails, ramps, debris, popups); 3D
 | Drill through an arm | `50 x mult` |
 | Hammer through crate, stack or rover | `75 x mult` |
 | Drift combo cash-out | `pool x (DRIFT_MULT[level] - 1)`, `DRIFT_MULT = [1, 1.2, 1.4, 1.6]` |
+| Style: clean / near miss / weave | `STYLE_POINTS = {clear 5, near 10, weave 15} x FLOW_K[lvl - 1]`, `FLOW_K = [1, 1.5, 2, 2.5, 3]` (not times `mult`) |
+| In the zone (flow level 5) | `ZONE_POINTS` 150, re-armed when `flow.lvl < 3` |
+| Bumper knock | `BUMP_POINTS 75 x mult` |
+| Clean break (first smash while golden) | `SCRAP_POINTS 25 x mult`, golden kept |
+
+### Flow, style and combos (r8 fun pass)
+
+All sim-side (`run.js` `flowAdd` / `style` / `zone` / `updateFlow` / `bump`, `loop.js` obstacle loop), driven only
+by seeded state and input, so replays and the Daily Run stay deterministic.
+
+- **Flow:** `flow.c` 0..`FLOW_MAX` 100, `lvl = min(5, 1 + floor(c / FLOW_LVL 20))`. Charge per event `FLOW_ADD`
+  (gear 2, screw 3, tool 10, clear 9, near 14, weave 10, smash 8, drift 10, grind 6). After `FLOW_IDLE` 2.2 s
+  without an event it cools at `FLOW_COOL` 14/s. It never resets on a miss.
+- **Style detection** runs once per obstacle when its middle crosses z = 0 (`o.styled`), never while invulnerable
+  or after contact: *clear* = same lane and a jump/slide/hop started within `CLEAR_T` 0.55 s (`r.actAt`) and the
+  robot is airborne or sliding (not the roller under an arm); *near* = not in its lane, last lane change within
+  `NEAR_T` 0.42 s (`r.laneAt`) out of the obstacle's lane (`r.laneFrom`), not a gap; *weave* = a near miss within
+  `WEAVE_T` 1.6 s of one in the opposite direction.
+- **Bumper:** `overdrive()` sets `fx.shield = 1` (cleared when overdrive ends). A crash (not a fall) with a shield
+  calls `bump()`: obstacle removed, 0.35 s `landRoll` invulnerability, `fx.bump = BUMP_SLOW_T` 0.6 s; `timeScale()`
+  multiplies game time by `1 - (1 - BUMP_SLOW_K 0.5) x smoothstep(fx.bump / BUMP_SLOW_T)`. Checked after the
+  hammer/drill smash and before `die()` (so before Spare Servo).
+- **Overclock:** while `fx.over > 0`, magnet/drill/hammer timers do not count down.
+- **Gold rush:** magnet reach `RUSH_R` 18 instead of `MAGNET_R` 10 while `fx.gold > 0`.
+- **Clean break:** `fx.breakOk` is set on each golden pickup; the first smash while golden spends it, keeps gold and
+  pays `SCRAP_POINTS`.
+- Combo chips read derived fields `fx.bumper / rush / brk / oc` (time left), written in `updateFx`.
+- **HUD:** `.fr__flow` (bar + level), combo chips `.is-combo`, incoming markers `.fr__mark` (two pooled DOM tags,
+  `hud.js updateMarks`, for tools/gold/wheel between `MARK_FAR` -100 and `MARK_NEAR` -40), game-over line
+  `.fr__style` from `lastRun.style`. No new meshes or draw calls.
 
 `mult = min(6, gold x overdrive)`, with `gold = 2 + floor(goldAge)` capped at 5 while `fx.gold > 0` (10 s) and
 `overdrive = 2` for 8 s. Any contact (a smash, or passing through while invulnerable) ends gold. Roller Mode has no

@@ -74,6 +74,24 @@ export const GRACE = 50;
 export const BURST = 8000;           // room for one multiplier streak, opening at 800/s after 10 s
 export const BURST_FROM = 10, BURST_RATE = 800;
 export const allowedScore = (secs) => secs * AVG_CAP + GRACE + Math.min(BURST, Math.max(0, secs - BURST_FROM) * BURST_RATE);
+// Power-up combos and the Bumper (fun pass, r8). All of it runs in the sim from seeded state only, so the
+// Daily Run and challenge seeds stay equal for every player.
+export const RUSH_R = 18;           // Gold Rush (golden + magnet): magnet reach this far ahead instead of MAGNET_R
+export const BUMP_SLOW_T = 0.6, BUMP_SLOW_K = 0.5; // Bumper pop: game time eases to half for this long
+export const BUMP_POINTS = 75;      // the obstacle a Bumper knocks away pays like a hammer smash
+export const SCRAP_POINTS = 25;     // Clean Break (golden + hammer/drill): every smash also drops a screw's worth
+// Flow: style moves and clean pickups charge a meter; its level (1-5) multiplies style points only.
+// It never drains on a miss, it only cools after FLOW_IDLE seconds without a move, so beginners lose nothing.
+export const FLOW_MAX = 100, FLOW_LVL = 20, FLOW_IDLE = 2.2, FLOW_COOL = 14; // charge per level; cools at 14/s once idle
+export const FLOW_ADD = { gear: 2, screw: 3, tool: 10, clear: 9, near: 14, weave: 10, smash: 8, drift: 10, grind: 6 };
+export const STYLE_POINTS = { clear: 5, near: 10, weave: 15 }; // times FLOW_K[level - 1]
+export const FLOW_K = [1, 1.5, 2, 2.5, 3];
+export const STYLE_NAME = { clear: "Clean", near: "Near miss", weave: "Weave" };
+export const NEAR_T = 0.42;         // a lane change this soon before an obstacle reaches you, out of its lane, is a near miss
+export const CLEAR_T = 0.55;        // a jump or slide this soon before an obstacle in your lane is a clean clear
+export const WEAVE_T = 1.6;         // two near misses this close together, opposite ways, are a weave
+export const ZONE_POINTS = 150;     // reaching Flow 5 ("In the zone"); re-arms once flow falls below 3
+export const MARK_FAR = -100, MARK_NEAR = -40; // incoming power-up markers show for pickups in this stretch
 export const SLOW_T = 1.2;          // first-run hint slow-mo: real seconds, eased in and out
 export const SLOW_K = 0.4;          // game speed at the bottom of the slow-mo
 export const TUT_SPEED = 9.5;       // first-run start speed, easing up to the normal curve
@@ -124,8 +142,10 @@ export const TIPS = {
   gold: { icon: "star", all: ["Golden torque wrench", "×2 to ×5 while you stay clean"] },
   over: { icon: "star", all: ["Overdrive ×2", "toolbox full"] },
   pb: { icon: "star", all: ["New best", "golden wrench incoming"] },
+  flow: { icon: "star", all: ["Flow", "near misses and clean clears charge it"] },
+  bumper: { icon: "star", all: ["Bumper", "overdrive shrugs off one hit"] },
 };
-export const NO_SLOW = new Set(["lanes", "rolling", "over", "pb", "screw", "ms"]);
+export const NO_SLOW = new Set(["lanes", "rolling", "over", "pb", "screw", "ms", "flow", "bumper"]);
 export const TOOL_NAME = { wrench: "Magnet", drill: "Drill", hammer: "Hammer", gold: "Golden" };
 export const MILESTONES = [
   { at: 1000, id: "pearl", name: "Cyan halo", light: 0xe9fbff, deep: 0x9beaff },

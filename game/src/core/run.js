@@ -2,12 +2,17 @@
 // Installed onto Game.prototype by game.js (methods use `this`, the Game).
 import * as P from "../../profile.js?v=20261021r7";
 import * as MT from "../../meta.js?v=20261021r7";
-import { START_SPEED, M_PER_U, MORPH_T, DRIVE_T, GRACE_T, DRIFT_CASH, DRIFT_MULT, RATE_CAP, OVER_LOCK, COUNT_BEAT, SCREW_POINTS, DRILL_POINTS, HAMMER_POINTS, MAGNET_T, DRILL_T, HAMMER_T, GOLD_T, OVER_T, MULT_CAP, GOLD_MIN, GOLD_MAX, METER_N, HIT_STOP, PB_GOLD_DELAY, allowedScore, TOOL_NAME, MILESTONES, CAUSE, HEADLINES, BAY, TIPS, REVIVE_T, REVIVE_CLEAR } from "./constants.js?v=20261021r7";
+import { START_SPEED, M_PER_U, MORPH_T, DRIVE_T, GRACE_T, DRIFT_CASH, DRIFT_MULT, RATE_CAP, OVER_LOCK, COUNT_BEAT, SCREW_POINTS, DRILL_POINTS, HAMMER_POINTS, MAGNET_T, DRILL_T, HAMMER_T, GOLD_T, OVER_T, MULT_CAP, GOLD_MIN, GOLD_MAX, METER_N, HIT_STOP, PB_GOLD_DELAY, allowedScore, TOOL_NAME, MILESTONES, CAUSE, HEADLINES, BAY, TIPS, REVIVE_T, REVIVE_CLEAR, BUMP_SLOW_T, BUMP_POINTS, SCRAP_POINTS, FLOW_MAX, FLOW_LVL, FLOW_IDLE, FLOW_COOL, FLOW_ADD, STYLE_POINTS, FLOW_K, STYLE_NAME, WEAVE_T, ZONE_POINTS } from "./constants.js?v=20261021r7";
 import { fmt, RNG, LOOT, clock } from "./util.js?v=20261021r7";
 
 export class Run {
+  freshFlow() {
+    return { c: 0, idle: 0, lvl: 1, armed: true, best: 1, near: 0, weave: 0, clear: 0, zones: 0, lastNear: -1e9, lastDir: 0, seen: false };
+  }
+
   freshFx() {
-    return { magnet: 0, drill: 0, hammer: 0, gold: 0, goldAge: 0, goldStep: 2, over: 0, meter: 0, smashCredit: 0, swing: 0, stop: 0, hitFlash: 0 };
+    return { magnet: 0, drill: 0, hammer: 0, gold: 0, goldAge: 0, goldStep: 2, over: 0, meter: 0, smashCredit: 0, swing: 0, stop: 0, hitFlash: 0,
+      shield: 0, bump: 0, breakOk: 0, bumper: 0, rush: 0, brk: 0, oc: 0 };
   }
 
   // Combined multiplier: golden ×2 climbing to ×5, overdrive ×2; capped at ×6 (Roller Mode has no multiplier of its own).
@@ -20,7 +25,7 @@ export class Run {
   collect(it) {
     it.taken = true;
     const f = this.fx, k = it.kind;
-    if (k === "screw") { this.screwsRun++; this.addScore(SCREW_POINTS * this.mult, it); this.learned("screw"); return; }
+    if (k === "screw") { this.screwsRun++; this.addScore(SCREW_POINTS * this.mult, it); this.learned("screw"); this.flowAdd("screw"); return; }
     this.buzz(20);
     this.toolsRun++;
     if (k === "wrench") f.magnet = MAGNET_T;
@@ -30,13 +35,14 @@ export class Run {
     // The golden torque wrench (r6 to r6b: this branch sat behind `else` and never ran, so the wrench
     // gave no multiplier and the next one never spawned).
     if (k === "gold") {
-      f.gold = GOLD_T; f.goldAge = 0; f.goldStep = 2; this.goldOut = false;
+      f.gold = GOLD_T; f.goldAge = 0; f.goldStep = 2; this.goldOut = false; f.breakOk = 1;
       if (this.pbGoldAt != null && this.runTime >= this.pbGoldAt) this.pbGoldAt = null;
       this.nextGold = this.runTime + GOLD_MIN + LOOT() * (GOLD_MAX - GOLD_MIN);
     }
     this.pop(k === "gold" ? "×2" : TOOL_NAME[k], it, true);
     if (this.tipNow === k) this.hideTip();
     this.learned(k);
+    this.flowAdd("tool");
     this.fillMeter(2);
   }
 
@@ -50,12 +56,14 @@ export class Run {
   overdrive() {
     const f = this.fx;
     f.over = OVER_T; f.meter = 0; this.stat.over++;
+    f.shield = 1; // the Bumper: overdrive shrugs off one crash
     this.burst.emit("over", this.r.x, 1.2, 0, 22);
     this.elFlash.classList.remove("is-on"); void this.elFlash.offsetWidth; this.elFlash.classList.add("is-on");
     this.buzz(40);
     this.sfx("over");
     if (!this.tips.over) { this.showTip("over", 1.8); this.tips.over = 1; P.setSetting("tips", this.tips); }
-    this.sr("Overdrive, times two.");
+    else if (!this.tips.bumper) { this.showTip("bumper", 2); this.tips.bumper = 1; P.setSetting("tips", this.tips); }
+    this.sr("Overdrive, times two. Bumper on.");
   }
 
   // Hammer and drill: break the thing instead of crashing into it.
@@ -70,8 +78,74 @@ export class Run {
     f.swing = 0.32;
     this.buzz(18);
     this.sfx(drill ? "drill" : o.type === "bot" ? "hammer" : "crate", o.x);
-    this.hitGold();
+    // Clean Break (golden + hammer or drill): the first smash keeps the multiplier and drops a screw's worth.
+    if (f.gold > 0 && f.breakOk) { f.breakOk = 0; this.addScore(SCRAP_POINTS * this.mult); this.pop("Clean break", { x: o.x, y: 2.1, z: o.z }, true); this.sfx("screw", o.x); }
+    else this.hitGold();
+    this.flowAdd("smash");
     if (f.smashCredit > 0) { f.smashCredit = 0; this.fillMeter(1); }
+  }
+
+  // The Bumper: a crash during overdrive knocks the obstacle away instead, once. Time eases to half for a
+  // beat so the next lane can be read, the golden multiplier holds, and flow drops by half.
+  bump(o, i) {
+    const f = this.fx;
+    f.shield = 0; f.bump = BUMP_SLOW_T;
+    this.burst.emit(o.type === "bot" ? "bot" : o.type === "arm" ? "arm" : "crate", o.x, 1, o.z, 16);
+    o.g.visible = false; this.pools[o.type].push(o.g); this.obstacles.splice(i, 1);
+    this.r.landRoll = Math.max(this.r.landRoll, 0.35);
+    this.addScore(BUMP_POINTS * this.mult);
+    this.pop("Bumper", { x: o.x, y: 1.9, z: o.z }, true);
+    this.flow.c *= 0.5; this.flow.idle = 0;
+    this.shake = this.reduceMotion ? 0 : Math.max(this.shake, 0.18);
+    this.buzz(35);
+    this.sfx(o.type === "crate" || o.type === "stack" ? "crash_wood" : "crash_steel", o.x);
+    this.sr("Bumper.");
+    if (this.stat) this.stat.bumps = (this.stat.bumps || 0) + 1;
+  }
+
+  /* ---------- flow and style ---------- */
+  // Charge the flow meter. Level 1-5 (one per FLOW_LVL of charge); reaching 5 is "In the zone".
+  flowAdd(k) {
+    const w = this.flow;
+    if (!w) return;
+    w.c = Math.min(FLOW_MAX, w.c + FLOW_ADD[k]); w.idle = 0;
+    const lvl = Math.min(5, 1 + Math.floor(w.c / FLOW_LVL));
+    if (lvl > w.best) w.best = lvl;
+    w.lvl = lvl;
+    if (lvl >= 5 && w.armed) this.zone();
+  }
+
+  // A style move: points times the flow level, its own pop, a tick and a buzz.
+  style(k, at) {
+    const w = this.flow;
+    w[k]++;
+    const add = this.addScore(STYLE_POINTS[k] * FLOW_K[w.lvl - 1]);
+    if (add >= 1) this.pop(`${STYLE_NAME[k]} +${Math.round(add)}`, at, w.lvl >= 3 || k === "weave");
+    this.sfx(k === "clear" ? "screw" : "tool", at.x);
+    this.buzz(k === "weave" ? 14 : 6);
+    this.flowAdd(k);
+    if (!w.seen) { w.seen = true; if (!this.tips.flow && !this.tipNow) { this.showTip("flow", 2); this.tips.flow = 1; P.setSetting("tips", this.tips); } }
+  }
+
+  zone() {
+    const w = this.flow;
+    w.armed = false; w.zones++;
+    const add = this.addScore(ZONE_POINTS);
+    this.pop(`In the zone +${Math.round(add)}`, { x: this.r.x, y: 2.4, z: 0 }, true);
+    this.burst.emit("confetti", this.r.x, 1.8, -0.5, 18);
+    this.sfx("mult", 0, 5);
+    this.buzz(30);
+    this.sr("In the zone.");
+  }
+
+  updateFlow(dt) {
+    const w = this.flow;
+    w.idle += dt;
+    if (w.idle > FLOW_IDLE && w.c > 0) {
+      w.c = Math.max(0, w.c - FLOW_COOL * dt);
+      w.lvl = Math.min(5, 1 + Math.floor(w.c / FLOW_LVL));
+    }
+    if (w.lvl < 3) w.armed = true;
   }
 
   // Any contact (a smash, or passing through while invulnerable) ends the golden multiplier.
@@ -83,7 +157,19 @@ export class Run {
 
   updateFx(dt) {
     const f = this.fx;
-    for (const k of ["magnet", "drill", "hammer", "over"]) if (f[k] > 0) f[k] = Math.max(0, f[k] - dt);
+    // Overclock (overdrive + a tool): tool timers hold while overdrive runs.
+    const oc = f.over > 0;
+    for (const k of ["magnet", "drill", "hammer", "over"]) if (f[k] > 0 && !(oc && k !== "over")) f[k] = Math.max(0, f[k] - dt);
+    if (f.over <= 0) f.shield = 0;
+    if (f.bump > 0) f.bump = Math.max(0, f.bump - dt);
+    if (f.gold <= 0) f.breakOk = 0;
+    // Combo chips (read by the HUD): each shows the time the pair has left.
+    const tool = Math.max(f.magnet, f.drill, f.hammer);
+    f.bumper = f.shield > 0 ? f.over : 0;
+    f.rush = f.gold > 0 && f.magnet > 0 ? Math.min(f.gold, f.magnet) : 0;
+    f.brk = f.breakOk && (f.drill > 0 || f.hammer > 0) ? Math.min(f.gold, Math.max(f.drill, f.hammer)) : 0;
+    f.oc = oc && tool > 0 ? f.over : 0;
+    this.updateFlow(dt);
     if (f.gold > 0) {
       f.gold = Math.max(0, f.gold - dt); f.goldAge += dt; this.stat.goldT += dt;
       // Each step up the golden ladder (×3, ×4, ×5) and the clean finish are called out: a pop over the
@@ -146,7 +232,7 @@ export class Run {
     const fromMenu = this.view === "menu";
     this.clearWorld();
     this.hideTip();
-    Object.assign(this.r, { lane: 1, x: 0, y: 0, vy: 0, ground: true, slideT: 0, queueSlide: false, jumpBuf: 0, rail: null, hopRail: null, launch: false, landRoll: 0 });
+    Object.assign(this.r, { lane: 1, x: 0, y: 0, vy: 0, ground: true, slideT: 0, queueSlide: false, jumpBuf: 0, rail: null, hopRail: null, launch: false, landRoll: 0, laneFrom: 1, laneAt: -1e9, actAt: -1e9 });
     const R = this.robot;
     R.root.rotation.set(0, 0, 0);
     R.root.position.set(0, 0, 0);
@@ -159,6 +245,7 @@ export class Run {
     this.gearsRun = 0;
     this.screwsRun = 0; this.toolsRun = 0; this.smashRun = 0;
     this.fx = this.freshFx();
+    this.flow = this.freshFlow();
     this.driftS = { level: 0, pool: 0, last: null };
     this.runDist = 0; this.bestMult = 1;
     this.lastTool = null; this.lastKind = {};
@@ -178,8 +265,9 @@ export class Run {
     this.servoUsed = false;
     this.servoReady = this.mode !== "daily" && !!this.settings.servoArm && MT.servoCount(this.profile) > 0;
     this.elServo.hidden = !this.servoReady;
+    this.elFlow.hidden = true; this.elFlow.classList.remove("is-zone");
     this.fps.frames = 0; this.fps.acc = 0; this.fps.slow = 0; // a slow window left over from the last run must not count toward this one
-    this.shown = { score: -1, gears: -1, mult: -1, meter: -1, chips: "", pb: -1 };
+    this.shown = { score: -1, gears: -1, mult: -1, meter: -1, chips: "", pb: -1, flowQ: -1, flowL: -1, flowOn: false, marks: "" };
     this.elPb.hidden = !(this.pbFrom > 0);
     this.elPb.classList.remove("is-past");
     this.elPbLabel.textContent = `PB ${fmt(this.pbFrom)}`;
@@ -297,6 +385,7 @@ export class Run {
       this.pop(`+${Math.round(add)}`, at, add >= 60);
       this.elScoreBox.classList.remove("is-tick"); void this.elScoreBox.offsetWidth; this.elScoreBox.classList.add("is-tick");
     }
+    return add;
   }
 
   pause() {
@@ -439,7 +528,7 @@ export class Run {
     const prevRank = this.settings.rank || null;
     this.lastRun = { mode: this.mode, seed: this.seed, headline, prevRank, dist: Math.round((this.runDist || 0) * M_PER_U), bestMult: this.bestMult || 1, missionsDone: ms.done, reward, challenge: this.mode === "challenge" ? this.challenge : null,
       score, gears: this.gearsRun, time: this.runTime, best, prevBest, delta: score - prevBest, streak, badge: newBadge,
-      screws: this.screwsRun, tools: this.toolsRun, smashes: this.smashRun, revive: !!this.servoUsed, wallet0: MT.wallet(this.profile) - this.gearsRun - reward, rank: null, post, cause: CAUSE[this.deathType] || "Run over" };
+      screws: this.screwsRun, tools: this.toolsRun, smashes: this.smashRun, revive: !!this.servoUsed, style: { flow: this.flow.best, near: this.flow.near, weave: this.flow.weave, clear: this.flow.clear, zones: this.flow.zones }, wallet0: MT.wallet(this.profile) - this.gearsRun - reward, rank: null, post, cause: CAUSE[this.deathType] || "Run over" };
     this.showOver();
     // Screen readers hear what sighted players read: why the run ended, the score, and whether it was a best.
     this.sr(`${headline}. ${fmt(score)} points.${this.lastRun.best ? (prevBest > 0 ? ` New best, up ${fmt(score - prevBest)}.` : " New best.") : prevBest > 0 ? ` Best ${fmt(prevBest)}.` : ""}`);
