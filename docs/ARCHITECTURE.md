@@ -463,13 +463,17 @@ sequenceDiagram
 
     A->>GA: Challenge a friend (game over)
     GA->>GA: challengeUrl(base, seed, score, name) gives ?c=seed base36&s=score&n=name
+    GA-)W: POST /ghost {c, s, b: compact track} (once per run, fire and forget; first write per c+s wins)
     GA->>OS: navigator.share inside the tap, else copyText, else toast with the URL
     OS-->>F: link
     F->>GF: open https://servosprint.xyz/?c=21i3v9&s=2410&n=alex_u
     GF->>GF: readChallenge: c is 1-7 chars of 0-9a-z, 0 <= s < 1e8, n must pass the name rule
+    GF-)W: GET /ghost?c&s (background; 200 {b} or {b: null})
+    W--)GF: the challenger's track, decoded and checked by decodeTrack
     GF-->>F: who you're racing and the score to beat, button Take the challenge
     F->>GF: start
     GF->>GF: startRun challenge, seed = parseInt(c, 36), same COURSE stream as the challenger
+    GF->>GF: the challenger's ghost races you (your own best on this course once it beats theirs)
     GF->>GF: score > s shows Challenge beaten
     GF->>W: POST /score mode challenge (counts on weekly and all-time)
     Note over GF: auamai.dev/game/?c=... forwards here with query and hash intact
@@ -527,6 +531,7 @@ references); bump it on every release, and keep the `modulepreload` list in `ind
 | `src/input/input.js` | Keyboard, swipes, wheel pad, gamepad (hysteresis), focus trap, blur/visibility/orientation/context loss |
 | `src/render/render.js` | Scene, quality tiers, camera, trail, `applyDesign()`, Garage close-up |
 | `src/render/grade.js` | Brand colour grade and light rig (AgX), UI-overlay lights |
+| `src/render/ghost.js` | Ghost racing: records the run's track (10 Hz), plays back the stored best on the same seed as a baked translucent robot, ahead/behind chip, overtake moment, `au_factory_ghost_v1` |
 | `src/render/arm.js`, `geometry.js` | Machined arm gantry (merged per material), shared geometries |
 | `factory.js`, `ceiling.js` | The hall: floor, walls, zones, roof, signs (LINE 3, NO RUNNING, FOREMAN'S OFFICE) |
 | `robots/` | `ul-h1.js` runner, `ul-w1.js` roller, `kit.js` shared materials and `bake()` (keeps UVs for `userData.keepUv`) |
@@ -663,6 +668,15 @@ and is baked into the same mesh (+0 draw calls). The texture is redrawn only whe
 - **Revive:** `Run.revive()` returns obstacles within `REVIVE_CLEAR` = 30 units ahead (and the one hit) to their
   pools, sets `reviveT` = `REVIVE_T` = 1.5 s (part of the `invulnerable` getter), and the obstacle pass breaks
   after a revive because the list just changed. No-servo code paths are byte-for-byte the old ones.
+- **Ghost racing** (`src/render/ghost.js`) is presentation only. `ghostTick()` runs once per 120 Hz step after the
+  robot moves; it *reads* `r.x`, `r.y`, slide/roller/launch flags, `runDist` and `score` into a preallocated
+  `Uint8Array` (10 Hz, 6 bytes a sample: x int8 1/25 u, y uint8 1/20 u, flags, distance step uint8 1/20 u and
+  score step uint16, both carried so they never drift; 300 s max = 18 KB raw) and moves the ghost mesh. It never
+  writes sim state, never calls `COURSE()`/`LOOT()` or `Math.random`, so goldens and the Daily Run are unchanged
+  with or without a stored ghost. Playback is keyed by `runTime`: ghost z = `runDist - ghostDist(t)` (negative
+  = ahead). Ahead/behind compares score at the same `runTime` (speed is a function of time, so distance only
+  differs through Roller Mode and ramps); after the ghost's track ends the chip shows metres past it.
+  Overtake = gap goes above +25 after at least 1 s below −25, at most once per 6 s (pop, `tool` chime, 15 ms buzz).
 - `fx.goldStep` (golden ladder callouts) and `passMilestone()` (badge moments, `Math.random` headlines) are
   presentation only and never read the course RNG.
 
@@ -844,7 +858,8 @@ against `durationMs`), or replay verification using the deterministic sim (seed 
 | Key | Contents |
 | --- | --- |
 | `au_factory_profile_v1` | `{ username, best, games, gears, lastPlayed, code?, token?, passkey, claimed, held, tb, pg, lv, cos }`. `lv`: last Line grade paid (1-30, device-local, never synced); `pg: 1`: progression migration stamp (r7.2). `held`: best unposted run `{score, durationMs}`. `tb: 1`: Toolbox migration stamp. `cos`: `{ spent, owned[], eq{trim,trail,hammer}, sv{b,u}, d{name,code,at} }` |
-| `au_factory_settings_v1` | `pad`, `lefty`, `haptics`, `music`, `sfx`, `musicVol`, `sfxVol`, `tips`, `trim`, `missions[]` (`{id, prog}`), `mv` (2 = r7.2 missions migration done), `reroll{day,n}`, `week{wk,n,paid}`, `twist{day,done}`, `streak{n,last,freeWeek,usedFree}`, `dailyBest{day,score}`, `pbStreak`, `rank`, `still` (reduce motion; absent = follow OS), `servoArm` |
+| `au_factory_settings_v1` | `pad`, `lefty`, `haptics`, `music`, `sfx`, `musicVol`, `sfxVol`, `tips`, `trim`, `missions[]` (`{id, prog}`), `mv` (2 = r7.2 missions migration done), `reroll{day,n}`, `week{wk,n,paid}`, `twist{day,done}`, `streak{n,last,freeWeek,usedFree}`, `dailyBest{day,score}`, `pbStreak`, `rank`, `still` (reduce motion; absent = follow OS), `servoArm`, `ghost` (ghost racer; absent = on) |
+| `au_factory_ghost_v1` | Ghost tracks: `{ v: 1, list: [{ k: seed, cv: course version (1 classic, 2 zones + turns; absent = 1), m: "daily"\|"challenge", s: score, b: base64 track, at }] }`. One Daily entry (today's replaces older ones) plus the newest courses, 4 entries max. Looked up by seed **and** course version, so a v1 ghost never races on a v2 course. Written only when a run on that seed and version beats the stored score. Device-only, never synced (sharing a challenge uploads that one run's track to `/ghost`, see §13) |
 | `au_factory_public_v1` | Read-only summary for the portfolio teaser: `{v, name, best, rank, streak, dailyDay, dailyResetAt, dailyBest, weeklyResetAt, updatedAt}`. Never contains the code or token |
 
 - `code` and `token` are secrets; nothing outside the game may read them.
@@ -880,6 +895,7 @@ against `durationMs`), or replay verification using the deterministic sim (seed 
 | `sessions` | `token_hash` (PK, SHA-256), `username`, `created_at`, `expires_at` (400 days) |
 | `webauthn_challenges` | `id`, `challenge`, `kind`, `username`, `expires_at` (5 min, deleted on read) |
 | `rate_limits` | `key` (hash of bucket + IP or name + minute), `win`, `count` |
+| `ghosts` | `(seed, score)` PK, `track` (base64, ≤ 24 KB), `created_at` (pruned after 60 days by the cron); index `ghosts_created` |
 | `visit_salt`, `visits`, `daily_uniques` | Portfolio unique-visitor count (salted hashes, 30 days) |
 
 Indexes: `idx_scores_score`, `idx_scores_user`, `idx_scores_daily (mode, day, score DESC)`,
@@ -891,6 +907,7 @@ Indexes: `idx_scores_score`, `idx_scores_user`, `idx_scores_daily (mode, day, sc
 | --- | --- | --- |
 | `schema.sql` | Base tables | Every statement is `CREATE ... IF NOT EXISTS` |
 | `migrate_r6.sql` | `scores.mode`, `day`, `week`; daily and weekly indexes; `profiles.cosmetics` | Applied in production at r6 |
+| `migrate_ghost.sql` | `ghosts` table + `ghosts_created` index (also appended to `schema.sql`) | **Apply before deploying a Worker with `/ghost`.** Without it `POST /ghost` answers 200 `{ok: false}` and `GET /ghost` `{b: null}`; nothing else changes |
 | `migrate_r7.sql` | `scores.robot TEXT`, `scores.design TEXT`, `scores.revive INTEGER NOT NULL DEFAULT 0` | **Apply before deploying the r7 Worker.** The Worker falls back to the old insert/select if the columns are missing, so order isn't fatal, but robot names won't show |
 
 ```sh
@@ -933,8 +950,15 @@ The fallback in `handleScore` and `handleTop` runs only when `noColumn(e)` match
   https://www.auamai.dev` (`servosprint.auamai.workers.dev` only while a preview is in use). `auamai.github.io` is gone.
 - Replies: `Cache-Control: no-store`, `nosniff`, `CSP default-src 'none'; frame-ancestors 'none'`; `/scores` is
   `public, max-age=15`. `?board=` is normalised to `all | daily | weekly`.
-- **Body caps** (bytes, streamed): 2 KB; 16 KB for passkey routes; 4 KB for `/err`.
-- **Rate limits** per IP per minute: score 10, claim 5, restore 10, sync 20, passkey 20, backup-code 5, err 20, hit 30.
+- **Body caps** (bytes, streamed): 2 KB; 16 KB for passkey routes; 4 KB for `/err`; 24,256 for `/ghost`.
+- **Rate limits** per IP per minute: score 10, claim 5, restore 10, sync 20, passkey 20, backup-code 5, err 20, hit 30, ghost 6.
+- **Challenge ghosts** (`POST /ghost {c, s, b}`, `GET /ghost?c&s`): cosmetic, never read by scoring. `c` 1-7 chars
+  `0-9a-z`, `s` integer 1..1e8; `b` strict base64, whole 6-byte samples, 30-3000 samples (3-300 s), flag byte ≤ 7,
+  distance ≤ 50 u/s on average, score steps sum to `s` within max(250, 5 %) and `s ≤ allowedScore(secs + 1)` (same
+  caps as `/score`). `INSERT OR IGNORE`: the first upload per (seed, score) is permanent until pruned, so nobody can
+  overwrite a friend's ghost. GET is public (no Origin needed) and cacheable (1 day; 60 s for `{b: null}`).
+  Missing ghost or unmigrated table answers 200, so no player ever sees a network error in the console.
+  Tests: `test/ghost.test.mjs` (`npm test` runs it).
   **Per-name lockout:** 10 wrong codes or tokens per name per minute from any IP, then 429 ("too many tries, wait a
   minute"), even for the right code. Trade-off: someone who knows a name can lock it a minute at a time.
 - **Save codes:** 10 chars from `A-H J-N P-Z 2-9` (~50 bits), shown once. Stored as legacy `SHA-256` or, when
@@ -1003,6 +1027,7 @@ skips the bus ducks.
 | Round trips to first frame | 2 | 2 (modulepreload) |
 | Hot loop allocations | 0 per sub-step | HUD chips keyed by bitmask; revive and spend allocate once per event |
 | Robot meshes | 58 | 58 |
+| Ghost racer | ≤ +3 draw calls | **+2** while it shows (depth pre-pass + rim-lit colour pass on one baked geometry per form; runner and roller baked at load, only one visible), 0 when hidden |
 | Draw calls, in a run | see below | see below |
 
 ### Draw calls: the honest numbers

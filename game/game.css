@@ -766,3 +766,15 @@ html.fr-open, html.fr-open body { overscroll-behavior: none; }
 .fr__seg button.is-locked { opacity: .45; cursor: not-allowed; position: relative; }
 .fr__lockg { position: absolute; right: 2px; bottom: 1px; font: 400 9px/1 var(--fr-mono); color: #f2f0ea; }
 .fr.is-still .fr__missions li.is-new .fr__mtext { animation: none; }
+
+/* Ghost racer chip (r7 ghost): ahead/behind your ghost. Dark plate, light mono type; cyan when you lead. */
+.fr__ghost { display: inline-flex; align-items: center; gap: 8px; padding: 5px 10px; border-radius: 6px; background: rgba(20, 22, 27, .85); color: #f2f0ea; font: 400 11px/1 var(--fr-mono); letter-spacing: .06em; text-transform: uppercase; }
+.fr__ghost[hidden] { display: none; }
+.fr__ghost i { width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid #3ddcff; }
+.fr__ghost b { font-weight: 400; min-width: 4.5ch; text-align: right; font-variant-numeric: tabular-nums; color: rgba(242, 240, 234, .72); }
+.fr__ghost.is-ahead b { color: #3ddcff; }
+.fr__ghost.is-ahead i { background: #3ddcff; }
+.fr__ghost.is-chase { animation: fr-ghost-chase .28s ease-out; }
+@keyframes fr-ghost-chase { 0% { transform: scale(1); } 40% { transform: scale(1.12); box-shadow: 0 0 0 2px #3ddcff; } 100% { transform: scale(1); } }
+.fr.is-still .fr__ghost.is-chase { animation: none; }
+@media (prefers-reduced-motion: reduce) { .fr__ghost.is-chase { animation: none; } }

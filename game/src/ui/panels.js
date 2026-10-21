@@ -28,6 +28,7 @@ export class Panels {
         <span class="fr__meta"><span class="fr__gears">0</span> gears · best <span class="fr__best">0</span><span class="fr__servo" hidden title="Spare Servo armed"><span class="fr__sicon">${OVER_ICON.servo}</span><span class="fr__sr">Spare Servo armed</span></span></span>
         <div class="fr__meter" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
         <div class="fr__chips" aria-hidden="true"></div>
+        <span class="fr__ghost" hidden aria-hidden="true"><i></i><span class="fr__ghost-name">PB ghost</span><b class="fr__ghost-gap">±0</b></span>
         <span class="fr__power" hidden>
           <svg class="fr__ring" viewBox="0 0 44 44" aria-hidden="true"><circle class="fr__ring-bg" cx="22" cy="22" r="19"/><circle class="fr__ring-fg" cx="22" cy="22" r="19"/>
             <g class="fr__wheel"><circle cx="22" cy="22" r="9"/><circle cx="22" cy="22" r="2.4"/><path d="M22 13.6v6M22 24.4v6M14.7 26.2l5.2-3M24.1 20.8l5.2-3M14.7 17.8l5.2 3M24.1 23.2l5.2 3"/></g></svg>
@@ -76,6 +77,9 @@ export class Panels {
     this.elPbLabel = root.querySelector(".fr__pb-label");
     this.elMeter = [...root.querySelectorAll(".fr__meter i")];
     this.elChips = root.querySelector(".fr__chips");
+    this.elGhost = root.querySelector(".fr__ghost");
+    this.elGhostName = root.querySelector(".fr__ghost-name");
+    this.elGhostGap = root.querySelector(".fr__ghost-gap");
     this.elPops = root.querySelector(".fr__pops");
     this.elFlash = root.querySelector(".fr__fxflash");
     this.layer = root.querySelector(".fr__layer");
@@ -209,7 +213,7 @@ export class Panels {
     const items = [t("pad", "Control wheel"), t("lefty", "Wheel on the left")];
     if (this.canBuzz) items.push(t("haptics", "Vibration"));
     const vol = (key, label) => `<label class="fr__vol"><span>${label}</span><input type="range" min="0" max="100" step="5" data-vol="${key}" value="${Math.round((this.settings[key] ?? (key === "musicVol" ? 0.7 : 0.8)) * 100)}" aria-label="${label} volume" /></label>`;
-    items.push(t("music", "Music"), vol("musicVol", "Music"), t("sfx", "Sound effects"), vol("sfxVol", "Effects"), t("still", "Reduce motion"));
+    items.push(t("music", "Music"), vol("musicVol", "Music"), t("sfx", "Sound effects"), vol("sfxVol", "Effects"), t("still", "Reduce motion"), t("ghost", "Ghost racer"));
     // Player manual (docs/MANUAL.md on GitHub): a plain link, so it needs no script and no CSP change.
     items.push(`<a class="fr__link fr__link--quiet" href="${MANUAL_URL}" target="_blank" rel="noopener">Player manual</a>`);
     return `<div class="fr__settings">${items.join("")}</div>`;
@@ -399,7 +403,7 @@ export class Panels {
       <h2 class="fr__headline">${esc(r.headline)}</h2>
       <p class="fr__big${r.best ? " is-best" : ""}" data-count="${r.score}">${this.reduceMotion ? fmt(r.score) : "0"}</p>
       <div class="fr__status" data-slot="status">${this.overStatusHtml()}</div>
-      <p class="fr__tbover">${toolboxHtml(this.reduceMotion ? MT.wallet(p) : r.wallet0)}${r.gears + r.reward ? `<span class="fr__muted">+${fmt(r.gears + r.reward)} this run</span>` : ""}${r.revive ? `<span class="fr__muted">Spare Servo used</span>` : ""}</p>
+      <p class="fr__tbover">${toolboxHtml(this.reduceMotion ? MT.wallet(p) : r.wallet0)}${r.gears + r.reward ? `<span class="fr__muted">+${fmt(r.gears + r.reward)} this run</span>` : ""}${r.revive ? `<span class="fr__muted">Spare Servo used</span>` : ""}${r.ghost ? `<span class="fr__muted fr__ghostres">${r.ghost.beat ? (r.ghost.kind === "pb" ? "Ghost beaten" : `Beat ${esc(r.ghost.name)}’s ghost`) : (r.ghost.kind === "pb" ? "Ghost held on" : `${esc(r.ghost.name)}’s ghost held on`)}</span>` : ""}</p>
       ${this.statsHtml()}
       ${this.progressHtml()}
       <div class="fr__actions">
@@ -733,6 +737,7 @@ export class Panels {
       b.setAttribute("aria-pressed", this.settings[k] ? "true" : "false");
       if (k === "haptics" && this.settings[k]) this.buzz(15);
       if (k === "lefty") this.root.classList.toggle("is-lefty", !!this.settings.lefty);
+      if (k === "ghost" && !this.settings.ghost) this.ghostHide();
       if (k === "music" || k === "sfx") { this.audio.applyVolumes(); this.paintSound(); if (k === "sfx" && this.settings[k]) this.sfx("tap"); }
     } else if (a === "copy") {
       try { await navigator.clipboard.writeText(b.dataset.code); this.toast("Copied"); } catch { this.toast("Couldn't copy. Write it down instead."); }

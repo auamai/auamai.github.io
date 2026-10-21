@@ -186,6 +186,7 @@ export class Run {
     this.elPb.classList.remove("is-past");
     this.elPbLabel.textContent = `PB ${fmt(this.pbFrom)}`;
     this.elBest.textContent = fmt(this.profile.best);
+    this.ghostStart();
     this.state = "play";
     this.view = "play";
     this.deathKind = null;
@@ -454,9 +455,10 @@ export class Run {
     let headline = pool[li].replace("{v}", mps).replace("{bay}", bay);
     headline = headline[0].toUpperCase() + headline.slice(1);
     const prevRank = this.settings.rank || null;
+    const ghost = this.ghostSave(score);
     this.lastRun = { mode: this.mode, seed: this.seed, courseV: this.courseV, zone: this.courseV >= 2 ? this.zoneName() : "", zoneN: 1 + Math.floor((this.runDist || 0) / ZONE_LEN), headline, prevRank, dist: Math.round((this.runDist || 0) * M_PER_U), bestMult: this.bestMult || 1, missionsDone: ms.done, reward, weekPay: wk.pay, twist, grades, challenge: this.mode === "challenge" ? this.challenge : null,
       score, gears: this.gearsRun, time: this.runTime, best, prevBest, delta: score - prevBest, streak, badge: newBadge,
-      screws: this.screwsRun, tools: this.toolsRun, smashes: this.smashRun, revive: !!this.servoUsed, wallet0: MT.wallet(this.profile) - this.gearsRun - reward, rank: null, post, cause: CAUSE[this.deathType] || "Run over" };
+      screws: this.screwsRun, tools: this.toolsRun, smashes: this.smashRun, revive: !!this.servoUsed, ghost, wallet0: MT.wallet(this.profile) - this.gearsRun - reward, rank: null, post, cause: CAUSE[this.deathType] || "Run over" };
     this.showOver();
     // Screen readers hear what sighted players read: why the run ended, the score, and whether it was a best.
     this.sr(`${headline}. ${fmt(score)} points.${this.lastRun.best ? (prevBest > 0 ? ` New best, up ${fmt(score - prevBest)}.` : " New best.") : prevBest > 0 ? ` Best ${fmt(prevBest)}.` : ""}`);

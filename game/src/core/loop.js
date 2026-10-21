@@ -252,6 +252,7 @@ export class Loop {
       this.updateTips(dt);
     }
 
+    this.ghostTick(dt, sliding);
     this.animateRobot(dt, v, sliding);
     this.updateTrack(dt);
     this.updateCamera(dt);

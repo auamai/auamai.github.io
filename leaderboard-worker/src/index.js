@@ -59,7 +59,8 @@ const LIMITS = {
   passkey: 20,
   backup: 5,
   err: 20,
-  nameFail: 10,   // wrong code/token tries per NAME per minute, from any number of IPs
+  nameFail: 10,
+  ghost: 6,       // challenge ghost uploads per IP per minute   // wrong code/token tries per NAME per minute, from any number of IPs
 };
 
 // Browser origins that may call the API (wrangler.toml ALLOWED_ORIGINS overrides). Exact matches only.
@@ -87,6 +88,7 @@ export default {
       const route = `${request.method} ${url.pathname.replace(/\/+$/, "") || "/"}`;
 
       if (route === "GET /stats") return await handleStats(request, env);
+      if (route === "GET /ghost") return await handleGhostGet(url, env, cors);
       if (route === "GET /scores") {
         const board = url.searchParams.get("board");
         return await handleTop(env, cors, board === "daily" || board === "weekly" ? board : "all");
@@ -119,6 +121,9 @@ export default {
           case "/passkey/login/verify":
             if (!(await rateLimit(env, ip, "passkey", LIMITS.passkey))) return json({ error: "slow down" }, 429, cors);
             return await handlePasskey(url.pathname, request, env, cors, origin);
+          case "/ghost":
+            if (!(await rateLimit(env, ip, "ghost", LIMITS.ghost))) return json({ error: "slow down" }, 429, cors);
+            return await handleGhostPost(request, env, cors);
           case "/err":
             if (!(await rateLimit(env, ip, "err", LIMITS.err))) return new Response(null, { status: 204, headers: cors });
             return await handleErr(request, cors);
@@ -143,6 +148,7 @@ export default {
     await env.DB.prepare("DELETE FROM rate_limits WHERE win < ?1").bind(currentWindow() - 1).run();
     await env.DB.prepare("DELETE FROM webauthn_challenges WHERE expires_at < ?1").bind(Date.now()).run();
     await env.DB.prepare("DELETE FROM sessions WHERE expires_at < ?1").bind(Date.now()).run();
+    try { await env.DB.prepare("DELETE FROM ghosts WHERE created_at < ?1").bind(Date.now() - GHOST_TTL_MS).run(); } catch (e) { if (!noTable(e)) throw e; }
   },
 };
 
@@ -253,6 +259,78 @@ async function handleScore(request, env, cors) {
   }
   return json(out, 200, cors);
 }
+
+/* ---------- challenge ghosts (r7 ghost) ---------- */
+// A challenge link (?c=seed&s=score) can carry its sharer's ghost: the game's compact track (10 samples/s,
+// 6 bytes each: x, y, flags, distance step, score step uint16 LE), base64. Stored once per (seed, score),
+// first write wins, never edited, pruned after GHOST_TTL_MS. Cosmetic only (it never touches a score), but
+// still checked: size, shape, flags, and its score steps must add up to the claimed score within the same
+// caps /score uses, at a possible speed.
+const GHOST_MIN_N = 30, GHOST_MAX_N = 3000, GHOST_SB = 6, GHOST_TTL_MS = 60 * 24 * 60 * 60 * 1000;
+const GHOST_MAX_B64 = Math.ceil((GHOST_MAX_N * GHOST_SB) / 3) * 4;
+const GHOST_MAX_UPS = 50; // units per second: top speed 38 x 1.2 in Roller Mode, plus ramp launches
+const SEED36_RE = /^[0-9a-z]{1,7}$/, B64_RE = /^[A-Za-z0-9+/]+={0,2}$/;
+
+function ghostKey(c, s) {
+  if (typeof c !== "string" || !SEED36_RE.test(c)) return null;
+  const seed = parseInt(c, 36);
+  const score = typeof s === "string" ? (/^\d{1,8}$/.test(s) ? Number(s) : NaN) : s;
+  if (!(seed >= 0 && seed <= 0xffffffff) || !Number.isInteger(score) || score < 1 || score >= 1e8) return null;
+  return { seed, score };
+}
+
+export function checkGhostTrack(b, score) {
+  if (typeof b !== "string" || b.length > GHOST_MAX_B64 || b.length % 4 || !B64_RE.test(b)) return "bad track";
+  let bin;
+  try { bin = atob(b); } catch { return "bad track"; }
+  if (bin.length % GHOST_SB) return "bad track";
+  const n = bin.length / GHOST_SB;
+  if (n < GHOST_MIN_N || n > GHOST_MAX_N) return "bad length";
+  let dist = 0, pts = 0;
+  for (let i = 0; i < n; i++) {
+    const o = i * GHOST_SB;
+    if (bin.charCodeAt(o + 2) > 7) return "bad flags";
+    dist += bin.charCodeAt(o + 3);
+    pts += bin.charCodeAt(o + 4) | (bin.charCodeAt(o + 5) << 8);
+  }
+  const secs = n / 10;
+  if (dist / 20 > secs * GHOST_MAX_UPS) return "implausible track";
+  // The last sample can trail the final score by a few steps of points.
+  if (pts > score || pts < score - Math.max(250, score * 0.05)) return "track does not match score";
+  if (score > allowedScore(secs + 1)) return "implausible score";
+  return "";
+}
+
+async function handleGhostPost(request, env, cors) {
+  const body = await readJson(request, GHOST_MAX_B64 + 256);
+  if (!body) return json({ error: "bad request" }, 400, cors);
+  const k = ghostKey(body.c, body.s);
+  if (!k) return json({ error: "bad challenge" }, 400, cors);
+  const err = checkGhostTrack(body.b, k.score);
+  if (err) return json({ error: err }, 400, cors);
+  try {
+    await env.DB.prepare("INSERT OR IGNORE INTO ghosts (seed, score, track, created_at) VALUES (?1, ?2, ?3, ?4)").bind(k.seed, k.score, body.b, Date.now()).run();
+  } catch (e) {
+    // migrate_ghost.sql not applied yet: a quiet 200 (a 5xx would print an error in every sharer's console).
+    if (noTable(e)) return json({ ok: false, error: "ghosts unavailable" }, 200, cors);
+    throw e;
+  }
+  return json({ ok: true }, 200, cors);
+}
+
+async function handleGhostGet(url, env, cors) {
+  const k = ghostKey(url.searchParams.get("c"), url.searchParams.get("s"));
+  if (!k) return json({ error: "bad challenge" }, 400, cors);
+  let row = null;
+  try { row = await env.DB.prepare("SELECT track FROM ghosts WHERE seed = ?1 AND score = ?2").bind(k.seed, k.score).first(); } catch (e) { if (!noTable(e)) throw e; }
+  // No ghost for this link (older links, or the sharer's upload failed): 200 with b: null, not a 404, so opening
+  // a challenge never prints a network error. Short cache, since the sharer's upload may land a moment later.
+  if (!row) return json({ b: null }, 200, { ...cors, "Cache-Control": "public, max-age=60" });
+  // Immutable once written: let the edge and the browser keep it for a day.
+  return json({ b: row.track }, 200, { ...cors, "Cache-Control": "public, max-age=86400" });
+}
+
+function noTable(e) { return /no such table/i.test(String(e && e.message)); }
 
 /* ---------- profiles ---------- */
 

@@ -16,6 +16,7 @@ import { Hud } from "./src/ui/hud.js?v=20261021r7";
 import { Panels } from "./src/ui/panels.js?v=20261021r7";
 import { Garage } from "./src/meta/garage.js?v=20261021r7";
 import { Net } from "./src/net/net.js?v=20261021r7";
+import { Ghost } from "./src/render/ghost.js?v=20261021r7";
 import { SoundUi } from "./src/ui/sound-ui.js?v=20261021r7";
 import { installErrorReporting } from "./src/net/errors.js?v=20261021r7";
 export { allowedScore } from "./src/core/constants.js?v=20261021r7";
@@ -72,6 +73,7 @@ class Game {
     this.tips = Object.assign({}, this.settings.tips);
     // A beat-my-run link (?c=seed&s=score&n=name) opens on that course with the score to beat.
     this.challenge = MT.readChallenge();
+    this.ghostFetch(); // the sharer's ghost, if they uploaded one (async; the run never waits for it)
     this.dailyLink = new URLSearchParams(location.search).has("daily");
     this.mode = this.challenge ? "challenge" : this.dailyLink ? "daily" : "free";
     // Reduced motion follows the OS setting until the player flips "Reduce motion" in Settings (saved as settings.still).
@@ -169,5 +171,5 @@ function install(target, ...sources) {
     }
   }
 }
-install(Game, Loop, Run, Physics, Input, WorldGen, Track, Render, Sound, Hud, Panels, Garage, Net, SoundUi);
+install(Game, Loop, Run, Physics, Input, WorldGen, Track, Render, Sound, Hud, Panels, Garage, Net, SoundUi, Ghost);
 installErrorReporting(() => current ? { state: current.state, q: current.quality, touch: !!current.coarse } : {});

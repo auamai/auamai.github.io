@@ -269,6 +269,29 @@ Each day also has one **twist**: an extra goal for that day's Daily Run, such as
 **+50 gears**, once a day. The twist only changes the goal, never the course, so the Daily Run itself stays
 the same for everyone.
 
+### Ghost racing
+
+On the Daily Run and on challenge courses you race a **ghost**: a see-through cyan copy of your own best run
+on that same course. Free runs get a fresh course every time, so they have no ghost.
+
+- Your first run on a course records the ghost. Beat that score and your new run becomes the ghost.
+- The chip under the score says how you stand at the same second of the run: **+240** means you're 240 points
+  ahead, **−90** behind. It turns cyan while you lead.
+- Pull ahead after trailing and you get an **Overtake**: a callout, a chime and a short buzz.
+- When the ghost's run ends and yours doesn't, it fades out ("Ghost down") and the chip counts the metres
+  you've gone past it.
+- The game-over screen says "Ghost beaten" or "Ghost held on".
+- The ghost fades when it would sit on top of your robot, so it never hides what's in front of you.
+- **Challenger ghost:** when you send someone a challenge (Share or Challenge a friend), your run's ghost goes
+  with it. When they open the link they race *your* ghost, labelled with your name, until they beat your score
+  on that course; after that they race their own best there.
+- Turn it off in **Settings → Ghost racer** (this also stops your ghost being attached to challenges you
+  send). Your own ghosts are stored on this device only (today's Daily plus your four most recent courses).
+  Ghosts never change the course or anyone's score.
+- A ghost belongs to one course: the same seed **and** the same course version. A classic challenge link
+  (made before Factory Zones, straight hall) only ever races a classic ghost, and a zones-and-turns course only
+  a ghost recorded on it.
+
 ### Streaks
 
 Play the Daily Run on consecutive days to build a streak. You get **one free miss a week**: skip a single day
@@ -478,6 +501,7 @@ Open **Settings** from the menu.
 | Music + volume | The soundtrack, "Line Shift". **M** toggles it; hold the speaker button for volume |
 | Sound effects + volume | Pickups, crashes, chimes |
 | **Reduce motion** | Turns off screen shake, hit-stop, hint slow-motion, the score count-up and menu animations. It starts from your system's reduced-motion setting until you change it here |
+| Ghost racer | Shows the ghost of your best run on the Daily Run and challenge courses (on by default) |
 | Player manual | Opens this manual in a new tab |
 
 Your mute and volume choices are remembered. The music dips briefly under crashes and new bests so the
@@ -552,7 +576,8 @@ saved with a passkey or backup code, sign in with it and your synced stats come 
 - **On your device:** your name, scores, settings, Toolbox, Garage design, and your save code or sign-in
   token are kept in your browser's local storage.
 - **On the server (if you play online):** your name, your scores with their run length, mode and date, your
-  robot's name and design, and whether a run used a Spare Servo. If you save your name: a scrambled (hashed)
+  robot's name and design, and whether a run used a Spare Servo. When you send a challenge link: that run's
+  ghost (where your robot was each tenth of a second, and its score), with no name attached, deleted after 60 days. If you save your name: a scrambled (hashed)
   copy of your backup code, your passkey's public key (never your face or fingerprint, which stay on your
   device), and your synced stats.
 - **No visit tracking in the game.** The game doesn't send a page-view ping. (The separate auamai.dev portfolio

@@ -331,6 +331,7 @@ export class WorldGen {
   }
 
   clearWorld() {
+    this.ghostHide?.();
     if (this.token) { this.token = null; this.tokenMesh.g.visible = false; }
     for (const it of this.items) { it.g.visible = false; this.pools[it.kind].push(it.g); }
     this.items.length = 0;
