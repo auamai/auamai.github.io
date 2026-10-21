@@ -1209,6 +1209,20 @@ and stepwise heap growth consistent with pools warming (19.7 to 22.2 MB).
 
 ---
 
+### integration/r9 (perf pass 2 + course v3 + Foreman/juice): measured
+
+Probe: perf pass 2's seeded god Daily run (`init2.py` streams), real GL draws per sample, 1187 `--headless=new`. The Daily
+is v3 on r9 and v2 on edb9125, so the course mix differs. Desktop 1280x800, 150 s, before juice: main median **148** /
+p95 175, main+shadow median 164 / p95 **194**, shadow median 14 (edb9125 187 / 222 and 221 / 259; perf2 158 / 179 and
+175 / 196). Per zone, main median 145-157, main+shadow p95 176-200. Set piece on screen vs not: main median 149 vs 146.
+First 60 s with juice on (Rocket Factory + Bakery Line): desktop main 149 / p95 177, main+shadow 164 / 195 (without juice
+148 / 176, 163 / 195); phone 390x844 DPR 3 (tier lo) main 145 / 174, main+shadow 160 / 191 (edb9125 174 / 214, 209 /
+254). Hazard meshes are hidden while empty (0 draws between set pieces). Payload vs edb9125: **+18.85 KB gz** (perf2
++2.92, course v3 +7.76, r9 fixes +0.18, juice +7.99). Main median is now at or under 152 on these probes; p95 and
+main+shadow are still over.
+
+---
+
 ## 16. Accessibility
 
 - **Reduce motion:** `.fr.is-still` on the root is the single switch. Source: `settings.still` when set, else
