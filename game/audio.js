@@ -24,6 +24,8 @@ const SWING = 0.022;             // odd 16ths land 22 ms late: ~58% swing, the A
 const LOOK = 0.12;               // scheduler lookahead (s); the timer runs every 25 ms
 const MAX_VOICES = 56;           // music polyphony cap (a "voice" is one note or phrase with all its nodes)
 const MUSIC_GAIN = 0.8;           // music bus trim at the default slider (tuned for -16 LUFS in a run)
+// Music dip per effect, [dB, hold s]: the crash and PB own the moment; power-ups only nudge.
+const DUCK = { crash_wood: [7, 0.5], crash_steel: [7, 0.5], hit: [7, 0.5], fall: [7, 0.6], pb: [5, 0.7], over: [3.5, 0.35], power: [3, 0.3], tool: [2, 0.18], mult: [1.5, 0.12] };
 const NOTE = (m) => 440 * Math.pow(2, (m - 69) / 12);
 const N = (s) => { const m = /^([A-G])(#|b)?(\d)$/.exec(s); return 12 * (+m[3] + 1) + { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[m[1]] + (m[2] === "#" ? 1 : m[2] === "b" ? -1 : 0); };
 
@@ -121,7 +123,10 @@ export class FactoryAudio {
       this.ctx.addEventListener?.("statechange", () => { if (this.ctx && this.ctx.state === "interrupted" && !document.hidden) this.ctx.resume().catch(() => {}); });
     }
     if (!this.offline && (this.ctx.state === "suspended" || this.ctx.state === "interrupted")) this.ctx.resume().catch(() => {});
-    if (!this.started) this.build();
+    if (!this.started) {
+      this.build();
+      if (!this.offline) try { const s = this.ctx.createBufferSource(); s.buffer = this.ctx.createBuffer(1, 1, 22050); s.connect(this.ctx.destination); s.start(0); } catch { /* ignore */ }
+    }
     return true;
   }
 
@@ -148,7 +153,9 @@ export class FactoryAudio {
     this.ambOut = A.createGain(); this.ambOut.gain.value = 0.4; this.ambOut.connect(this.filter);
     // `bus` follows the game state (pause/over duck, kick included); `duck` and `bassDuck` only pump
     // gently off the kick. Kept apart so a queued kick can never undo the pause duck.
-    this.bus = A.createGain(); this.bus.connect(this.musicOut);
+    this.bus = A.createGain();
+    // Event duck: crashes, PB and power-ups dip the music for a beat so the moment reads (sfx stay on top).
+    this.evDuck = A.createGain(); this.bus.connect(this.evDuck).connect(this.musicOut);
     const lowcut = A.createBiquadFilter(); lowcut.type = "highpass"; lowcut.frequency.value = 70; lowcut.Q.value = 0.6;
     this.duck = A.createGain(); this.duck.connect(lowcut).connect(this.bus);
     const bcut = A.createBiquadFilter(); bcut.type = "highpass"; bcut.frequency.value = 34; bcut.Q.value = 0.6;
@@ -707,15 +714,16 @@ export class FactoryAudio {
 
   /* ---------- sound effects ---------- */
   // Effects voiced as their materials. Every call varies pitch and level a little.
-  sfx(name, pan = 0) {
+  sfx(name, pan = 0, lvl = 0) {
     if (!this.started || this.s.sfx === false) return;
     // Polyphony guard: the same effect at most once per 35 ms (a burst of pickups at top speed reads as one
     // bright hit, not a pile-up), and at most 16 effects sounding at once (small pickups give way first).
     const now = this.ctx.currentTime, minor = name === "gear" || name === "screw" || name === "step" || name === "tap";
     if (now - (this.sfxLast[name] ?? -1) < 0.035) return;
-    this.sfxLive = this.sfxLive.filter((x) => x > now);
+    const L = this.sfxLive; let j = 0; for (let i = 0; i < L.length; i++) if (L[i] > now) L[j++] = L[i]; L.length = j;   // in place: no array per effect
     if (this.sfxLive.length >= (minor ? 12 : 16)) return;
     this.sfxLast[name] = now; this.sfxLive.push(now + 0.45);
+    const dk = DUCK[name]; if (dk) this.duckFor(dk[0], dk[1]);
     const t = this.ctx.currentTime + 0.005, D = this.sfxOut, V = (x, p) => this.vary(x, p);
     const k = V(1, 0.06); // this call's pitch factor
     const o = (ty, f, d, p, a, dt = 0) => { const v = this.osc(ty, f * k, t + dt, d, null, V(p, 0.08), a); this.out(v.g, pan, D); return v; };
@@ -754,8 +762,20 @@ export class FactoryAudio {
     else if (name === "fall") { const v = o("sine", 220, 0.6, 0.12, 0.02); v.o.frequency.exponentialRampToValueAtTime(70 * k, t + 0.55); thud(60, 0.35, 0.5, 0.45); }
     else if (name === "pb") { [1046.5, 1318.5, 1568, 2093].forEach((f, i) => { const v = this.osc("sine", f, t + i * 0.07, 0.5, null, i === 3 ? 0.06 : 0.1); this.out(v.g, 0, D); }); this.sweep(); }
     else if (name === "over") { [523.25, 659.25, 783.99].forEach((f, i) => { const v = this.osc("triangle", f, t + i * 0.05, 0.4, null, 0.1); this.out(v.g, 0, D); }); this.riser(t, 0.5); }
-    else if (name === "tap") o("triangle", 660, 0.05, 0.04, 0.003);
+    // Menu: a machined detent click (a tiny noise tick on a short sine knock), not a beep.
+    else if (name === "tap") { nz(0.012, 0.09, "bandpass", 3200, 3, 0.0006); o("sine", 880, 0.035, 0.05, 0.002); }
+    // Multiplier step: two quick notes up the G major triad, one step higher per level (x2 .. x6).
+    else if (name === "mult") { const f = NOTE(79 + [0, 0, 0, 4, 7, 12, 16][Math.min(6, lvl)]); o("sine", f, 0.09, 0.07, 0.003); o("sine", f * 1.5, 0.12, 0.05, 0.003, 0.06); o("triangle", f * 2, 0.05, 0.015, 0.002, 0.06); }
     else if (name === "power") { const v = o("triangle", 440, 0.3, 0.13, 0.012); v.o.frequency.exponentialRampToValueAtTime(880 * k, t + 0.25); }
+  }
+
+  // Dip the music by `db` for ~`hold` s, then let it breathe back (time constants, so no clicks or zips).
+  duckFor(db, hold) {
+    const g = this.evDuck?.gain; if (!g) return;
+    const t = this.ctx.currentTime, v = Math.pow(10, -db / 20);
+    if (g.cancelAndHoldAtTime) g.cancelAndHoldAtTime(t); else { g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); }
+    g.setTargetAtTime(Math.min(v, g.value), t, 0.012);
+    g.setTargetAtTime(1, t + hold, 0.18);
   }
 
   suspend() { if (this.ctx && !this.offline && this.ctx.state === "running") this.ctx.suspend(); }

@@ -230,7 +230,24 @@ export function applyGrade(game) {
     hero.position.set(0, 0.9, 0.6);
     game.robot.root.add(hero);
     game.rig.hero = hero;
+  } else if (game.robot?.blob && !game.robot.spill) {
+    // Phones get the hero light's cyan pool as one additive decal under the feet: +1 draw, no light,
+    // no shader cost on the rest of the scene. It rides the contact blob, so it shrinks with a jump.
+    const c = document.createElement("canvas"); c.width = c.height = 64;
+    const x = c.getContext("2d"), gr = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+    gr.addColorStop(0, "rgba(255,255,255,1)"); gr.addColorStop(0.45, "rgba(255,255,255,.42)"); gr.addColorStop(1, "rgba(255,255,255,0)");
+    x.fillStyle = gr; x.fillRect(0, 0, 64, 64);
+    const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+    const mat = new THREE.MeshBasicMaterial({ color: G.CY, map: tex, transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, fog: false });
+    mat.userData.graded = true;
+    const spill = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 2.6), mat);
+    spill.position.z = 0.004; spill.renderOrder = 1;
+    game.robot.blob.add(spill);
+    game.robot.spill = spill;
   }
+  // Phones: floating gears skip the shadow pass (a 10-gear arc was 10 extra shadow draws); the gear's own
+  // cyan and the contact blob carry its height. Desktop keeps gear shadows.
+  game.gearShadow = tier === "hi";
 
   // Hazards carry their own light so yellow stays saturated in shadow (AgX greys unlit yellow).
   if (game.M) {
@@ -254,6 +271,10 @@ export function applyGrade(game) {
   if (game.M?.dash) { game.M.dash.emissive.setHex(G.W3); game.M.dash.emissiveIntensity = 0.12; }
   // Kit environment: neutral studio with off-white panels and one cyan strip (was periwinkle).
   regrade(game);
+  // 3D UI overlay (countdown, score digits): its lights were still the old hall's periwinkle sky / blue rim,
+  // which tinted the off-white faces. Lights are not materials, so the material pass never reached them.
+  if (game.ui?.scene) game.ui.scene.traverse((o) => { if (!o.isLight) return;
+    o.color.setHex(G.W3); if (o.groundColor) o.groundColor.setHex(G.S5); });
   vignette(game, tier);
   return game.rig;
 }
