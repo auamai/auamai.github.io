@@ -35,7 +35,7 @@ export class Garage {
         <button class="fr__btn fr__btn--sm" type="button" data-panel="g" data-g="cancel">Cancel</button></div>`;
     const priceBtn = (id, price, name) => w < price
       ? `<button class="fr__btn fr__btn--sm is-short" type="button" aria-disabled="true" data-panel="g" data-g="short" data-id="${id}" aria-label="${esc(name)}: ${fmt(price)} gears, ${fmt(price - w)} more needed">Need ${fmt(price - w)}</button>`
-      : `<button class="fr__btn fr__btn--sm" type="button" data-panel="buy" data-id="${id}">${fmt(price)} gears</button>`;
+      : `<button class="fr__btn fr__btn--sm" type="button" data-panel="g" data-g="ask" data-id="${id}">${fmt(price)} gears</button>`;
     const row = (it) => {
       const own = cos.owned.includes(it.id), on = cos.eq[it.kind] === it.id;
       const sw = `<span class="fr__swatch" style="background:${hex6(it.color ?? it.light)}"></span>`;
@@ -71,7 +71,16 @@ export class Garage {
     this.garageNote = "";
   }
 
-  // Buying: first tap asks, second tap (Buy) spends. Wearing/unwearing is instant and free.
+  // In the Garage a price tap only asks; the confirm row's Buy spends (commitBuy). buy(id) is the
+  // direct path (wear/unwear, or a purchase with no prompt) and goes through the same atomic spend.
+  askBuy(id) {
+    if (!MT.SHOP.some((x) => x.id === id) && id !== "servo") return;
+    this.pendingBuy = id;
+    this.showShop();
+    const ok = this.panel.querySelector('[data-g="ok"]');
+    if (ok) ok.focus({ preventScroll: true });
+  }
+
   buy(id) {
     const p = this.profile;
     if (!p) return;
@@ -85,9 +94,7 @@ export class Garage {
     }
     if (!it && id !== "servo") return;
     this.pendingBuy = id;
-    this.showShop();
-    const ok = this.panel.querySelector('[data-g="ok"]');
-    if (ok) ok.focus({ preventScroll: true });
+    this.commitBuy(id);
   }
 
   commitBuy(id) {
@@ -123,6 +130,7 @@ export class Garage {
 
   garageAct(b) {
     const g = b.dataset.g;
+    if (g === "ask") return this.askBuy(b.dataset.id);
     if (g === "ok") return this.commitBuy(b.dataset.id);
     if (g === "cancel") { this.pendingBuy = ""; return this.showShop(); }
     if (g === "short") { this.garageNote = `Not enough gears yet. Runs and missions fill your toolbox.`; return this.showShop(); }
