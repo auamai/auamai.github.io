@@ -246,6 +246,10 @@ export function applyGrade(game) {
   if (game.factory?.shell) { const c = game.factory.shell[1].material; c.emissive.setHex(G.G2); c.emissiveIntensity = 1; c.userData.lift = true; }
   if (game.ceiling?.M?.solid) { game.ceiling.M.solid.emissive.setHex(G.G4); game.ceiling.M.solid.emissiveIntensity = 0.55; game.ceiling.M.solid.userData.lift = true; }
   if (game.factory?.M?.screen) game.factory.M.screen.opacity = 0.45;
+  // r6b: desktop 16:9 still had 14-16 % of pixels at L* < 2 (overhead car bodies, upper side walls see only the
+  // hemi ground colour). A small flat floor lifts those blacks to ~L* 5 without flattening the lit faces.
+  if (game.ceiling?.M?.body) { const m = game.ceiling.M.body; m.emissive.setHex(G.G4); m.emissiveIntensity = 0.55; m.userData.lift = true; }
+  if (game.factory?.M?.solid) { const m = game.factory.M.solid; m.emissive.setHex(G.G3); m.emissiveIntensity = 0.3; m.userData.lift = true; }
   // Lane dashes are guidance, not hazard: off-white, not yellow.
   if (game.M?.dash) { game.M.dash.emissive.setHex(G.W3); game.M.dash.emissiveIntensity = 0.12; }
   // Kit environment: neutral studio with off-white panels and one cyan strip (was periwinkle).
