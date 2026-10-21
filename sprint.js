@@ -2,7 +2,7 @@
 // with prefers-reduced-motion (or Save-Data) it never loads the video and the poster stays.
 // Copy: a returning player sees their own best; a first visit sees the board's top score when
 // the board answers, else the plain caption. Reads the game's local save only; never writes it.
-//   localStorage "au_factory_profile_v1"  { username, best, held: { score } }   (game/profile.js)
+//   localStorage "au_factory_profile_v1"  { username, best, held: { score } }   (written by the old auamai.dev/game build, now a redirect to servosprint.xyz)
 //   localStorage "au_factory_public_v1"   { v, name, best, rank, ... }          (game, read-only summary)
 (() => {
   const el = document.querySelector("[data-sprint]");
@@ -64,7 +64,7 @@
   } else { onScreen = true; }
   document.addEventListener("visibilitychange", sync);
   if (still.addEventListener) still.addEventListener("change", sync);
-  // bfcache: coming back from /game/ with the back button
+  // bfcache: coming back from the game with the back button
   window.addEventListener("pageshow", sync);
   sync();
 })();
