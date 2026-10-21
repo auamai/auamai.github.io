@@ -258,7 +258,7 @@ main { width: min(var(--wrap), calc(100% - 40px)); margin: 0 auto; }
 
 /* Projects: compact rows, small uniform thumbnails */
 .projects { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-.project { display: grid; grid-template-columns: 132px 1fr; gap: 18px; padding: 12px; align-items: start; }
+.project { display: grid; grid-template-columns: clamp(184px, 34%, 240px) 1fr; gap: 18px; padding: 12px; align-items: start; }
 .project--text { grid-template-columns: 1fr; padding: 14px 14px 14px 22px; }
 .project__shot { margin: 0; border-radius: 16px; overflow: hidden; aspect-ratio: 1 / 1; background: #e9ecf3; }
 .project__shot img { width: 100%; height: 100%; object-fit: cover; transition: transform .6s ease; }
@@ -472,7 +472,7 @@ main { width: min(var(--wrap), calc(100% - 40px)); margin: 0 auto; }
 .link-arrow[target="_blank"]:hover b { transform: translate(2px, -2px); }
 
 /* Projects: meta first, outcome next, tools as plain words, one clear action */
-.project { gap: 20px; padding: 14px; }
+.project { gap: 24px; padding: 14px; }
 .project__body { gap: 8px; }
 .project__meta { font-size: 13.5px; font-weight: 400; color: var(--ink-3); display: flex; flex-wrap: wrap; align-items: center; gap: 0 .45em; }
 .project__meta .status { font-size: 13.5px; color: var(--ink-2); }
