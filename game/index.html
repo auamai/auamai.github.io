@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://api.auamai.dev; media-src 'self' data: blob:; manifest-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'self'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-ZVN4DmtepnRuC3LYNZCsIUdrqco4Ma7lMqDvzqDsJ+Y='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://api.auamai.dev; media-src 'self' data: blob:; manifest-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'self'" />
+  <!-- three.js is pinned by Subresource Integrity. The CSP above allows this exact import map by its sha256;
+       if the map or the three.js version changes, update both hashes (CSP here and in _headers). -->
+  <script type="importmap">{"integrity":{"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js":"sha384-61S/Nu32S3E5+n+KpCOTb2eRYps6fVKm+9Gz1QBvSePFthb46f063Aa/qe/lykFZ"}}</script>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Servo Sprint</title>
   <meta name="description" content="Servo Sprint: a 3D robot runner. Sprint the line, bank the gears, dodge the machines. Daily Run, global board." />
