@@ -35,7 +35,7 @@ const LOOK = 0.12;               // scheduler lookahead (s); the timer runs ever
 const MAX_VOICES = 56;           // music polyphony cap (a "voice" is one note or phrase with all its nodes)
 const MUSIC_GAIN = 0.8;           // music bus trim at the default slider (tuned for -16 LUFS in a run)
 // AAC first (Safari, Chrome, Edge, Firefox); Ogg Opus when the browser can't decode AAC (open-source Chromium builds).
-const MUSIC_URLS = [["music/rhythm-factory.m4a?v=20261021r10", 'audio/mp4; codecs="mp4a.40.2"'], ["music/rhythm-factory.ogg?v=20261021r10", 'audio/ogg; codecs="opus"']];
+const MUSIC_URLS = [["music/rhythm-factory.m4a?v=20261021r11", 'audio/mp4; codecs="mp4a.40.2"'], ["music/rhythm-factory.ogg?v=20261021r11", 'audio/ogg; codecs="opus"']];
 function musicUrls() {
   let el = null; try { el = typeof Audio === "function" ? new Audio() : null; } catch { /* no media element */ }
   const can = (m) => !el || !el.canPlayType || el.canPlayType(m) !== "";

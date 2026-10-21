@@ -12,10 +12,10 @@
 // set piece is one box instance in one of two InstancedMeshes (lit body, unlit glow), so the whole feature costs
 // at most 3 draw calls (body, glow, body shadow) whatever is on screen, 0 when none is, and no per-frame allocation.
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
-import { LANES, SPAWN_Z, DESPAWN_Z, REVIVE_CLEAR } from "../core/constants.js?v=20261021r10";
-import { COURSE, pick, shuffle } from "../core/util.js?v=20261021r10";
-import { BOX } from "../render/geometry.js?v=20261021r10";
-import { ZONES } from "./track.js?v=20261021r10";
+import { LANES, SPAWN_Z, DESPAWN_Z, REVIVE_CLEAR } from "../core/constants.js?v=20261021r11";
+import { COURSE, pick, shuffle } from "../core/util.js?v=20261021r11";
+import { BOX } from "../render/geometry.js?v=20261021r11";
+import { ZONES } from "./track.js?v=20261021r11";
 
 // The zone's set piece, by zone order (track.js ZONES).
 export const SET = ["door", "press", "belt", "crane", "fire"];
