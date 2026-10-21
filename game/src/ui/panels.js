@@ -263,7 +263,7 @@ export class Panels {
     if (!this.saveUi || this.saveUi.ctx !== "menu") this.saveUi = { open: "", msg: "", busy: false, code: "", ctx: "menu" };
     this.renderPanel(`
       <h2 class="fr__title fr__brand"><span class="fr__sr-only">Servo Sprint</span>${WORDMARK}</h2>
-      <p class="fr__sub">Sprint the line. Bank the gears. Don't meet the machines.</p>
+      <p class="fr__sub">Outrun the Foreman.</p>
       ${body}
       ${!fresh ? `<div data-slot="save">${this.saveHtml("menu")}</div>` : ""}
       <div class="fr__links">${links.join("")}</div>

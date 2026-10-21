@@ -257,6 +257,7 @@ export class Loop {
     }
     if (st === "play") {
       if (!this.pbPassed && this.pbFrom > 0 && this.score > this.pbFrom) this.passBest();
+      if (this.msNext && this.score >= this.msNext.at) this.passMilestone();
       this.updateHud(mult, v);
     }
   }
