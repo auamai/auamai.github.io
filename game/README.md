@@ -5,6 +5,17 @@ A three.js robot runner (formerly Factory Run). Opens as an overlay from the por
 `CNAME`; nothing outside the folder is referenced). Everything is procedural: geometry, the robot's animation, the
 music and sound. No third-party assets.
 
+## Docs
+
+- [Player manual](../docs/MANUAL.md): controls, scoring, gears and the Toolbox, power-ups, Daily Run, Garage,
+  leaderboards, passkeys and backup codes, sharing, FAQ, privacy. Linked in game from the menu's settings row.
+- [Architecture and game mechanics](../docs/ARCHITECTURE.md): system and component diagrams, module map, render
+  pipeline, fixed-step sim and seeded RNG, scoring formulas and caps, anti-cheat, storage and migrations, audio graph,
+  performance budgets, testing, deploy and rollback.
+
+Every change to gameplay, UI, storage, the API or the architecture updates the matching doc in the same commit or
+PR (see [CONTRIBUTING.md](../CONTRIBUTING.md)).
+
 ## Files
 
 | File | What it is |
