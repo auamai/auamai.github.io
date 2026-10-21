@@ -10,7 +10,7 @@ export class Run {
     return { magnet: 0, drill: 0, hammer: 0, gold: 0, goldAge: 0, goldStep: 2, over: 0, meter: 0, smashCredit: 0, swing: 0, stop: 0, hitFlash: 0 };
   }
 
-  // Combined multiplier: rolling ×1.5, golden ×2 climbing to ×5, overdrive ×2; capped at ×6.
+  // Combined multiplier: golden ×2 climbing to ×5, overdrive ×2; capped at ×6 (Roller Mode has no multiplier of its own).
   get mult() {
     const f = this.fx;
     const gold = f.gold > 0 ? Math.min(5, 2 + Math.floor(f.goldAge)) : 1;

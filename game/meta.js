@@ -154,10 +154,16 @@ const DESIGN_RE = /^[0-3][0-2][0-3][01][A-Z0-9-]{0,8}$/;
 const RNAME_RE = /^[A-Za-z0-9][A-Za-z0-9 _.-]{0,15}$/;
 const BAD = ["fuck", "shit", "bitch", "cunt", "dick", "pussy", "nigg", "fag", "slut", "whore", "rape", "nazi", "hitler",
   "porn", "penis", "vagina", "asshole", "bastard", "retard", "kike", "chink", "twat", "wank", "jizz", "dildo", "sex"];
+// Same rule as the Worker: short stems that hide inside ordinary words (Sussex, Dickens, grape, swanky)
+// only match a whole word (plus -s / -y); every other stem matches anywhere, across spaces too.
+const WORD_ONLY = new Set(["sex", "dick", "rape", "fag", "wank", "twat", "kike", "chink", "nazi"]);
 export function rudeText(s) {
-  const b = String(s).toLowerCase().replace(/[^a-z0-9]/g, "");
-  const leet = (x, one) => x.replace(/0/g, "o").replace(/1/g, one).replace(/3/g, "e").replace(/4/g, "a").replace(/5/g, "s").replace(/7/g, "t").replace(/8/g, "b").replace(/9/g, "g").replace(/\$/g, "s");
-  return [b, leet(b, "i"), leet(b, "l")].some((v) => BAD.some((w) => v.includes(w)));
+  const leet = (x, one) => x.replace(/0/g, "o").replace(/1/g, one).replace(/3/g, "e").replace(/4/g, "a").replace(/5/g, "s").replace(/7/g, "t").replace(/8/g, "b").replace(/9/g, "g");
+  const vs = (x) => [x, leet(x, "i"), leet(x, "l")];
+  const words = String(s).toLowerCase().replace(/\$/g, "s").split(/[^a-z0-9]+/).filter(Boolean), all = words.join("");
+  return BAD.some((w) => WORD_ONLY.has(w)
+    ? words.some((t) => vs(t).some((v) => v === w || v === w + "s" || v === w + "y"))
+    : vs(all).some((v) => v.includes(w)));
 }
 // Tidy what a player types: trim, squash spaces, drop anything outside the allowed set, cut to length.
 export const tidyName = (s) => String(s || "").replace(/\s+/g, " ").replace(/[^A-Za-z0-9 _.-]/g, "").trim().slice(0, 16);

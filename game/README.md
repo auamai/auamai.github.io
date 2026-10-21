@@ -50,7 +50,7 @@ Cache-busting: every local import carries `?v=20261020r6d`; bump it on every rel
 | Drill: machine (arm) bored through | 50 |
 | Hammer: crate, stack or robot smashed | 75 |
 
-Multipliers multiply and cap at ×6: rolling ×1.5, golden torque wrench ×2 → ×5 (one step a second, ends early on any
+Multipliers multiply and cap at ×6: golden torque wrench ×2 → ×5 (one step a second, ends early on any
 contact), Overdrive ×2 (8 s, when the toolbox meter's five segments fill: a tool fills one, smashes half).
 
 Caps, held by the game and checked the same way by the Worker:
