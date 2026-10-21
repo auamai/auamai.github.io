@@ -136,6 +136,10 @@ async function req(method, path, body, ms = 5000) {
   }
 }
 
+// Challenge ghosts (r7 ghost): the sharer's compact track, keyed by the link's seed (base 36) and score.
+export const postGhost = (c, s, b) => req("POST", "/ghost", { c, s, b }, 8000);
+export const getGhost = (c, s) => req("GET", `/ghost?c=${encodeURIComponent(c)}&s=${encodeURIComponent(s)}`);
+
 // board: "all" (default), "daily" (today's Daily Run) or "weekly" (since Monday 00:00 Vancouver).
 export const topScores = (board = "all") => req("GET", board === "all" ? "/scores" : `/scores?board=${board}`);
 // run: { mode: "free" | "daily" | "challenge", day, seed } (round 6; older Workers ignore it).

@@ -65,6 +65,7 @@ class Game {
     this.tips = Object.assign({}, this.settings.tips);
     // A beat-my-run link (?c=seed&s=score&n=name) opens on that course with the score to beat.
     this.challenge = MT.readChallenge();
+    this.ghostFetch(); // the sharer's ghost, if they uploaded one (async; the run never waits for it)
     this.dailyLink = new URLSearchParams(location.search).has("daily");
     this.mode = this.challenge ? "challenge" : this.dailyLink ? "daily" : "free";
     // Reduced motion follows the OS setting until the player flips "Reduce motion" in Settings (saved as settings.still).

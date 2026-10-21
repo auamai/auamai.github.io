@@ -114,6 +114,7 @@ export class Net {
     const r = this.lastRun;
     if (!r) return;
     const card = await this.cardFor(r).catch(() => ({ blob: null, url: "" }));
+    if (r.mode !== "daily") this.ghostUpload(r);
     const how = await MT.shareOrDownload(card, this.shareText(r), this.shareLink(r));
     if (how === "downloaded+copied") this.toast("Card saved · link copied");
     else if (how === "downloaded") this.toast("Card saved");
@@ -123,6 +124,7 @@ export class Net {
     const r = this.lastRun;
     if (!r) return;
     const link = MT.challengeUrl(GAME_URL, r.seed, r.score, this.profile.username);
+    this.ghostUpload(r);
     try {
       if (navigator.share) { await navigator.share({ text: `Beat my ${fmt(r.score)} in Servo Sprint`, url: link }); return; }
     } catch (e) { if (e && e.name === "AbortError") return; }

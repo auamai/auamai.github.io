@@ -10,6 +10,7 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
 import { M_PER_U, visY } from "../core/constants.js?v=20261021r7";
 import { fmt } from "../core/util.js?v=20261021r7";
 import { mergeParts } from "./geometry.js?v=20261021r7";
+import * as P from "../../profile.js?v=20261021r7";
 
 const GKEY = "au_factory_ghost_v1";  // new key: { v: 1, list: [{ k: seed, m: mode, s: score, b: base64, at }] }
 const HZ = 10, MAX_N = 300 * HZ, SB = 6, KEEP = 4, GAP_HYST = 25;
@@ -106,8 +107,10 @@ export class Ghost {
     if (!G) return;
     G.n = 0; G.dq = 0; G.sq = 0; G.ahead = null; G.aheadT = 0; G.behindT = 0; G.chaseAt = -99; G.out = 0; G.fade = 0; G.shown = "";
     G.track = null; G.kind = "";
-    G.rec = this.mode === "daily" || this.mode === "challenge";
-    if (G.rec && this.settings.ghost !== false) {
+    // Every run records (a free run's track can ride along when it's shared as a challenge); only Daily and
+    // challenge runs keep it on this device, since a free run's course never comes back.
+    G.rec = true;
+    if ((this.mode === "daily" || this.mode === "challenge") && this.settings.ghost !== false) {
       const mine = readStore().list.find((e) => e.k === this.seed);
       const ch = this.mode === "challenge" && this.challenge && this.challenge.ghost;
       if (ch && (!mine || mine.s < ch.s)) { G.track = ch.track; G.kind = "rival"; G.name = this.challenge.name || "Rival"; }
@@ -210,15 +213,38 @@ export class Ghost {
     if (!G) return null;
     const res = G.on ? { kind: G.kind, name: G.name, beat: G.out ? true : score > G.track.s[G.track.n - 1] } : null;
     this.ghostHide();
-    if (!G.rec || G.n < HZ * 3 || score <= 0) return res;
+    this.lastGhost = null;
+    if (G.n < HZ * 3 || score <= 0) return res;
+    const b = encodeTrack(this.gRec, G.n);
+    this.lastGhost = { seed: this.seed, score, b, sent: false, cut: G.n >= MAX_N }; // a cut track wouldn't add up to the score // the share flow can attach it to a challenge
+    if (this.mode !== "daily" && this.mode !== "challenge") return res;
     const S = readStore(), old = S.list.find((e) => e.k === this.seed);
     if (old && old.s >= score) return res;
-    const ent = { k: this.seed, m: this.mode, s: score, b: encodeTrack(this.gRec, G.n), at: Date.now() };
+    const ent = { k: this.seed, m: this.mode, s: score, b, at: Date.now() };
     // One Daily ghost (today's course replaces yesterday's) plus the newest challenge courses.
     S.list = [ent, ...S.list.filter((e) => e.k !== this.seed && !(this.mode === "daily" && e.m === "daily"))];
     S.list.sort((p, q) => q.at - p.at); S.list.length = Math.min(S.list.length, KEEP);
     try { localStorage.setItem(GKEY, JSON.stringify(S)); } catch { /* full or private mode: no ghost, play on */ }
-    this.lastGhostB64 = ent.b; // the share flow can attach it to a challenge
     return res;
+  }
+
+  // Sharing a run as a challenge uploads its track once (fire and forget; the Worker validates it and keeps the
+  // first one per seed and score). Nothing waits on it and a failure changes nothing for the player.
+  ghostUpload(r) {
+    const L = this.lastGhost;
+    if (!L || L.sent || L.cut || !P.online() || L.seed !== r.seed || L.score !== r.score || this.settings.ghost === false) return;
+    L.sent = true;
+    P.postGhost((L.seed >>> 0).toString(36), L.score, L.b).catch(() => {});
+  }
+
+  // Opening a challenge link: fetch the sharer's ghost in the background. If it lands before the run starts,
+  // it races you; otherwise you race your own best on that course (if any).
+  ghostFetch() {
+    const c = this.challenge;
+    if (!c || !(c.score > 0) || !P.online() || this.settings.ghost === false) return;
+    P.getGhost((c.seed >>> 0).toString(36), c.score).then((res) => {
+      const track = res && res.ok && res.data && decodeTrack(res.data.b);
+      if (track && this.challenge === c && track.s[track.n - 1] <= c.score) c.ghost = { track, s: c.score };
+    }).catch(() => {});
   }
 }

@@ -90,3 +90,14 @@ CREATE TABLE IF NOT EXISTS webauthn_challenges (
 -- CREATE INDEX IF NOT EXISTS idx_scores_week ON scores (week, score DESC);
 -- ALTER TABLE profiles ADD COLUMN cosmetics TEXT;
 -- (applied by migrate_r6.sql; ALTER is not idempotent in SQLite, so it lives there)
+
+-- Challenge ghosts (r7 ghost): one compact track per (seed, score). Apply before deploying a Worker with
+-- /ghost (without it, POST /ghost answers 503 and GET /ghost 404; nothing else changes).
+CREATE TABLE IF NOT EXISTS ghosts (
+  seed INTEGER NOT NULL,
+  score INTEGER NOT NULL,
+  track TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (seed, score)
+);
+CREATE INDEX IF NOT EXISTS ghosts_created ON ghosts (created_at);

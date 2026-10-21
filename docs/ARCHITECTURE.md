@@ -463,13 +463,17 @@ sequenceDiagram
 
     A->>GA: Challenge a friend (game over)
     GA->>GA: challengeUrl(base, seed, score, name) gives ?c=seed base36&s=score&n=name
+    GA-)W: POST /ghost {c, s, b: compact track} (once per run, fire and forget; first write per c+s wins)
     GA->>OS: navigator.share inside the tap, else copyText, else toast with the URL
     OS-->>F: link
     F->>GF: open https://servosprint.xyz/?c=21i3v9&s=2410&n=alex_u
     GF->>GF: readChallenge: c is 1-7 chars of 0-9a-z, 0 <= s < 1e8, n must pass the name rule
+    GF-)W: GET /ghost?c&s (background; 200 {b} or {b: null})
+    W--)GF: the challenger's track, decoded and checked by decodeTrack
     GF-->>F: who you're racing and the score to beat, button Take the challenge
     F->>GF: start
     GF->>GF: startRun challenge, seed = parseInt(c, 36), same COURSE stream as the challenger
+    GF->>GF: the challenger's ghost races you (your own best on this course once it beats theirs)
     GF->>GF: score > s shows Challenge beaten
     GF->>W: POST /score mode challenge (counts on weekly and all-time)
     Note over GF: auamai.dev/game/?c=... forwards here with query and hash intact
@@ -777,7 +781,7 @@ against `durationMs`), or replay verification using the deterministic sim (seed 
 | --- | --- |
 | `au_factory_profile_v1` | `{ username, best, games, gears, lastPlayed, code?, token?, passkey, claimed, held, tb, cos }`. `held`: best unposted run `{score, durationMs}`. `tb: 1`: Toolbox migration stamp. `cos`: `{ spent, owned[], eq{trim,trail,hammer}, sv{b,u}, d{name,code,at} }` |
 | `au_factory_settings_v1` | `pad`, `lefty`, `haptics`, `music`, `sfx`, `musicVol`, `sfxVol`, `tips`, `trim`, `missions[]`, `streak{n,last,freeWeek,usedFree}`, `dailyBest{day,score}`, `pbStreak`, `rank`, `still` (reduce motion; absent = follow OS), `servoArm`, `ghost` (ghost racer; absent = on) |
-| `au_factory_ghost_v1` | Ghost tracks: `{ v: 1, list: [{ k: seed, m: "daily"\|"challenge", s: score, b: base64 track, at }] }`. One Daily entry (today's replaces older ones) plus the newest courses, 4 entries max. Written only when a run on that seed beats the stored score. Device-only, never synced |
+| `au_factory_ghost_v1` | Ghost tracks: `{ v: 1, list: [{ k: seed, m: "daily"\|"challenge", s: score, b: base64 track, at }] }`. One Daily entry (today's replaces older ones) plus the newest courses, 4 entries max. Written only when a run on that seed beats the stored score. Device-only, never synced (sharing a challenge uploads that one run's track to `/ghost`, see §13) |
 | `au_factory_public_v1` | Read-only summary for the portfolio teaser: `{v, name, best, rank, streak, dailyDay, dailyResetAt, dailyBest, weeklyResetAt, updatedAt}`. Never contains the code or token |
 
 - `code` and `token` are secrets; nothing outside the game may read them.
@@ -798,6 +802,7 @@ against `durationMs`), or replay verification using the deterministic sim (seed 
 | `sessions` | `token_hash` (PK, SHA-256), `username`, `created_at`, `expires_at` (400 days) |
 | `webauthn_challenges` | `id`, `challenge`, `kind`, `username`, `expires_at` (5 min, deleted on read) |
 | `rate_limits` | `key` (hash of bucket + IP or name + minute), `win`, `count` |
+| `ghosts` | `(seed, score)` PK, `track` (base64, ≤ 24 KB), `created_at` (pruned after 60 days by the cron); index `ghosts_created` |
 | `visit_salt`, `visits`, `daily_uniques` | Portfolio unique-visitor count (salted hashes, 30 days) |
 
 Indexes: `idx_scores_score`, `idx_scores_user`, `idx_scores_daily (mode, day, score DESC)`,
@@ -809,6 +814,7 @@ Indexes: `idx_scores_score`, `idx_scores_user`, `idx_scores_daily (mode, day, sc
 | --- | --- | --- |
 | `schema.sql` | Base tables | Every statement is `CREATE ... IF NOT EXISTS` |
 | `migrate_r6.sql` | `scores.mode`, `day`, `week`; daily and weekly indexes; `profiles.cosmetics` | Applied in production at r6 |
+| `migrate_ghost.sql` | `ghosts` table + `ghosts_created` index (also appended to `schema.sql`) | **Apply before deploying a Worker with `/ghost`.** Without it `POST /ghost` answers 200 `{ok: false}` and `GET /ghost` `{b: null}`; nothing else changes |
 | `migrate_r7.sql` | `scores.robot TEXT`, `scores.design TEXT`, `scores.revive INTEGER NOT NULL DEFAULT 0` | **Apply before deploying the r7 Worker.** The Worker falls back to the old insert/select if the columns are missing, so order isn't fatal, but robot names won't show |
 
 ```sh
@@ -851,8 +857,15 @@ The fallback in `handleScore` and `handleTop` runs only when `noColumn(e)` match
   https://www.auamai.dev` (`servosprint.auamai.workers.dev` only while a preview is in use). `auamai.github.io` is gone.
 - Replies: `Cache-Control: no-store`, `nosniff`, `CSP default-src 'none'; frame-ancestors 'none'`; `/scores` is
   `public, max-age=15`. `?board=` is normalised to `all | daily | weekly`.
-- **Body caps** (bytes, streamed): 2 KB; 16 KB for passkey routes; 4 KB for `/err`.
-- **Rate limits** per IP per minute: score 10, claim 5, restore 10, sync 20, passkey 20, backup-code 5, err 20, hit 30.
+- **Body caps** (bytes, streamed): 2 KB; 16 KB for passkey routes; 4 KB for `/err`; 24,256 for `/ghost`.
+- **Rate limits** per IP per minute: score 10, claim 5, restore 10, sync 20, passkey 20, backup-code 5, err 20, hit 30, ghost 6.
+- **Challenge ghosts** (`POST /ghost {c, s, b}`, `GET /ghost?c&s`): cosmetic, never read by scoring. `c` 1-7 chars
+  `0-9a-z`, `s` integer 1..1e8; `b` strict base64, whole 6-byte samples, 30-3000 samples (3-300 s), flag byte ≤ 7,
+  distance ≤ 50 u/s on average, score steps sum to `s` within max(250, 5 %) and `s ≤ allowedScore(secs + 1)` (same
+  caps as `/score`). `INSERT OR IGNORE`: the first upload per (seed, score) is permanent until pruned, so nobody can
+  overwrite a friend's ghost. GET is public (no Origin needed) and cacheable (1 day; 60 s for `{b: null}`).
+  Missing ghost or unmigrated table answers 200, so no player ever sees a network error in the console.
+  Tests: `test/ghost.test.mjs` (`npm test` runs it).
   **Per-name lockout:** 10 wrong codes or tokens per name per minute from any IP, then 429 ("too many tries, wait a
   minute"), even for the right code. Trade-off: someone who knows a name can lock it a minute at a time.
 - **Save codes:** 10 chars from `A-H J-N P-Z 2-9` (~50 bits), shown once. Stored as legacy `SHA-256` or, when

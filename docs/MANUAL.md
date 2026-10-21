@@ -246,8 +246,12 @@ on that same course. Free runs get a fresh course every time, so they have no gh
   you've gone past it.
 - The game-over screen says "Ghost beaten" or "Ghost held on".
 - The ghost fades when it would sit on top of your robot, so it never hides what's in front of you.
-- Turn it off in **Settings → Ghost racer**. Ghosts are stored on this device only (today's Daily plus your
-  four most recent courses) and never change the course or your score.
+- **Challenger ghost:** when you send someone a challenge (Share or Challenge a friend), your run's ghost goes
+  with it. When they open the link they race *your* ghost, labelled with your name, until they beat your score
+  on that course; after that they race their own best there.
+- Turn it off in **Settings → Ghost racer** (this also stops your ghost being attached to challenges you
+  send). Your own ghosts are stored on this device only (today's Daily plus your four most recent courses).
+  Ghosts never change the course or anyone's score.
 
 ### Streaks
 
@@ -497,7 +501,8 @@ saved with a passkey or backup code, sign in with it and your synced stats come 
 - **On your device:** your name, scores, settings, Toolbox, Garage design, and your save code or sign-in
   token are kept in your browser's local storage.
 - **On the server (if you play online):** your name, your scores with their run length, mode and date, your
-  robot's name and design, and whether a run used a Spare Servo. If you save your name: a scrambled (hashed)
+  robot's name and design, and whether a run used a Spare Servo. When you send a challenge link: that run's
+  ghost (where your robot was each tenth of a second, and its score), with no name attached, deleted after 60 days. If you save your name: a scrambled (hashed)
   copy of your backup code, your passkey's public key (never your face or fingerprint, which stay on your
   device), and your synced stats.
 - **No visit tracking in the game.** The game doesn't send a page-view ping. (The separate auamai.dev portfolio
