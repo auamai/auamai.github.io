@@ -1050,7 +1050,7 @@ skips the bus ducks.
 | Hot loop allocations | 0 per sub-step | HUD chips keyed by bitmask; revive and spend allocate once per event |
 | Robot meshes | 58 | 58 |
 | Ghost racer | ≤ +3 draw calls | **+2** while it shows (depth pre-pass + rim-lit colour pass on one baked geometry per form; runner and roller baked at load, only one visible), 0 when hidden |
-| Juice + Foreman (r8 juice) | ≤ +4 draw calls | **+4** at most while he is on screen and sparks are live (drone, beam, floor pool, sparks), 0 when he is behind the camera and no sparks live; shaders warmed on the title screen; no per-frame allocation (typed arrays, preallocated vectors, one pooled DOM line) |
+| Juice + Foreman (r8 juice) | ≤ +4 draw calls | Measured (same frame, juice objects on vs off): **+1** while sparks are live, **+2** while he follows (drone, floor pool), **+3** with sparks, **+4** in a lane check or the crash (beam added; one pass, `forceSinglePass`); 0 when he is behind the camera and no sparks live. Shaders warmed 1.2 s after the title draws. No per-frame allocation (typed arrays, preallocated vectors, one pooled DOM line). Payload **+7.2 KB gz** |
 | Draw calls, in a run | see below | see below |
 
 ### Draw calls: the honest numbers

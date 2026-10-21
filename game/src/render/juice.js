@@ -10,6 +10,7 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
 import { BEND } from "../world/track.js?v=20261021r8";
 
 const INK = 0xf2f0ea, GOLD = 0xffc93c, CYAN = 0x3ddcff, GRAPH = 0x14161b;
+const LIGHT = 0xfad779; // the searchlight: #FFC93C tinted 35% toward #F2F0EA, so dim light on grey never reads orange
 const NP = 64;               // pooled sparks (one Points draw)
 const HOLD = 0.085;          // crash hit-stop: the impact frame holds this long (render only)
 // The Foreman's lines. Dry, short, in the floor's own words (the LINE 3 and NO RUNNING signs, the tagline).
@@ -58,11 +59,11 @@ function merge(list) {
 // Cone along +z from r0 at z=0 to 1 at z=1, plus a lamp disc at the apex; vertex colours fade to black
 // (additive blending, so black is "no light").
 function beamGeo() {
-  const S = 20, pos = [], col = [], c = new THREE.Color(GOLD);
+  const S = 20, pos = [], col = [], c = new THREE.Color(LIGHT);
   const ring = (i) => [Math.cos((i / S) * Math.PI * 2), Math.sin((i / S) * Math.PI * 2)];
   for (let i = 0; i < S; i++) {
     const [a, b] = ring(i), [e, f] = ring(i + 1), r0 = 0.16;
-    const near = 0.055, far = 0.0;
+    const near = 0.035, far = 0.0;
     pos.push(a * r0, b * r0, 0, a, b, 1, e, f, 1, a * r0, b * r0, 0, e, f, 1, e * r0, f * r0, 0);
     for (const k of [near, far, far, near, far, near]) col.push(c.r * k, c.g * k, c.b * k);
     pos.push(0, 0, 0.001, a * r0 * 0.9, b * r0 * 0.9, 0.001, e * r0 * 0.9, f * r0 * 0.9, 0.001); // the lamp
@@ -75,7 +76,7 @@ function beamGeo() {
 }
 // Floor pool: a bright rim (the searchlight's edge) and a faint fill, flat on the floor.
 function poolGeo() {
-  const S = 28, pos = [], col = [], c = new THREE.Color(GOLD);
+  const S = 28, pos = [], col = [], c = new THREE.Color(LIGHT);
   for (let i = 0; i < S; i++) {
     const a0 = (i / S) * Math.PI * 2, a1 = ((i + 1) / S) * Math.PI * 2;
     const p = (r, a) => [Math.cos(a) * r, 0, Math.sin(a) * r];
@@ -83,7 +84,7 @@ function poolGeo() {
       pos.push(...p(r0, a0), ...p(r1, a1), ...p(r1, a0), ...p(r0, a0), ...p(r0, a1), ...p(r1, a1));
       for (const k of [k0, k1, k1, k0, k0, k1]) col.push(c.r * k, c.g * k, c.b * k);
     };
-    quad(0, 0.86, 0.09, 0.07); quad(0.86, 0.94, 0.07, 0.3); quad(0.94, 1, 0.3, 0.0);
+    quad(0, 0.86, 0.05, 0.04); quad(0.86, 0.94, 0.04, 0.18); quad(0.94, 1, 0.18, 0.0);
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
@@ -94,19 +95,19 @@ function poolGeo() {
 export class Juice {
   /* ---------- build (once, on the first drawn frame) ---------- */
   juiceBuild() {
-    const add = { transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, vertexColors: true, fog: false };
+    const add = { transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, vertexColors: true, fog: false, toneMapped: false };
     const M = {
       drone: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.45, metalness: 0.35 }),
       beam: new THREE.MeshBasicMaterial({ ...add, side: THREE.DoubleSide, forceSinglePass: true }), // one pass, not back+front
       pool: new THREE.MeshBasicMaterial({ ...add, polygonOffset: true, polygonOffsetFactor: -2 }),
     };
-    // The Foreman's drone: a graphite pod, two rotor booms, ink trim, a gold lamp housing and a cyan eye slit.
+    // The Foreman's drone: a graphite pod, two rotor booms, ink trim and lamp housing, a cyan eye slit.
     const parts = [
       box(0.9, 0.34, 0.62, 0, 0, 0, GRAPH), box(0.62, 0.08, 0.66, 0, 0.21, 0, 0x3a3f4b),
       box(2.1, 0.07, 0.12, 0, 0.12, 0, 0x262a33), box(0.12, 0.07, 1.5, 0, 0.12, 0, 0x262a33),
       box(0.5, 0.025, 0.5, 1.05, 0.17, 0, INK), box(0.5, 0.025, 0.5, -1.05, 0.17, 0, INK),
       box(0.5, 0.025, 0.5, 0, 0.17, 0.75, INK), box(0.5, 0.025, 0.5, 0, 0.17, -0.75, INK),
-      box(0.34, 0.16, 0.2, 0, -0.22, -0.18, GOLD), box(0.56, 0.05, 0.02, 0, 0.03, -0.32, CYAN),
+      box(0.34, 0.16, 0.2, 0, -0.22, -0.18, INK), box(0.56, 0.05, 0.02, 0, 0.03, -0.32, CYAN),
     ];
     const drone = new THREE.Mesh(merge(parts), M.drone);
     drone.scale.setScalar(0.6);
