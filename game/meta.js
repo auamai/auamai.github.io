@@ -386,7 +386,7 @@ const fmtN = (n) => Math.floor(n).toLocaleString("en-US");
 const unit = (stat, n) => ({ smash: n === 1 ? "smash" : "smashes", screws: "screws", gearsRun: "gears", tools: n === 1 ? "tool" : "tools", jumps: "jumps", goldT: "s", score: "points", over: "overdrive", daily: "run", slides: n === 1 ? "slide" : "slides", time: "s", dist: "m", clean: "clean points" }[stat] || "");
 
 /* ---------- beat-my-run links ---------- */
-// v: course version (r7 levels). Links without it were made before Factory Zones (v1, the straight hall)
+// v: course version (Factory Zones). Links without it were made before Factory Zones (v1, the straight hall)
 // and still replay that exact course; new links carry v=2.
 export function challengeUrl(base, seed, score, name, v = 2) {
   const u = new URL("./", base); // base: the game's own folder (config.js GAME_URL)

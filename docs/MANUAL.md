@@ -284,7 +284,8 @@ on that same course. Free runs get a fresh course every time, so they have no gh
 - The ghost fades when it would sit on top of your robot, so it never hides what's in front of you.
 - **Challenger ghost:** when you send someone a challenge (Share or Challenge a friend), your run's ghost goes
   with it. When they open the link they race *your* ghost, labelled with your name, until they beat your score
-  on that course; after that they race their own best there.
+  on that course; after that they race their own best there. A long name is shortened with "…" so the chip
+  stays on one line on small phones.
 - Turn it off in **Settings → Ghost racer** (this also stops your ghost being attached to challenges you
   send). Your own ghosts are stored on this device only (today's Daily plus your four most recent courses).
   Ghosts never change the course or anyone's score.

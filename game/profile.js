@@ -143,7 +143,7 @@ async function req(method, path, body, ms = 5000) {
   }
 }
 
-// Challenge ghosts (r7 ghost): the sharer's compact track, keyed by the link's seed (base 36) and score.
+// Challenge ghosts (Ghost Racing): the sharer's compact track, keyed by the link's seed (base 36) and score.
 // v: course version of the run (1 classic, 2 zones + turns); the Worker keys ghosts by (seed, score, v).
 export const postGhost = (c, s, v, b) => req("POST", "/ghost", { c, s, v, b }, 8000);
 export const getGhost = (c, s, v) => req("GET", `/ghost?c=${encodeURIComponent(c)}&s=${encodeURIComponent(s)}&v=${encodeURIComponent(v || 1)}`);
