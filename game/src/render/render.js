@@ -466,6 +466,15 @@ export class Render {
     }
     // Garage close-up (r7): the robot sits beside the panel on wide screens, above it on phones.
     const gk = this.garageK = (this.garageK || 0) + ((this.view === "shop" && this.state === "menu" ? 1 : 0) - (this.garageK || 0)) * Math.min(1, dt * 8);
+    // The close-up also pulls the fog and far plane in (a studio feel), so the far hall drops out of
+    // the frustum: the Garage view draws fewer calls than the title, not more.
+    const fb = this.fogBase || (this.fogBase = { near: this.scene.fog.near, far: this.scene.fog.far, cam: c.far });
+    const cf = fb.cam + (52 - fb.cam) * gk;
+    if (Math.abs(cf - c.far) > 0.01) {
+      const k = gk < 0.002 ? 0 : gk;
+      this.scene.fog.near = fb.near + (12 - fb.near) * k; this.scene.fog.far = fb.far + (50 - fb.far) * k;
+      c.far = k ? cf : fb.cam; c.updateProjectionMatrix();
+    }
     if (gk > 0.002) {
       const port = c.aspect < 1, px = port ? 0 : -1.05, py = port ? 1.5 : 1.45, pz = port ? 3.6 : 3.6, ly = port ? -0.1 : 0.95;
       c.position.set(c.position.x + (px - c.position.x) * gk, c.position.y + (py - c.position.y) * gk, c.position.z + (pz - c.position.z) * gk);
