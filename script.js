@@ -8,8 +8,17 @@
   const dateEl = document.getElementById("clock-date");
   const dfmt = new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "America/Vancouver" });
   const tickDate = () => { if (dateEl) dateEl.textContent = dfmt.format(new Date()).replace(",", ""); };
-  tick(); tickDate();
-  setInterval(() => { tick(); tickDate(); }, 15000);
+  // Re-sync on every second boundary and whenever the tab wakes up. Browsers throttle or
+  // freeze timers in background tabs, so a fixed interval drifts or shows a stale time.
+  const syncers = [() => { tick(); tickDate(); }];
+  const syncAll = () => syncers.forEach((f) => f());
+  let timer = 0;
+  const loopTick = () => { syncAll(); clearTimeout(timer); timer = setTimeout(loopTick, 1000 - (Date.now() % 1000) + 20); };
+  loopTick();
+  const wake = () => { if (document.visibilityState !== "hidden") loopTick(); };
+  document.addEventListener("visibilitychange", wake);
+  window.addEventListener("pageshow", wake);
+  window.addEventListener("focus", wake);
 
   // Dial: minute ticks; the 12 hour marks are the ring pins of a cycloidal drive.
   const ns = "http://www.w3.org/2000/svg";
@@ -23,7 +32,16 @@
     }
   }
   const sweep = document.querySelector(".dial__sweep");
-  if (sweep) { const n = new Date(); sweep.style.setProperty("--sweep-delay", -(n.getSeconds() + n.getMilliseconds() / 1000) + "s"); }
+  const syncSweep = () => {
+    if (!sweep) return;
+    const n = new Date();
+    sweep.style.animation = "none"; void sweep.offsetWidth; sweep.style.animation = "";
+    sweep.style.setProperty("--sweep-delay", -(n.getSeconds() + n.getMilliseconds() / 1000) + "s");
+  };
+  syncSweep();
+  const resweep = () => { if (document.visibilityState !== "hidden") syncSweep(); };
+  document.addEventListener("visibilitychange", resweep);
+  window.addEventListener("pageshow", resweep);
 
   // Cycloidal drive: N ring pins, N-1 lobes, eccentric E. Input turns the eccentric;
   // the disc turns backward at 1/(N-1) of it. Disc rotation is the output and reads the hour.
@@ -72,10 +90,10 @@
       const step = (now) => {
         const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3);
         place(outputNow() + back * (1 - e));
-        if (k < 1) requestAnimationFrame(step); else setInterval(() => place(outputNow()), 1000);
+        if (k < 1) requestAnimationFrame(step); else { place(outputNow()); syncers.push(() => place(outputNow())); }
       };
       place(outputNow() + back); requestAnimationFrame(step);
-    } else { place(outputNow()); setInterval(() => place(outputNow()), 1000); }
+    } else { place(outputNow()); syncers.push(() => place(outputNow())); }
 
     // 2.5D: a gentle tilt toward the cursor on fine pointers; flat for reduced motion.
     const stage = dial.querySelector(".dial__stage");
