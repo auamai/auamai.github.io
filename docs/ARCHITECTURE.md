@@ -607,8 +607,9 @@ patched.
   near hazards are never displaced; phone portrait keeps the robot framed through every turn. Shadows stay
   consistent: casters render unbent into the shadow map and receivers look up shadows from their unbent world
   position (`worldpos_vertex` is untouched), so a shadow stays under its object.
-- **Long pieces are tessellated** at build time (`tessellate`/`tessLines`: longest-z-edge bisection to 6-unit
-  steps, attributes interpolated, edges split) for any non-instanced mesh or line set over 30 units long (floor,
+- **Long pieces are tessellated** at build time (`tessellate`/`tessLines`: every triangle is sliced by z-planes
+  12 units apart, a convex clip per slab, fan-triangulated, so the count grows linearly with length; attributes
+  interpolated, normals renormalised, edges split; chord sag at the tightest bend is k L²/4 = 0.12 units) for any non-instanced mesh or line set over 30 units long (floor,
   ceiling, lane and bed planes, side rails, roof strips). Short pieces and instanced furniture bend per vertex as
   they are. +0 draw calls, +0 materials; extra triangles are measured in §15.
 - **Camera:** looks into the corner (`camYaw`, capped at 32 % of the horizontal half-FOV so the robot stays on

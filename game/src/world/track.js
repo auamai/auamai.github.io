@@ -74,29 +74,41 @@ export function bendAt(seed, start, d, out) {
 }
 
 /* ---------- geometry: long straight pieces get rings along z so the bend can curve them ---------- */
-const STEP = 6;
+const STEP = 12; // chord sag at the tightest bend: k L² / 4 = 0.12 units
+// Slices every triangle by z-planes STEP apart (a convex clip per slab, fan-triangulated), so the count grows
+// linearly with length. Every attribute is interpolated; normals are renormalised.
+const lerpV = (a, b, t) => a.map((x, i) => x + (b[i] - x) * t);
+function clip(poly, zi, z, keepAbove) {
+  const out = [];
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i], b = poly[(i + 1) % poly.length], ia = keepAbove ? a[zi] >= z : a[zi] <= z, ib = keepAbove ? b[zi] >= z : b[zi] <= z;
+    if (ia) out.push(a);
+    if (ia !== ib) out.push(lerpV(a, b, (z - a[zi]) / (b[zi] - a[zi])));
+  }
+  return out;
+}
 function tessellate(src, sz) {
   const g = src.index ? src.toNonIndexed() : src.clone();
-  const names = Object.keys(g.attributes);
-  const A = names.map((n) => Array.from(g.attributes[n].array)), sizes = names.map((n) => g.attributes[n].itemSize);
-  const pos = names.indexOf("position"), lim = STEP / Math.max(1e-6, Math.abs(sz));
-  const out = names.map(() => []), stack = [];
-  const n = A[pos].length / 3;
-  for (let i = 0; i < n; i += 3) stack.push([i, i + 1, i + 2].map((v) => names.map((_, a) => A[a].slice(v * sizes[a], v * sizes[a] + sizes[a]))));
-  while (stack.length) {
-    const t = stack.pop();
-    // Longest edge in z.
-    let e = -1, best = lim;
-    for (let j = 0; j < 3; j++) { const dz = Math.abs(t[j][pos][2] - t[(j + 1) % 3][pos][2]); if (dz > best) { best = dz; e = j; } }
-    if (e < 0) { for (const v of t) v.forEach((arr, a) => out[a].push(...arr)); continue; }
-    const p = t[e], q = t[(e + 1) % 3], r = t[(e + 2) % 3];
-    const m = p.map((arr, a) => arr.map((x, c) => (x + q[a][c]) / 2));
-    const ni = names.indexOf("normal");
-    if (ni >= 0) { const v = m[ni], l = Math.hypot(...v) || 1; for (let c = 0; c < 3; c++) v[c] /= l; }
-    stack.push([p, m, r], [m, q, r]);
+  const names = Object.keys(g.attributes), sizes = names.map((n) => g.attributes[n].itemSize);
+  const offs = []; let w = 0; for (const s of sizes) { offs.push(w); w += s; }
+  const zi = offs[names.indexOf("position")] + 2, ni = names.indexOf("normal"), lim = STEP / Math.max(1e-6, Math.abs(sz));
+  const n = g.attributes.position.count, vert = (i) => { const v = []; names.forEach((nm, a) => { const A = g.attributes[nm].array; for (let c = 0; c < sizes[a]; c++) v.push(A[i * sizes[a] + c]); }); return v; };
+  const out = [];
+  for (let i = 0; i < n; i += 3) {
+    const tri = [vert(i), vert(i + 1), vert(i + 2)], z0 = Math.min(...tri.map((v) => v[zi])), z1 = Math.max(...tri.map((v) => v[zi]));
+    if (z1 - z0 <= lim * 1.5) { out.push(...tri); continue; }
+    for (let lo = z0; lo < z1 - 1e-6; lo += lim) {
+      const poly = clip(clip(tri, zi, lo, true), zi, Math.min(z1, lo + lim), false);
+      for (let k = 1; k + 1 < poly.length; k++) out.push(poly[0], poly[k], poly[k + 1]);
+    }
   }
   const res = new THREE.BufferGeometry();
-  names.forEach((nm, a) => res.setAttribute(nm, new THREE.Float32BufferAttribute(out[a], sizes[a], g.attributes[nm].normalized)));
+  names.forEach((nm, a) => {
+    const arr = new Float32Array(out.length * sizes[a]);
+    out.forEach((v, j) => { for (let c = 0; c < sizes[a]; c++) arr[j * sizes[a] + c] = v[offs[a] + c]; });
+    if (a === ni) for (let j = 0; j < out.length; j++) { const o = j * 3, l = Math.hypot(arr[o], arr[o + 1], arr[o + 2]) || 1; arr[o] /= l; arr[o + 1] /= l; arr[o + 2] /= l; }
+    res.setAttribute(nm, new THREE.BufferAttribute(arr, sizes[a], g.attributes[nm].normalized));
+  });
   g.dispose();
   return res;
 }
