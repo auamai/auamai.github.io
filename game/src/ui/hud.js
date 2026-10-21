@@ -5,6 +5,10 @@ import * as P from "../../profile.js?v=20261020r6c";
 import { DIST_POINTS, MAGNET_T, DRILL_T, HAMMER_T, GOLD_T, OVER_T, SLOW_T, ICON, TIPS, NO_SLOW } from "../core/constants.js?v=20261020r6c";
 import { fmt } from "../core/util.js?v=20261020r6c";
 
+// Tool chips in HUD order: [fx key, full duration, label].
+const CHIPS = [["magnet", MAGNET_T, "Magnet"], ["drill", DRILL_T, "Drill"], ["hammer", HAMMER_T, "Hammer"], ["gold", GOLD_T, "Gold"], ["over", OVER_T, "Overdrive"]];
+const CHIP_T = Object.fromEntries(CHIPS.map(([k, T]) => [k, T]));
+
 export class Hud {
   // Floating "+25" over the thing that paid it, projected to the screen. Pooled DOM.
   pop(text, at, big = false) {
@@ -126,19 +130,23 @@ export class Hud {
       this.elMeter[0].parentNode.classList.toggle("is-over", seg < 0);
     }
     // Active tool chips: name and a ring that empties; the golden one shows its multiplier.
-    const act = [["magnet", MAGNET_T, "Magnet"], ["drill", DRILL_T, "Drill"], ["hammer", HAMMER_T, "Hammer"], ["gold", GOLD_T, "Gold"], ["over", OVER_T, "Overdrive"]].filter(([k]) => f[k] > 0);
-    const key = act.map(([k]) => k).join();
-    if (key !== sh.chips) {
-      sh.chips = key;
-      this.elChips.innerHTML = act.map(([k, , n]) => `<span class="fr__chip is-${k}" data-k="${k}"><svg viewBox="0 0 24 24"><circle class="bg" cx="12" cy="12" r="9.5"/><circle class="fg" cx="12" cy="12" r="9.5"/></svg><b>${n}</b></span>`).join("");
+    // Runs every 120 Hz sub-step, so it allocates nothing unless the set of chips or a shown value changes.
+    let mask = 0;
+    for (let i = 0; i < CHIPS.length; i++) if (f[CHIPS[i][0]] > 0) mask |= 1 << i;
+    if (mask !== sh.chips) {
+      sh.chips = mask;
+      this.elChips.innerHTML = CHIPS.filter((c, i) => mask & (1 << i)).map(([k, , n]) => `<span class="fr__chip is-${k}" data-k="${k}"><svg viewBox="0 0 24 24"><circle class="bg" cx="12" cy="12" r="9.5"/><circle class="fg" cx="12" cy="12" r="9.5"/></svg><b>${n}</b></span>`).join("");
       this.chipEls = [...this.elChips.children];
+      for (const el of this.chipEls) { el._k = el.dataset.k; el._T = CHIP_T[el._k]; el._ring = el.firstChild.lastChild; el._dash = -1; el._gold = -1; }
     }
-    for (const el of this.chipEls || []) {
-      const k = el.dataset.k, T = { magnet: MAGNET_T, drill: DRILL_T, hammer: HAMMER_T, gold: GOLD_T, over: OVER_T }[k];
-      const left = f[k] / T;
-      el.firstChild.lastChild.style.strokeDashoffset = ((1 - left) * 59.69).toFixed(1);
-      if (k === "gold") el.lastChild.textContent = `Gold ×${Math.min(5, 2 + Math.floor(f.goldAge))}`;
-      el.classList.toggle("is-ending", f[k] < 1.5);
+    const chips = this.chipEls;
+    if (chips) for (let i = 0; i < chips.length; i++) {
+      const el = chips[i], k = el._k;
+      const dash = Math.round((1 - f[k] / el._T) * 597); // 0.1 of the 59.69 ring length
+      if (dash !== el._dash) { el._dash = dash; el._ring.style.strokeDashoffset = (dash / 10).toFixed(1); }
+      if (k === "gold") { const gm = Math.min(5, 2 + Math.floor(f.goldAge)); if (gm !== el._gold) { el._gold = gm; el.lastChild.textContent = `Gold ×${gm}`; } }
+      const ending = f[k] < 1.5;
+      if (ending !== el._end) { el._end = ending; el.classList.toggle("is-ending", ending); }
     }
     // Personal best: the HUD bar fills toward it, and a floor line marks where it falls at this pace.
     if (this.pbFrom > 0) {
