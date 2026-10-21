@@ -387,7 +387,12 @@ export class Run {
     const bay = (slot && BAY[slot.type]) || "the line", mps = Math.round((this.deathSpeed || this.speed) * M_PER_U);
     const late = (this.deathType === "stack" && this.fx.hammer <= 0 && this.lastToolKind === "hammer") ? "hammer" : (this.deathType === "arm" && this.lastToolKind === "drill" && this.fx.drill <= 0) ? "drill" : this.deathType;
     const pool = HEADLINES[late] || ["Run over"];
-    let headline = pool[(Math.random() * pool.length) | 0].replace("{v}", mps).replace("{bay}", bay);
+    // Never the same line twice in a row for the same hazard (UI only: Math.random, not the course RNG).
+    this.lastLine = this.lastLine || {};
+    let li = (Math.random() * pool.length) | 0;
+    if (pool.length > 1 && li === this.lastLine[late]) li = (li + 1 + ((Math.random() * (pool.length - 1)) | 0)) % pool.length;
+    this.lastLine[late] = li;
+    let headline = pool[li].replace("{v}", mps).replace("{bay}", bay);
     headline = headline[0].toUpperCase() + headline.slice(1);
     const prevRank = this.settings.rank || null;
     this.lastRun = { mode: this.mode, seed: this.seed, headline, prevRank, dist: Math.round((this.runDist || 0) * M_PER_U), bestMult: this.bestMult || 1, missionsDone: ms.done, reward, challenge: this.mode === "challenge" ? this.challenge : null,

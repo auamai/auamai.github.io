@@ -139,14 +139,14 @@ export const OVER_ICON = {
 export const CAUSE = { crate: "Clipped a crate", stack: "Into the stack", arm: "Caught by the arm", bot: "Hit an oncoming rover", gap: "Fell through the line" };
 // Game-over headlines, per hazard: {v} speed in m/s, {bay} the bay you went down in. Picked at random.
 export const HEADLINES = {
-  crate: ["Clipped a crate at {v} m/s", "That crate wasn't moving. You were, at {v} m/s", "Boxed in at {bay}", "Shipped early from {bay}"],
+  crate: ["Clipped a crate at {v} m/s", "That crate wasn't moving. You were, at {v} m/s", "Took a crate at {bay}", "Shipped early from {bay}"],
   stack: ["Ran into a wall of crates at {bay}", "The stack won at {v} m/s", "Two crates high. That one goes around", "Stacked up at {bay}"],
   arm: ["Swept by the arm at {bay}", "The arm saw you first", "Should have slid under that one", "Picked up by the line at {bay}"],
   bot: ["Met a rover head-on at {v} m/s", "Right of way: the rover at {bay}", "Robot traffic at {bay}", "The rover had the lane at {bay}"],
   gap: ["Dropped through the line at {bay}", "Missed the floor by a jump", "Down the gap at {v} m/s", "The belt ran out at {bay}"],
   drill: ["Drill went cold. The arm didn't"], hammer: ["Hammer's down. The stack wasn't"],
 };
-export const BAY = { weld: "the weld cell", laser: "the laser cutters", test: "the test bay", inventory: "inventory", window: "the windows", assembly: "final assembly", door: "the loading door" };
+export const BAY = { weld: "the weld cell", laser: "the laser cutters", test: "the test bay", inventory: "the parts racks", window: "the window wall", assembly: "final assembly", door: "the loading dock" };
 
 export const BOT_SPEED = 3.2;       // own speed of mobile robots, on top of the belt
 export const BOT_FROM = 20;         // seconds into a run before mobile robots appear
