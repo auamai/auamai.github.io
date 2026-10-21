@@ -241,6 +241,8 @@ export class Track {
     this.applyLook(on ? this.zoneSeen : -1, dt);
   }
 
+  zoneName() { return ZONES[zoneAt(this.zoneStart, this.runDist || 0)].name; }
+
   zoneEnter(z) {
     if (this.state !== "play") return;
     this.sfx?.("tool");

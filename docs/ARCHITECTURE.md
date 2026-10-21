@@ -692,6 +692,23 @@ state). Expected values for this build:
 The god_180s change is deliberate: the golden wrench picked up near 115 s now applies its multiplier and books the
 next one. New expectations are in `review/gameplay_golden.json`. Any other sim change must either keep all three
 or justify the new values in the PR. A Spare Servo is never used in the goldens.
+**Course v2 (r7 levels, `review/levels`).** Factory Zones change world generation on purpose (zone obstacle mixes,
+teach/test/twist row rules, zone spacing; see [§10](#10-obstacles-and-world-generation)), so a golden challenge
+without a version field now runs course v2 and the bot's recorded inputs were re-recorded. New expectations
+(`review/levels_golden.json`, same seeds, steps and bot as before):
+
+| Scenario | v2 score / hash | classic v1 (`challenge.v = 1`) |
+| --- | --- | --- |
+| `real_run` | **472 / `7653262c`** (crash at step 1958) | 432 / `acd66776` |
+| `god_180s` | **11353 / `a1b7d2f`** | 9885 / `93ed983c` |
+| `daily_like` | **3592 / `1d2f7e4d`** | 3057 / `ded68c93` |
+
+Each v2 golden was recorded, self-replayed, then replayed twice more in fresh browsers: identical every time. The
+right-hand column is the old r7 golden file replayed with `challenge.v = 1`: all three match, which is the proof
+that old challenge links still lay out the exact course they were made on. Turns, lean, camera and zone light are
+render-only and never enter the digest. Why the scores move: the zone rules lay out different rows (the Bakery Line opens
+with crate-only, roomier rows; later zones change the type mix); the bot and seeds are unchanged.
+
 All three goldens were re-run on the integrated tree (`integration/r7`, `b1ea002`) and match the values above:
 `real_run` 432 / `acd66776`, `daily_like` 3057 / `ded68c93`, `god_180s` 9885 / `93ed983c`. Lighting's `worldgen.js`
 change (`gearShadow`) is render-only.
@@ -1062,6 +1079,11 @@ At `integration/r7` only the two `leaderboard-worker/test/` suites are in the re
 (`gtests.py`, 11) and the Worker garage suite (14) still live under `review/garage_shots/`; moving them into the repo
 is open. Integrated Worker total: **134** (31 + 15 + 9 + 14 + 46 + 12 + 7, as counted by the integrator). Browser
 17/17, reliability 9/9, garage 11/11 on `b1ea002`.
+
+**Course v2 (r7 levels):** golden expectations moved to `review/levels_golden.json` ([§8](#8-seeded-rng-determinism-and-golden-replays)),
+plus a fourth check: the old r7 golden file replayed with `challenge.v = 1` must still match. The reliability suite's
+`share_and_challenge` pinned the exact link text, so the levels copy (`review/val_h/out_levels/tests_b_lv.js`)
+expects `&v=2` on new links, `v: 1` from a link without it, and no `v` when a v1 run is re-shared.
 
 Known test gaps: no WebKit on the test box (iOS covered by Chromium emulation plus code review); a real iPhone pass
 is needed for audio unlock, share sheet and Add to Home Screen.
