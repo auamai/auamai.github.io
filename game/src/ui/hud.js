@@ -2,11 +2,16 @@
 // Installed onto Game.prototype by game.js (methods use `this`, the Game).
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
 import * as P from "../../profile.js?v=20261021r7";
-import { DIST_POINTS, MAGNET_T, DRILL_T, HAMMER_T, GOLD_T, OVER_T, SLOW_T, ICON, TIPS, NO_SLOW, visY } from "../core/constants.js?v=20261021r7";
+import { DIST_POINTS, MAGNET_T, DRILL_T, HAMMER_T, GOLD_T, OVER_T, SLOW_T, ICON, TIPS, NO_SLOW, visY, FLOW_MAX, FLOW_LVL, MARK_FAR, MARK_NEAR, TOOL_NAME } from "../core/constants.js?v=20261021r7";
 import { fmt } from "../core/util.js?v=20261021r7";
 
 // Tool chips in HUD order: [fx key, full duration, label].
-const CHIPS = [["magnet", MAGNET_T, "Magnet"], ["drill", DRILL_T, "Drill"], ["hammer", HAMMER_T, "Hammer"], ["gold", GOLD_T, "Gold"], ["over", OVER_T, "Overdrive"]];
+// The last four are combos (run.js updateFx): they read as a pair, cyan-edged, after the tools they join.
+const CHIPS = [["magnet", MAGNET_T, "Magnet"], ["drill", DRILL_T, "Drill"], ["hammer", HAMMER_T, "Hammer"], ["gold", GOLD_T, "Gold"], ["over", OVER_T, "Overdrive"],
+  ["bumper", OVER_T, "Bumper"], ["rush", MAGNET_T, "Gold rush"], ["brk", HAMMER_T, "Clean break"], ["oc", OVER_T, "Overclock"]];
+const COMBO = new Set(["bumper", "rush", "brk", "oc"]);
+const MARK = { wrench: ["tool", TOOL_NAME.wrench], drill: ["tool", TOOL_NAME.drill], hammer: ["tool", TOOL_NAME.hammer], gold: ["star", "Golden"], wheel: ["wheel", "Roller"] };
+const V = new THREE.Vector3();
 const CHIP_T = Object.fromEntries(CHIPS.map(([k, T]) => [k, T]));
 
 export class Hud {
@@ -111,6 +116,28 @@ export class Hud {
     this.toastT = setTimeout(() => this.toastEl.classList.remove("is-on"), 2800);
   }
 
+  // Incoming power-ups: a small labelled marker over each tool, golden wrench or wheel while it is still far
+  // down the line (MARK_FAR to MARK_NEAR), so the lane choice can start early. Two pooled DOM markers.
+  updateMarks() {
+    const els = this.elMarks;
+    if (!els) return;
+    let n = 0;
+    const show = (kind, x, y, z) => {
+      if (n >= els.length || z < MARK_FAR || z > MARK_NEAR) return;
+      const el = els[n++], m = MARK[kind];
+      if (el._k !== kind) { el._k = kind; el.firstChild.innerHTML = ICON[m[0]]; el.lastChild.textContent = m[1]; el.classList.toggle("is-gold", kind === "gold"); }
+      V.set(x, visY(y) + 1.1, z).project(this.camera);
+      const lx = Math.round((V.x + 1) * 500), ly = Math.round((1 - V.y) * 500), fade = z > MARK_NEAR - 12 ? 1 : 0;
+      if (lx !== el._x || ly !== el._y) { el._x = lx; el._y = ly; el.style.left = `${(lx / 10).toFixed(1)}%`; el.style.top = `${(ly / 10).toFixed(1)}%`; }
+      if (el.hidden) el.hidden = false;
+      if (fade !== el._f) { el._f = fade; el.classList.toggle("is-near", !!fade); }
+    };
+    for (const it of this.items) if (!it.taken && it.kind !== "screw") show(it.kind, it.x, it.y, it.z);
+    const tk = this.token;
+    if (tk && !tk.taken) show("wheel", tk.x, tk.y, tk.z);
+    for (let i = n; i < els.length; i++) if (!els[i].hidden) { els[i].hidden = true; els[i]._k = null; }
+  }
+
   updateHud(mult, v) {
     const sh = this.shown, f = this.fx, s = Math.floor(this.score);
     if (s !== sh.score) { sh.score = s; this.elScore.textContent = fmt(s); }
@@ -135,7 +162,7 @@ export class Hud {
     for (let i = 0; i < CHIPS.length; i++) if (f[CHIPS[i][0]] > 0) mask |= 1 << i;
     if (mask !== sh.chips) {
       sh.chips = mask;
-      this.elChips.innerHTML = CHIPS.filter((c, i) => mask & (1 << i)).map(([k, , n]) => `<span class="fr__chip is-${k}" data-k="${k}"><svg viewBox="0 0 24 24"><circle class="bg" cx="12" cy="12" r="9.5"/><circle class="fg" cx="12" cy="12" r="9.5"/></svg><b>${n}</b></span>`).join("");
+      this.elChips.innerHTML = CHIPS.filter((c, i) => mask & (1 << i)).map(([k, , n]) => `<span class="fr__chip is-${k}${COMBO.has(k) ? " is-combo" : ""}" data-k="${k}"><svg viewBox="0 0 24 24"><circle class="bg" cx="12" cy="12" r="9.5"/><circle class="fg" cx="12" cy="12" r="9.5"/></svg><b>${n}</b></span>`).join("");
       this.chipEls = [...this.elChips.children];
       for (const el of this.chipEls) { el._k = el.dataset.k; el._T = CHIP_T[el._k]; el._ring = el.firstChild.lastChild; el._dash = -1; el._gold = -1; }
     }
@@ -145,9 +172,25 @@ export class Hud {
       const dash = Math.round((1 - f[k] / el._T) * 597); // 0.1 of the 59.69 ring length
       if (dash !== el._dash) { el._dash = dash; el._ring.style.strokeDashoffset = (dash / 10).toFixed(1); }
       if (k === "gold") { const gm = Math.min(5, 2 + Math.floor(f.goldAge)); if (gm !== el._gold) { el._gold = gm; el.lastChild.textContent = `Gold ×${gm}`; } }
-      const ending = f[k] < 1.5;
+      const ending = f[k] < 1.5 && !(f.oc > 0 && (k === "magnet" || k === "drill" || k === "hammer"));
       if (ending !== el._end) { el._end = ending; el.classList.toggle("is-ending", ending); }
     }
+    // Flow meter: appears with the first style move or pickup chain, then stays for the run.
+    const w = this.flow;
+    if (w) {
+      if (!sh.flowOn && w.c > 0 && (w.seen || w.c >= FLOW_LVL)) { sh.flowOn = true; this.elFlow.hidden = false; }
+      if (sh.flowOn) {
+        const q = Math.round((w.c % FLOW_LVL) / FLOW_LVL * 50), qq = w.lvl >= 5 ? 50 : q;
+        if (qq !== sh.flowQ) { sh.flowQ = qq; this.elFlowBar.style.transform = `scaleX(${(qq / 50).toFixed(2)})`; }
+        if (w.lvl !== sh.flowL) {
+          const up = w.lvl > sh.flowL && sh.flowL > 0;
+          sh.flowL = w.lvl; this.elFlowLab.textContent = w.lvl >= 5 ? "In the zone" : `Flow ×${w.lvl}`;
+          this.elFlow.classList.toggle("is-zone", w.lvl >= 5);
+          if (up) { this.elFlow.classList.remove("is-bump"); void this.elFlow.offsetWidth; this.elFlow.classList.add("is-bump"); }
+        }
+      }
+    }
+    this.updateMarks();
     // Personal best: the HUD bar fills toward it, and a floor line marks where it falls at this pace.
     if (this.pbFrom > 0) {
       const q = Math.min(1, this.score / this.pbFrom), qi = Math.round(q * 200);

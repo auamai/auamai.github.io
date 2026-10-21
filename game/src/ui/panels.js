@@ -21,12 +21,14 @@ export class Panels {
     root.innerHTML = `
       <canvas class="fr__canvas" aria-hidden="true"></canvas>
       <div class="fr__pops" aria-hidden="true"></div>
+      <div class="fr__marks" aria-hidden="true"><span class="fr__mark" hidden><span class="fr__mark-icon"></span><b></b></span><span class="fr__mark" hidden><span class="fr__mark-icon"></span><b></b></span></div>
       <div class="fr__fxflash" aria-hidden="true"></div>
       <div class="fr__hud" hidden>
         <div class="fr__scorebox"><span class="fr__score">0</span><span class="fr__mult" hidden>×1</span></div>
         <div class="fr__pb" aria-hidden="true"><span class="fr__pb-bar"><i></i></span><span class="fr__pb-label">PB</span></div>
         <span class="fr__meta"><span class="fr__gears">0</span> gears · best <span class="fr__best">0</span><span class="fr__servo" hidden title="Spare Servo armed"><span class="fr__sicon">${OVER_ICON.servo}</span><span class="fr__sr">Spare Servo armed</span></span></span>
         <div class="fr__meter" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="fr__flow" aria-hidden="true" hidden><span class="fr__flow-bar"><i></i></span><b>Flow ×1</b></div>
         <div class="fr__chips" aria-hidden="true"></div>
         <span class="fr__power" hidden>
           <svg class="fr__ring" viewBox="0 0 44 44" aria-hidden="true"><circle class="fr__ring-bg" cx="22" cy="22" r="19"/><circle class="fr__ring-fg" cx="22" cy="22" r="19"/>
@@ -77,6 +79,10 @@ export class Panels {
     this.elMeter = [...root.querySelectorAll(".fr__meter i")];
     this.elChips = root.querySelector(".fr__chips");
     this.elPops = root.querySelector(".fr__pops");
+    this.elFlow = root.querySelector(".fr__flow");
+    this.elFlowBar = root.querySelector(".fr__flow-bar i");
+    this.elFlowLab = root.querySelector(".fr__flow b");
+    this.elMarks = [...root.querySelectorAll(".fr__mark")];
     this.elFlash = root.querySelector(".fr__fxflash");
     this.layer = root.querySelector(".fr__layer");
     this.panel = root.querySelector(".fr__panel");
@@ -315,7 +321,8 @@ export class Panels {
     const r = this.lastRun, I = OVER_ICON;
     const st = [["gears", fmt(r.gears), "Gears"], ["time", clock(r.time), "Time"], ["dist", r.dist >= 1000 ? `${(r.dist >= 100000 ? Math.round(r.dist / 1000) : r.dist >= 10000 ? Math.round(r.dist / 100) / 10 : Math.round(r.dist / 10) / 100).toFixed(r.dist >= 100000 ? 0 : r.dist >= 10000 ? 1 : 2)}<small>km</small>` : `${fmt(r.dist)}<small>m</small>`, "Distance"],
       ["tools", fmt(r.tools), "Tools"], ["mult", `×${(Math.round(r.bestMult * 10) / 10).toString()}`, "Multiplier"], ["smash", fmt(r.smashes), "Smashed"]];
-    return `<ul class="fr__stats">${st.map(([k, v, n], i) => `<li style="--i:${i}"><span class="fr__sicon">${I[k]}</span><b>${v}</b><span>${n}</span></li>`).join("")}</ul>`;
+    const y = r.style, sl = y && (y.near || y.clear || y.zones) ? [y.zones ? `In the zone ×${y.zones}` : `Flow ×${y.flow}`, y.near ? `${y.near} near ${y.near === 1 ? "miss" : "misses"}` : "", y.weave ? `${y.weave} ${y.weave === 1 ? "weave" : "weaves"}` : "", y.clear ? `${y.clear} clean` : ""].filter(Boolean).join(" · ") : "";
+    return `<ul class="fr__stats">${st.map(([k, v, n], i) => `<li style="--i:${i}"><span class="fr__sicon">${I[k]}</span><b>${v}</b><span>${n}</span></li>`).join("")}</ul>${sl ? `<p class="fr__style">${sl}</p>` : ""}`;
   }
 
   progressHtml() {

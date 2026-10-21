@@ -741,3 +741,26 @@ html.fr-open, html.fr-open body { overscroll-behavior: none; }
 @media (prefers-reduced-motion: reduce) { .fr__tbfly { display: none; } .fr__toolbox.is-pulse { animation: none; } }
 .fr__tbline { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
 .fr__tbover { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 6px 12px; margin: 0; }
+/* Fun pass r8: flow meter, combo chips, incoming power-up markers, style recap */
+.fr__flow { display: flex; align-items: center; gap: 8px; padding: 4px 8px; border-radius: var(--ss-r1, 4px); background: rgba(20, 22, 27, .86); font: 400 11px/1 var(--fr-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ss-ink, #f2f0ea); }
+.fr__flow[hidden] { display: none; }
+.fr__flow-bar { position: relative; width: 56px; height: 4px; border-radius: 2px; background: rgba(242, 240, 234, .16); overflow: hidden; }
+.fr__flow-bar i { position: absolute; inset: 0; background: #3ddcff; transform-origin: 0 50%; transform: scaleX(0); transition: transform .15s linear; }
+.fr__flow b { font-weight: 400; min-width: 9ch; }
+.fr__flow.is-zone { background: #3ddcff; color: #14161b; }
+.fr__flow.is-zone .fr__flow-bar { background: rgba(20, 22, 27, .2); }
+.fr__flow.is-zone .fr__flow-bar i { background: #14161b; }
+.fr__flow.is-bump { animation: fr-bump .3s cubic-bezier(.3, 1.8, .5, 1); }
+.fr__chip.is-combo { border-color: #3ddcff; box-shadow: inset 0 0 0 1px rgba(61, 220, 255, .35); }
+.fr__chip.is-combo .fg { stroke: #3ddcff; }
+.fr__marks { position: absolute; inset: 0; pointer-events: none; z-index: 2; overflow: hidden; }
+.fr__mark { position: absolute; transform: translate(-50%, -100%); display: inline-flex; align-items: center; gap: 4px; padding: 3px 7px 3px 4px; border-radius: 4px;
+  background: rgba(20, 22, 27, .88); border: 1px solid rgba(61, 220, 255, .55); font: 400 10px/1 var(--fr-mono); letter-spacing: .08em; text-transform: uppercase; color: #f2f0ea; white-space: nowrap; transition: opacity .2s; }
+.fr__mark[hidden] { display: none; }
+.fr__mark::after { content: ""; position: absolute; left: 50%; bottom: -5px; margin-left: -4px; border: 4px solid transparent; border-bottom: 0; border-top-color: rgba(61, 220, 255, .8); }
+.fr__mark-icon svg { width: 14px; height: 14px; fill: none; stroke: #3ddcff; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; display: block; }
+.fr__mark.is-gold { border-color: #ffc93c; } .fr__mark.is-gold .fr__mark-icon svg { stroke: #ffc93c; } .fr__mark.is-gold::after { border-top-color: #ffc93c; }
+.fr__mark.is-near { opacity: 0; }
+.fr__style { margin: 8px 0 0; font: 400 12px/1.4 var(--fr-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ss-ink-2, rgba(242, 240, 234, .78)); text-align: center; }
+.fr.is-still .fr__flow.is-bump { animation: none; }
+.fr:not(.is-playing) .fr__marks { display: none; }
