@@ -13,11 +13,11 @@
 //  3. Quality tier: "hi" (desktop, quality 0-1) adds the cyan hero light and 2048 shadows;
 //     "lo" (touch devices or quality >= 2) keeps 3 lights, 1024 shadows, no extra pass.
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
-import { COL, MILESTONES } from "../core/constants.js?v=20261021r7";
-import { C } from "../../factory.js?v=20261021r7";
-import { UL, rim } from "../../robots/kit.js?v=20261021r7";
-import { TOOL_COL } from "../../tools.js?v=20261021r7";
-import { SHOP } from "../../meta.js?v=20261021r7";
+import { COL, MILESTONES } from "../core/constants.js?v=20261021r8";
+import { C } from "../../factory.js?v=20261021r8";
+import { UL, rim } from "../../robots/kit.js?v=20261021r8";
+import { TOOL_COL } from "../../tools.js?v=20261021r8";
+import { SHOP } from "../../meta.js?v=20261021r8";
 
 /* ---------- brand ---------- */
 export const BRAND = { graphite: 0x14161b, offwhite: 0xf2f0ea, yellow: 0xffc93c, cyan: 0x3ddcff };

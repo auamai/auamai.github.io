@@ -1,25 +1,25 @@
 // Servo Sprint: a small endless runner. Loaded only when someone presses Play.
 // Entry point: builds the Game from its modules (src/). See README.md for the module map.
-import * as P from "./profile.js?v=20261021r7";
-import * as MT from "./meta.js?v=20261021r7";
-import { START_SPEED } from "./src/core/constants.js?v=20261021r7";
-import { BOX } from "./src/render/geometry.js?v=20261021r7";
-import { Loop } from "./src/core/loop.js?v=20261021r7";
-import { Run } from "./src/core/run.js?v=20261021r7";
-import { Physics } from "./src/sim/physics.js?v=20261021r7";
-import { Input } from "./src/input/input.js?v=20261021r7";
-import { WorldGen } from "./src/world/worldgen.js?v=20261021r7";
-import { Track } from "./src/world/track.js?v=20261021r7";
-import { Render } from "./src/render/render.js?v=20261021r7";
-import { Sound } from "./src/audio/sound.js?v=20261021r7";
-import { Hud } from "./src/ui/hud.js?v=20261021r7";
-import { Panels } from "./src/ui/panels.js?v=20261021r7";
-import { Garage } from "./src/meta/garage.js?v=20261021r7";
-import { Net } from "./src/net/net.js?v=20261021r7";
-import { Ghost } from "./src/render/ghost.js?v=20261021r7";
-import { SoundUi } from "./src/ui/sound-ui.js?v=20261021r7";
-import { installErrorReporting } from "./src/net/errors.js?v=20261021r7";
-export { allowedScore } from "./src/core/constants.js?v=20261021r7";
+import * as P from "./profile.js?v=20261021r8";
+import * as MT from "./meta.js?v=20261021r8";
+import { START_SPEED } from "./src/core/constants.js?v=20261021r8";
+import { BOX } from "./src/render/geometry.js?v=20261021r8";
+import { Loop } from "./src/core/loop.js?v=20261021r8";
+import { Run } from "./src/core/run.js?v=20261021r8";
+import { Physics } from "./src/sim/physics.js?v=20261021r8";
+import { Input } from "./src/input/input.js?v=20261021r8";
+import { WorldGen } from "./src/world/worldgen.js?v=20261021r8";
+import { Track } from "./src/world/track.js?v=20261021r8";
+import { Render } from "./src/render/render.js?v=20261021r8";
+import { Sound } from "./src/audio/sound.js?v=20261021r8";
+import { Hud } from "./src/ui/hud.js?v=20261021r8";
+import { Panels } from "./src/ui/panels.js?v=20261021r8";
+import { Garage } from "./src/meta/garage.js?v=20261021r8";
+import { Net } from "./src/net/net.js?v=20261021r8";
+import { Ghost } from "./src/render/ghost.js?v=20261021r8";
+import { SoundUi } from "./src/ui/sound-ui.js?v=20261021r8";
+import { installErrorReporting } from "./src/net/errors.js?v=20261021r8";
+export { allowedScore } from "./src/core/constants.js?v=20261021r8";
 
 let current = null;
 let cssLoaded = null;
@@ -29,7 +29,7 @@ function loadCss() {
     cssLoaded = new Promise((resolve) => {
       const link = document.createElement("link");
       link.rel = "stylesheet";
-      link.href = new URL("./game.css?v=20261021r7", import.meta.url).href;
+      link.href = new URL("./game.css?v=20261021r8", import.meta.url).href;
       link.onload = link.onerror = () => resolve();
       document.head.appendChild(link);
     });

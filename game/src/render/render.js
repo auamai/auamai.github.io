@@ -1,16 +1,16 @@
 // three.js scene, meshes, quality ladder, robot animation, camera, trails.
 // Installed onto Game.prototype by game.js (methods use `this`, the Game).
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
-import * as MT from "../../meta.js?v=20261021r7";
-import { Factory } from "../../factory.js?v=20261021r7";
-import { Ceiling } from "../../ceiling.js?v=20261021r7";
-import { UI3D } from "../../ui3d.js?v=20261021r7";
-import { createKit, RUNNERS, ROLLERS } from "../../robots/index.js?v=20261021r7";
-import { toolMaterials, toolGeometries, buildTool, Burst } from "../../tools.js?v=20261021r7";
-import { LANES, MORPH_T, COL, MILESTONES, visY, REVIVE_T } from "../core/constants.js?v=20261021r7";
-import { BOX, BOX_EDGES, CYL, CYL_EDGES, gearGeometry, mergeParts } from "./geometry.js?v=20261021r7";
-import { applyGrade, regrade } from "./grade.js?v=20261021r7";
-import { makeArmKit } from "./arm.js?v=20261021r7";
+import * as MT from "../../meta.js?v=20261021r8";
+import { Factory } from "../../factory.js?v=20261021r8";
+import { Ceiling } from "../../ceiling.js?v=20261021r8";
+import { UI3D } from "../../ui3d.js?v=20261021r8";
+import { createKit, RUNNERS, ROLLERS } from "../../robots/index.js?v=20261021r8";
+import { toolMaterials, toolGeometries, buildTool, Burst } from "../../tools.js?v=20261021r8";
+import { LANES, MORPH_T, COL, MILESTONES, visY, REVIVE_T } from "../core/constants.js?v=20261021r8";
+import { BOX, BOX_EDGES, CYL, CYL_EDGES, gearGeometry, mergeParts } from "./geometry.js?v=20261021r8";
+import { applyGrade, regrade } from "./grade.js?v=20261021r8";
+import { makeArmKit } from "./arm.js?v=20261021r8";
 
 export class Render {
   /* ---------- scene ---------- */
