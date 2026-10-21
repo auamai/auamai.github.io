@@ -38,5 +38,20 @@
       "type": "image/png",
       "purpose": "maskable"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "Daily Run",
+      "short_name": "Daily Run",
+      "description": "Today's course, the same for everyone",
+      "url": "./?daily=1",
+      "icons": [
+        {
+          "src": "brand/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
   ]
 }

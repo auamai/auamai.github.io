@@ -240,7 +240,10 @@ export class Panels {
         <div class="fr__links"><button class="fr__link" type="button" data-panel="shop">Garage · ${fmt(MT.wallet(p))} gears</button></div>`;
       links.push(`<button class="fr__link" type="button" data-panel="switch">Not you?</button>`);
     } else {
-      body = `
+      // Arriving from a friend's link: say what the link is before asking for a name, and keep the one Start button.
+      const invite = this.switching ? "" : this.challenge ? this.challengeHtml()
+        : this.dailyLink ? `<p class="fr__challenge"><span class="fr__badge fr__badge--pb">Daily Run</span>Today's course, the same for everyone until midnight Pacific.</p>` : "";
+      body = `${invite}
         <form class="fr__form" data-form="name" novalidate>
           <label class="fr__label" for="fr-name">Pick a name</label>
           <input id="fr-name" class="fr__input" name="username" type="text" inputmode="text" autocomplete="nickname"
@@ -249,7 +252,7 @@ export class Panels {
             value="${esc(this.switching ? "" : (p ? p.username : ""))}" autofocus />
           <p class="fr__hint${error ? " is-error" : ""}" id="fr-name-hint">${esc(error || (this.switching ? "A new name starts a new save on this device." : "3 to 16 letters, numbers or _. Shown on the board."))}</p>
           <div class="fr__actions">
-            <button class="fr__btn fr__btn--solid fr__btn--wide" type="submit">Start</button>
+            <button class="fr__btn fr__btn--solid fr__btn--wide" type="submit">${!this.switching && this.challenge ? "Take the challenge" : !this.switching && this.dailyLink ? "Start the Daily Run" : "Start"}</button>
             ${this.switching ? '<button class="fr__btn" type="button" data-panel="unswitch">Back</button>' : ""}
           </div>
         </form>`;
@@ -312,7 +315,7 @@ export class Panels {
   progressHtml() {
     const r = this.lastRun, out = [];
     const ls = MT.liveStreak(this.settings.streak);
-    if (r.mode === "daily") out.push(`<li><b>Daily Run</b><span>${r.dailyRank ? `#${r.dailyRank} today` : "today's course"}${ls.n ? ` · day ${ls.n}` : ""}</span></li>`);
+    if (r.mode === "daily") out.push(`<li><b>Daily Run${ls.n ? ` · day ${ls.n}` : ""}</b><span>${r.dailyRank ? `#${r.dailyRank} today · ` : ""}new course in ${this.until(MT.nextMidnight())}</span></li>`);
     else if (ls.n) out.push(`<li><b>Streak · day ${ls.n}</b><span>${ls.playedToday ? "kept today" : "run the Daily Run to keep it"}</span></li>`);
     if (r.challenge) out.push(`<li><b>${r.score > r.challenge.score ? "Challenge beaten" : "Challenge"}</b><span>${r.score > r.challenge.score ? `by ${fmt(r.score - r.challenge.score)}` : `${fmt(r.challenge.score - r.score + 1)} short of ${r.challenge.name ? esc(r.challenge.name) : "their score"}`}</span></li>`);
     for (const m of r.missionsDone || []) out.push(`<li class="is-done"><b>${esc(m.text)}</b><span>+${m.reward} gears</span></li>`);
@@ -363,6 +366,7 @@ export class Panels {
       ${this.boardHtml()}`, "over");
     this.overAt = performance.now();
     this.countUp();
+    this.prepareCard();
     this.layer.classList.add("is-arming");
     clearTimeout(this.armT);
     this.armT = setTimeout(() => this.layer.classList.remove("is-arming"), OVER_LOCK);

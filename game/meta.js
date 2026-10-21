@@ -170,24 +170,29 @@ export function readChallenge(search = location.search) {
 // A 1080x1350 image: score, rank, the robot (a frame of the game canvas), and a short "Beat N at <host>" line.
 // Share card (1080 x 1350), in the Servo Sprint identity: graphite, off-white numerals, the wordmark,
 // a yellow hazard rule, cyan for the rank line. Uses the bundled Inter Tight (300/400) and Plex Mono.
-export async function shareCard({ canvas, score, rank, best, daily, name, link, wordmark }) {
+export async function shareCard({ canvas, score, rank, best, daily, day, name, link, wordmark, passed, focusY }) {
   const W = 1080, H = 1350, c = document.createElement("canvas");
   c.width = W; c.height = H;
   const x = c.getContext("2d");
-  try { await document.fonts.load('300 200px "Inter Tight"'); await document.fonts.load('400 40px "IBM Plex Mono"'); } catch { /* fallback */ }
   x.fillStyle = "#14161b"; x.fillRect(0, 0, W, H);
+  // Copy the game frame first, before any await: a WebGL canvas without preserveDrawingBuffer is cleared once the
+  // frame is composited, so a copy taken after the font await below can come out blank.
   if (canvas) {
     // Cover-fit the frame into its band (y 456-1136) and clip, so a tall phone canvas can't spill behind the type
     // and the score numerals (baseline 408, comma descender to ~440) always sit on flat graphite above it.
     const BY = 456, BH = 680, s = Math.max(W / canvas.width, BH / canvas.height);
     const w = canvas.width * s, h = canvas.height * s;
     x.save(); x.beginPath(); x.rect(0, BY, W, BH); x.clip();
-    try { x.globalAlpha = 0.9; x.drawImage(canvas, (W - w) / 2, BY + (BH - h) * 0.62, w, h); x.globalAlpha = 1; } catch { /* tainted or lost */ }
+    // Vertical crop: put the robot (focusY, from the camera) a little below the band's middle; the old fixed 62 %
+    // crop cut the robot off on tall phone frames. Clamped so the frame always covers the band.
+    const oy = Number.isFinite(focusY) ? Math.min(0, Math.max(BH - h, BH * 0.6 - focusY * h)) : (BH - h) * 0.62;
+    try { x.globalAlpha = 0.9; x.drawImage(canvas, (W - w) / 2, BY + oy, w, h); x.globalAlpha = 1; } catch { /* tainted or lost */ }
     x.restore();
     const g = x.createLinearGradient(0, BY, 0, BY + BH);
     g.addColorStop(0, "rgba(20,22,27,1)"); g.addColorStop(0.22, "rgba(20,22,27,0.15)"); g.addColorStop(0.75, "rgba(20,22,27,0.15)"); g.addColorStop(1, "rgba(20,22,27,1)");
     x.fillStyle = g; x.fillRect(0, BY, W, BH);
   }
+  try { await document.fonts.load('300 200px "Inter Tight"'); await document.fonts.load('400 40px "IBM Plex Mono"'); } catch { /* fallback */ }
   const sans = (w, px) => `${w} ${px}px "Inter Tight", system-ui, sans-serif`, mono = (px) => `400 ${px}px "IBM Plex Mono", ui-monospace, monospace`;
   // Wordmark (SVG, currentColor -> off-white), 64 px cap height, top left on the 8 px grid.
   if (wordmark) {
@@ -201,11 +206,11 @@ export async function shareCard({ canvas, score, rank, best, daily, name, link, 
     } catch { /* skip */ }
   }
   x.textBaseline = "alphabetic"; x.fillStyle = "rgba(242,240,234,.64)";
-  x.font = mono(32); x.fillText(daily ? "DAILY RUN" : "SCORE", 80, 232);
+  x.font = mono(32); x.fillText(daily ? `DAILY RUN${dayLabel(day)}` : "SCORE", 80, 232);
   x.fillStyle = "#f2f0ea"; x.font = sans(300, 200); x.fillText(fmtN(score), 68, 408);
   // Lines shrink to fit the 920 px column (long names / links never clip).
   const fit = (t, w, px, max) => { x.font = sans(w, px); const m = x.measureText(t).width; if (m > max) x.font = sans(w, Math.floor(px * max / m)); };
-  const line = [best ? "New personal best" : "", rank ? `#${rank} on the board` : "", name || ""].filter(Boolean).join("  ·  ");
+  const line = [best ? "New personal best" : "", passed ? (passed.name ? `Passed ${passed.name} by ${fmtN(passed.by)}` : `Challenge beaten by ${fmtN(passed.by)}`) : "", rank ? `#${rank} on the board` : "", name || ""].filter(Boolean).join("  ·  ");
   fit(line, 400, 40, W - 160); x.fillStyle = "#3ddcff"; x.fillText(line, 80, 1168);
   // A short call to action, not the raw challenge URL (that stays in the share/copy payload): the host is the
   // game's own origin (servosprint.xyz live; auamai.dev/game on the portfolio copy).
@@ -217,19 +222,44 @@ export async function shareCard({ canvas, score, rank, best, daily, name, link, 
   x.save(); x.beginPath(); x.rect(80, 1272, 240, 16); x.clip(); x.fillStyle = "#ffc93c"; x.fillRect(80, 1272, 240, 16); x.fillStyle = "#14161b";
   for (let i = -1; i < 9; i++) { const x0 = 80 + i * 32; x.beginPath(); x.moveTo(x0, 1288); x.lineTo(x0 + 16, 1288); x.lineTo(x0 + 32, 1272); x.lineTo(x0 + 16, 1272); x.closePath(); x.fill(); }
   x.restore();
+  // toBlob encodes off the main thread; an object URL (not a base64 data URL) keeps the game-over screen smooth.
   const blob = await new Promise((r) => c.toBlob(r, "image/png"));
-  return { blob, url: c.toDataURL("image/png") };
+  return { blob, url: blob ? URL.createObjectURL(blob) : c.toDataURL("image/png") };
 }
+// "OCT 20" from "2026-10-20", for the Daily Run card (the course is the same for everyone that day).
+const MON = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+const dayLabel = (d) => (typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d) ? ` · ${MON[+d.slice(5, 7) - 1]} ${+d.slice(8, 10)}` : "");
+
+// Copy text: async Clipboard API first, then the old textarea + execCommand path (http, older WebViews,
+// or a denied permission). Returns true when something reached the clipboard.
+export async function copyText(text) {
+  try { if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(text); return true; } } catch { /* fall through */ }
+  try {
+    const prev = document.activeElement, t = document.createElement("textarea");
+    t.value = text; t.setAttribute("readonly", ""); t.style.cssText = "position:fixed;top:0;left:0;opacity:0;pointer-events:none";
+    document.body.appendChild(t); t.select(); t.setSelectionRange(0, text.length);
+    const ok = document.execCommand && document.execCommand("copy");
+    t.remove();
+    if (prev && prev.focus) prev.focus({ preventScroll: true }); // keep keyboard focus on the button that was pressed
+    return !!ok;
+  } catch { return false; }
+}
+
+// Share the card. Web Share with the image when the platform takes files (the link rides in the text, since many
+// share targets drop `url` next to a file), then link-only Web Share, then download the card and copy the link.
+// Safari rejects share() once the tap's user activation has passed (NotAllowedError): that also falls back.
 export async function shareOrDownload({ blob, url }, text, link) {
   const file = blob && typeof File === "function" ? new File([blob], "servo-sprint.png", { type: "image/png" }) : null;
   try {
-    if (file && navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text, url: link }); return "shared"; }
+    if (file && navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text: `${text} ${link}` }); return "shared"; }
     if (navigator.share) { await navigator.share({ text, url: link }); return "shared"; }
   } catch (e) { if (e && e.name === "AbortError") return "cancelled"; }
-  const a = document.createElement("a");
-  a.href = url; a.download = "servo-sprint.png";
-  document.body.appendChild(a); a.click(); a.remove();
-  return "downloaded";
+  if (url) {
+    const a = document.createElement("a");
+    a.href = url; a.download = "servo-sprint.png";
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+  return (await copyText(link)) ? "downloaded+copied" : "downloaded";
 }
 
 /* ---------- the site teaser's read-only summary ---------- */
