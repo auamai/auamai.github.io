@@ -174,7 +174,7 @@ async function handleTop(env, cors, board = "all") {
   // Garage (r7): robot name + design of each name's best run (SQLite takes bare columns from the MAX row).
   let results;
   try { ({ results } = await env.DB.prepare(sql.replace("MAX(score) AS score", "MAX(score) AS score, robot, design")).bind(...bind).all()); }
-  catch { ({ results } = await env.DB.prepare(sql).bind(...bind).all()); }
+  catch (e) { if (!noColumn(e)) throw e; ({ results } = await env.DB.prepare(sql).bind(...bind).all()); }
   const row = (r) => {
     const o = { username: r.username, score: r.score }, rb = cleanRobot(r.robot), d = cleanDesign(r.design);
     if (rb) o.robot = rb;
@@ -225,12 +225,14 @@ async function handleScore(request, env, cors) {
   }
   // Spare Servo (r7): a revive is flagged on the run; the score caps above apply exactly the same.
   // The Daily Run never allows one (every player's daily stays equal).
-  const robot = cleanRobot(body.robot), design = cleanDesign(body.design);
+  const robot = await robotFree(env, cleanRobot(body.robot), username), design = cleanDesign(body.design);
   try {
     await env.DB.prepare("INSERT INTO scores (username, score, duration_ms, created_at, mode, day, week, robot, design, revive) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)")
       .bind(username, score, durationMs, now, mode, day, vanWeek(now), robot, design, revive).run();
-  } catch {
+  } catch (e) {
     // Database not migrated yet (migrate_r7.sql): store the run the old way rather than lose it.
+    // Only a missing column falls back; any other database error is a real failure.
+    if (!noColumn(e)) throw e;
     await env.DB.prepare("INSERT INTO scores (username, score, duration_ms, created_at, mode, day, week) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)")
       .bind(username, score, durationMs, now, mode, day, vanWeek(now)).run();
   }
@@ -298,8 +300,17 @@ async function handleSync(request, env, cors) {
     const cur = parseCos(row.cosmetics), inc = parseCos(JSON.stringify(body.cos));
     const gears = Math.max(row.gears || 0, s.gears);
     const merged = { spent: Math.min(gears, Math.max(cur.spent, inc.spent)), owned: [...new Set([...cur.owned, ...inc.owned])], eq: { ...cur.eq, ...inc.eq } };
-    if (cur.sv || inc.sv) { const a = cur.sv || { b: 0, u: 0 }, b = inc.sv || { b: 0, u: 0 }; merged.sv = { b: Math.max(a.b, b.b), u: Math.min(Math.max(a.b, b.b), Math.max(a.u, b.u)) }; }
+    if (cur.sv || inc.sv) {
+      // Spare Servos (r7): bought only grows, but never past what the spent gears paid for (450 each),
+      // and no more than SERVO_MAX held (bought - used) at once; used never exceeds bought.
+      const a = cur.sv || { b: 0, u: 0 }, b = inc.sv || { b: 0, u: 0 };
+      const u = Math.max(a.u, b.u);
+      let bought = Math.min(Math.max(a.b, b.b), Math.floor(merged.spent / SERVO_PRICE));
+      bought = Math.min(bought, u + SERVO_MAX);
+      merged.sv = { b: bought, u: Math.min(u, bought) };
+    }
     if (cur.d || inc.d) merged.d = cur.d && inc.d ? (inc.d.at > cur.d.at ? inc.d : cur.d) : cur.d || inc.d;
+    if (merged.d && merged.d.name && !(await robotFree(env, merged.d.name, row.username))) merged.d = { ...merged.d, name: "" };
     await env.DB.prepare("UPDATE profiles SET cosmetics = ?2 WHERE username = ?1").bind(row.username, JSON.stringify(merged)).run();
   }
   const updated = await env.DB.prepare("SELECT * FROM profiles WHERE username = ?1").bind(row.username).first();
@@ -319,6 +330,7 @@ function publicProfile(r) {
   return { username: r.username, best: r.best, games: r.games, gears: r.gears, lastPlayed: r.last_played, cos: parseCos(r.cosmetics) };
 }
 
+const SERVO_PRICE = 450, SERVO_MAX = 3; // same as game/meta.js SERVO
 const SHOP_IDS = new Set(["trim-navy", "trim-ice", "trail-ribbon", "trail-navy", "trail-pearl", "hammer-navy", "hammer-pearl"]);
 function parseCos(text) {
   let c = {};
@@ -703,11 +715,25 @@ function checkName(name) {
 // so old clients and odd input still post their score.
 const ROBOT_RE = /^[A-Za-z0-9][A-Za-z0-9 _.-]{0,15}$/;
 const DESIGN_RE = /^[0-3][0-2][0-3][01][A-Z0-9-]{0,8}$/;
+// Short stems that hide inside ordinary words (Sussex, Dickens, grape, swanky) only match a whole word
+// (plus a plural / -y ending); every other stem still matches anywhere, across spaces too.
+const WORD_ONLY = new Set(["sex", "dick", "rape", "fag", "wank", "twat", "kike", "chink", "nazi"]);
 function rude(s) {
-  const b = String(s).toLowerCase().replace(/[^a-z0-9]/g, "");
   const leet = (x, one) => x.replace(/0/g, "o").replace(/1/g, one).replace(/3/g, "e").replace(/4/g, "a").replace(/5/g, "s").replace(/7/g, "t").replace(/8/g, "b").replace(/9/g, "g");
-  return [b, leet(b, "i"), leet(b, "l")].some((v) => BLOCKLIST.some((w) => v.includes(w)));
+  const vs = (x) => [x, leet(x, "i"), leet(x, "l")];
+  const words = String(s).toLowerCase().split(/[^a-z0-9]+/).filter(Boolean), all = words.join("");
+  return BLOCKLIST.some((w) => WORD_ONLY.has(w)
+    ? words.some((t) => vs(t).some((v) => v === w || v === w + "s" || v === w + "y"))
+    : vs(all).some((v) => v.includes(w)));
 }
+// A robot name may not pose as another player: one that equals someone else's username (any case) is dropped.
+// Only a name that could be a username (3-16 of letters, digits, _) needs the lookup.
+async function robotFree(env, robot, owner) {
+  if (!robot || !/^[A-Za-z0-9_]{3,16}$/.test(robot)) return robot;
+  const r = await env.DB.prepare("SELECT 1 AS x FROM profiles WHERE lower(username) = lower(?1) AND username <> ?2 LIMIT 1").bind(robot, owner).first();
+  return r ? null : robot;
+}
+const noColumn = (e) => /no such column|has no column named/i.test(String((e && e.message) || e));
 function cleanRobot(v) {
   if (typeof v !== "string") return null;
   const s = v.replace(/\s+/g, " ").trim();
