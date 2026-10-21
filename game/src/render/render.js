@@ -465,7 +465,7 @@ export class Render {
       c.position.y += Math.sin(t * 45 + 1.3) * k * 0.8;
     }
     // Garage close-up (r7): the robot sits beside the panel on wide screens, above it on phones.
-    const gk = this.garageK = (this.garageK || 0) + ((this.view === "shop" && this.state === "menu" ? 1 : 0) - (this.garageK || 0)) * Math.min(1, dt * 5);
+    const gk = this.garageK = (this.garageK || 0) + ((this.view === "shop" && this.state === "menu" ? 1 : 0) - (this.garageK || 0)) * Math.min(1, dt * 8);
     if (gk > 0.002) {
       const port = c.aspect < 1, px = port ? 0 : -1.05, py = port ? 1.5 : 1.45, pz = port ? 3.6 : 3.6, ly = port ? -0.1 : 0.95;
       c.position.set(c.position.x + (px - c.position.x) * gk, c.position.y + (py - c.position.y) * gk, c.position.z + (pz - c.position.z) * gk);

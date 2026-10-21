@@ -92,8 +92,10 @@ export class Garage {
 
   commitBuy(id) {
     const p = this.profile, it = MT.SHOP.find((x) => x.id === id);
+    // Only the confirm row that was asked for can spend, and only once: a double tap, a stale
+    // button or a second tab's click finds nothing pending and does nothing.
+    if (this.pendingBuy !== id || this.buying) return;
     this.pendingBuy = "";
-    if (this.buying) return; // a second tap while this one is saving
     this.buying = true;
     try {
       const price = id === "servo" ? MT.SERVO.price : it ? it.price : -1;

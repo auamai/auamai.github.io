@@ -727,4 +727,4 @@ html.fr-open, html.fr-open body { overscroll-behavior: none; }
 .fr__tbfly { position: fixed; z-index: 9; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; border: 3px solid #ffc93c; pointer-events: none; transition: transform .5s cubic-bezier(.5, 0, .7, 1), opacity .5s; }
 @media (prefers-reduced-motion: reduce) { .fr__tbfly { display: none; } .fr__toolbox.is-pulse { animation: none; } }
 .fr__tbline { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
-.fr__tbover { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 12px; margin: 0; }
+.fr__tbover { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 6px 12px; margin: 0; }

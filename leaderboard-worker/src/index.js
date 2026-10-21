@@ -171,8 +171,17 @@ async function handleTop(env, cors, board = "all") {
   let bind = [], resetAt = null;
   if (board === "daily") { sql = `SELECT username, MAX(score) AS score FROM scores WHERE mode = 'daily' AND day = ?1 GROUP BY username ORDER BY score DESC, MIN(created_at) ASC LIMIT 10`; bind = [vanDay()]; resetAt = nextMidnight(); }
   else if (board === "weekly") { sql = `SELECT username, MAX(score) AS score FROM scores WHERE week = ?1 GROUP BY username ORDER BY score DESC, MIN(created_at) ASC LIMIT 10`; bind = [vanWeek()]; resetAt = nextMonday(); }
-  const { results } = await env.DB.prepare(sql).bind(...bind).all();
-  return json({ board, ...(resetAt ? { resetAt, day: vanDay(), week: vanWeek() } : {}), scores: results.map((r) => ({ username: r.username, score: r.score })) }, 200, {
+  // Garage (r7): robot name + design of each name's best run (SQLite takes bare columns from the MAX row).
+  let results;
+  try { ({ results } = await env.DB.prepare(sql.replace("MAX(score) AS score", "MAX(score) AS score, robot, design")).bind(...bind).all()); }
+  catch { ({ results } = await env.DB.prepare(sql).bind(...bind).all()); }
+  const row = (r) => {
+    const o = { username: r.username, score: r.score }, rb = cleanRobot(r.robot), d = cleanDesign(r.design);
+    if (rb) o.robot = rb;
+    if (d) o.design = d;
+    return o;
+  };
+  return json({ board, ...(resetAt ? { resetAt, day: vanDay(), week: vanWeek() } : {}), scores: results.map(row) }, 200, {
     ...cors,
     "Cache-Control": "public, max-age=15",
   });
@@ -206,14 +215,25 @@ async function handleScore(request, env, cors) {
   const now = Date.now();
   const mode = body.mode === "daily" || body.mode === "challenge" ? body.mode : "free";
   let day = vanDay(now);
+  const revive = body.revive === true ? 1 : 0;
+  if (revive && mode === "daily") return json({ error: "no spare servo in the daily run" }, 400, cors);
   if (mode === "daily") {
     const started = vanDay(now - durationMs - 60_000);
     if (body.day !== day && body.day !== started) return json({ error: "daily run is over" }, 400, cors);
     if (body.seed !== dailySeed(body.day)) return json({ error: "wrong daily seed" }, 400, cors);
     day = body.day;
   }
-  await env.DB.prepare("INSERT INTO scores (username, score, duration_ms, created_at, mode, day, week) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)")
-    .bind(username, score, durationMs, now, mode, day, vanWeek(now)).run();
+  // Spare Servo (r7): a revive is flagged on the run; the score caps above apply exactly the same.
+  // The Daily Run never allows one (every player's daily stays equal).
+  const robot = cleanRobot(body.robot), design = cleanDesign(body.design);
+  try {
+    await env.DB.prepare("INSERT INTO scores (username, score, duration_ms, created_at, mode, day, week, robot, design, revive) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)")
+      .bind(username, score, durationMs, now, mode, day, vanWeek(now), robot, design, revive).run();
+  } catch {
+    // Database not migrated yet (migrate_r7.sql): store the run the old way rather than lose it.
+    await env.DB.prepare("INSERT INTO scores (username, score, duration_ms, created_at, mode, day, week) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)")
+      .bind(username, score, durationMs, now, mode, day, vanWeek(now)).run();
+  }
 
   const better = await env.DB.prepare(
     `SELECT COUNT(*) AS n FROM (SELECT MAX(score) AS s FROM scores GROUP BY username) WHERE s > ?1`
@@ -278,6 +298,8 @@ async function handleSync(request, env, cors) {
     const cur = parseCos(row.cosmetics), inc = parseCos(JSON.stringify(body.cos));
     const gears = Math.max(row.gears || 0, s.gears);
     const merged = { spent: Math.min(gears, Math.max(cur.spent, inc.spent)), owned: [...new Set([...cur.owned, ...inc.owned])], eq: { ...cur.eq, ...inc.eq } };
+    if (cur.sv || inc.sv) { const a = cur.sv || { b: 0, u: 0 }, b = inc.sv || { b: 0, u: 0 }; merged.sv = { b: Math.max(a.b, b.b), u: Math.min(Math.max(a.b, b.b), Math.max(a.u, b.u)) }; }
+    if (cur.d || inc.d) merged.d = cur.d && inc.d ? (inc.d.at > cur.d.at ? inc.d : cur.d) : cur.d || inc.d;
     await env.DB.prepare("UPDATE profiles SET cosmetics = ?2 WHERE username = ?1").bind(row.username, JSON.stringify(merged)).run();
   }
   const updated = await env.DB.prepare("SELECT * FROM profiles WHERE username = ?1").bind(row.username).first();
@@ -305,7 +327,12 @@ function parseCos(text) {
   const eq = {};
   for (const k of ["trim", "trail", "hammer"]) if (c.eq && typeof c.eq[k] === "string" && (c.eq[k] === "" || SHOP_IDS.has(c.eq[k]) || /^(pearl|deep|star)$/.test(c.eq[k]))) eq[k] = c.eq[k];
   const spent = Number.isFinite(c.spent) ? Math.max(0, Math.min(STAT_CAP, Math.floor(c.spent))) : 0;
-  return { spent, owned, eq };
+  const out = { spent, owned, eq };
+  // r7: Spare Servos bought/used (only grow) and the robot design (newest wins).
+  const n = (v) => (Number.isFinite(v) ? Math.max(0, Math.min(STAT_CAP, Math.floor(v))) : 0);
+  if (c.sv && typeof c.sv === "object") out.sv = { b: n(c.sv.b), u: Math.min(n(c.sv.u), n(c.sv.b)) };
+  if (c.d && typeof c.d === "object") out.d = { name: cleanRobot(c.d.name) || "", code: cleanDesign(c.d.code) || "0000", at: Math.min(n(c.d.at), Date.now() + 60_000) };
+  return out;
 }
 
 function cleanStats(b) {
@@ -665,6 +692,26 @@ function checkName(name) {
   const variants = [base, leet(base, "i"), leet(base, "l")];
   if (variants.some((v) => BLOCKLIST.some((w) => v.includes(w)))) return "username not allowed";
   return "";
+}
+
+/* ---------- Garage (r7): robot name + design code ---------- */
+// Optional on POST /score and in profile cosmetics. Bad or rude values are dropped (never an error),
+// so old clients and odd input still post their score.
+const ROBOT_RE = /^[A-Za-z0-9][A-Za-z0-9 _.-]{0,15}$/;
+const DESIGN_RE = /^[0-3][0-2][0-3][01][A-Z0-9-]{0,8}$/;
+function rude(s) {
+  const b = String(s).toLowerCase().replace(/[^a-z0-9]/g, "");
+  const leet = (x, one) => x.replace(/0/g, "o").replace(/1/g, one).replace(/3/g, "e").replace(/4/g, "a").replace(/5/g, "s").replace(/7/g, "t").replace(/8/g, "b").replace(/9/g, "g");
+  return [b, leet(b, "i"), leet(b, "l")].some((v) => BLOCKLIST.some((w) => v.includes(w)));
+}
+function cleanRobot(v) {
+  if (typeof v !== "string") return null;
+  const s = v.replace(/\s+/g, " ").trim();
+  return s && ROBOT_RE.test(s) && !rude(s) ? s : null;
+}
+function cleanDesign(v) {
+  if (typeof v !== "string" || !DESIGN_RE.test(v)) return null;
+  return rude(v.slice(4)) ? v.slice(0, 4) : v;
 }
 
 async function rateLimit(env, ip, bucket, limit) {
