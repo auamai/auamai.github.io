@@ -681,3 +681,50 @@ html.fr-open, html.fr-open body { overscroll-behavior: none; }
   .fr__stats li > span:last-child { font-size: 12px; }
 }
 @media (max-width: 359px) { .fr__stats .fr__sicon { display: none; } .fr__stats b { font-size: 17px; } .fr__stats li > span:last-child { font-size: 11px; } }
+
+/* ---------- Garage, Toolbox, Spare Servo (r7) ---------- */
+/* The panel steps aside so the robot behind it is the live 3D preview. */
+@media (min-width: 760px) { .fr__layer[data-view="shop"] { place-items: center start; padding-left: max(24px, 7vw); background: linear-gradient(90deg, rgba(20, 22, 27, .72) 0, rgba(20, 22, 27, .45) 46%, rgba(20, 22, 27, 0) 70%); } }
+@media (max-width: 759px) { .fr__layer[data-view="shop"] { place-items: end center; background: linear-gradient(180deg, rgba(20, 22, 27, 0) 0, rgba(20, 22, 27, .5) 52%); } .fr__layer[data-view="shop"] .fr__panel { max-height: 54%; } }
+.fr__ghead { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.fr__toolbox { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 6px; border: 1px solid rgba(255, 201, 60, .45); border-radius: 8px; background: linear-gradient(180deg, rgba(255, 201, 60, .1), rgba(255, 201, 60, .03)); color: #f2f0ea; font-size: 13px; letter-spacing: .02em; white-space: nowrap; }
+.fr__toolbox b { font: 500 16px/1 var(--fr-display, inherit); font-variant-numeric: tabular-nums; }
+.fr__toolbox > span:last-child { color: rgba(242, 240, 234, .72); }
+.fr__toolbox.is-lg { padding: 6px 12px 6px 8px; }
+.fr__toolbox.is-lg b { font-size: 20px; }
+.fr__toolbox.is-pulse { animation: fr-tb .28s ease-out; }
+@keyframes fr-tb { 0% { transform: scale(1.08); border-color: #ffc93c; } 100% { transform: scale(1); } }
+.fr__gnote { min-height: 1.2em; margin: 0; font-size: 14px; color: #3ddcff; }
+.fr__gnote:empty { min-height: 0; }
+.fr__design { display: flex; flex-direction: column; gap: 8px; }
+.fr__field { display: grid; grid-template-columns: 64px 1fr; align-items: center; gap: 4px 10px; font-size: 14px; color: rgba(242, 240, 234, .78); }
+.fr__field input { min-height: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid rgba(242, 240, 234, .22); background: rgba(20, 22, 27, .6); color: #f2f0ea; font: 400 16px/1 inherit; }
+.fr__field input#fr-plate { font-family: "IBM Plex Mono", ui-monospace, monospace; letter-spacing: .12em; text-transform: uppercase; }
+.fr__field input:focus-visible { outline: 2px solid #3ddcff; outline-offset: 1px; }
+.fr__field input[aria-invalid] { border-color: #ffc93c; }
+.fr__field small { grid-column: 2; font-size: 12px; color: rgba(242, 240, 234, .66); }
+.fr__field small.is-error { color: #ffc93c; }
+.fr__glabel { margin: 4px 0 0; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: rgba(242, 240, 234, .66); }
+.fr__seg { display: flex; gap: 6px; flex-wrap: wrap; }
+.fr__seg button { min-width: 44px; min-height: 44px; padding: 0 12px; display: inline-grid; place-items: center; border-radius: 8px; border: 1px solid rgba(242, 240, 234, .2); background: transparent; color: #f2f0ea; font: 300 14px/1 inherit; cursor: pointer; }
+.fr__seg button[aria-checked="true"] { border-color: #3ddcff; box-shadow: inset 0 0 0 1px #3ddcff; }
+.fr__seg button:focus-visible { outline: 2px solid #3ddcff; outline-offset: 2px; }
+.fr__seg .fr__swatch { width: 20px; height: 20px; border-color: rgba(242, 240, 234, .5); }
+.fr__layer[data-view="shop"] .fr__btn--sm { min-height: 44px; min-width: 44px; }
+.fr__showbot { align-self: flex-start; margin-top: 4px; }
+.fr__btn.is-short { opacity: .7; border-style: dashed; }
+.fr__confirmrow { display: block !important; }
+.fr__confirm { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(61, 220, 255, .5); background: rgba(61, 220, 255, .06); font-size: 14px; }
+@media (max-width: 400px) { .fr__confirm { grid-template-columns: 1fr 1fr; } .fr__confirm > span { grid-column: 1 / -1; } }
+.fr__swatch.is-servo { border: 0; width: 22px; height: 22px; color: #3ddcff; }
+.fr__swatch.is-servo svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linejoin: round; }
+.fr__servo { display: inline-flex; vertical-align: middle; margin-left: 8px; color: #3ddcff; }
+.fr__servo .fr__sicon { width: 16px; height: 16px; color: #3ddcff; }
+.fr__servo .fr__sicon svg { width: 16px; height: 16px; }
+.fr__robotname { color: #3ddcff; font-weight: 400; }
+.fr__brow { display: block; font-size: 12px; color: rgba(242, 240, 234, .62); letter-spacing: .02em; }
+/* Game over: this run's gears fly into the Toolbox. */
+.fr__tbfly { position: fixed; z-index: 9; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; border: 3px solid #ffc93c; pointer-events: none; transition: transform .5s cubic-bezier(.5, 0, .7, 1), opacity .5s; }
+@media (prefers-reduced-motion: reduce) { .fr__tbfly { display: none; } .fr__toolbox.is-pulse { animation: none; } }
+.fr__tbline { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.fr__tbover { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 12px; margin: 0; }

@@ -36,6 +36,8 @@ export const RAIL_H = 1.2;           // grind height
 export const RAIL_GEAR_GAP = 2.0;    // gears along a rail
 export const RAMP_DEG = 35, RAMP_H = 1.4, RAMP_L = 2.0;  // kicker: a 35 degree lip 1.4 high; a true projectile off it
 export const RAMP_G = 1;             // (real gravity in the air)
+export const REVIVE_T = 1.5;       // Spare Servo: invulnerable after a reboot (r7)
+export const REVIVE_CLEAR = 30;    // ...and nothing within this far ahead survives it
 export const LAND_ROLL = 0.5;        // invulnerable roll after a ramp landing
 export const HOP_V = Math.sqrt(2 * 9.81 / 0.85 * 0.75); // the roller's jump: a low hop, 0.75 units
 export const DRIFT_CHAIN = 0.6, DRIFT_CASH = 1.5;
@@ -126,6 +128,8 @@ export const MILESTONES = [
   { at: 5000, id: "star", name: "Starlight", light: 0xf4f6fb, deep: 0x8fa2f0 },
 ];
 export const OVER_ICON = {
+  toolbox: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 9.5h17v9.5h-17z"/><path d="M8.5 9.5V7a1.2 1.2 0 0 1 1.2-1.2h4.6A1.2 1.2 0 0 1 15.5 7v2.5"/><path d="M3.5 13h17M10.5 13v2h3v-2"/></svg>',
+  servo: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="8" width="16" height="9" rx="1.6"/><circle cx="9" cy="12.5" r="2.4"/><path d="M9 5.5v4.6M14 11h4M14 14h4"/></svg>',
   gears: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.2l1.5 2.2 2.6-.6.6 2.6 2.2 1.5-1.2 2.4 1.2 2.4-2.2 1.5-.6 2.6-2.6-.6L12 20.8l-1.5-2.2-2.6.6-.6-2.6-2.2-1.5L6.3 12 5.1 9.6l2.2-1.5.6-2.6 2.6.6z"/><circle cx="12" cy="12" r="2.8"/></svg>',
   time: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="7.5"/><path d="M12 9v4.4l2.8 1.6M10 3.5h4"/></svg>',
   dist: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18h16M6 18l3-12M18 18l-3-12M12 7v2M12 12v2"/></svg>',

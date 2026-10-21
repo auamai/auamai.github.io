@@ -50,6 +50,8 @@ export function load() {
       // The best run the board hasn't taken yet (offline, or the name needed a sign-in). Posted on sign-in.
       // Gear shop: gears spent, items owned, items worn (round 6). Synced with a claimed name.
       cos: cosClean(p.cos),
+      // Toolbox migration stamp (r7): the wallet is gears minus spent; set once, never re-run.
+      ...(p.tb === 1 ? { tb: 1 } : {}),
       held: p.held && int(p.held.score) > 0 && int(p.held.durationMs) >= 3000 ? { score: int(p.held.score), durationMs: int(p.held.durationMs) } : null,
     };
   } catch {
@@ -62,7 +64,7 @@ export function save(p) {
 }
 
 export function create(username) {
-  const p = { username, best: 0, games: 0, gears: 0, lastPlayed: 0, code: "", token: "", passkey: false, claimed: false, held: null, cos: cosClean(null) };
+  const p = { username, best: 0, games: 0, gears: 0, lastPlayed: 0, code: "", token: "", passkey: false, claimed: false, held: null, cos: cosClean(null), tb: 1 };
   save(p);
   return p;
 }
@@ -90,7 +92,9 @@ export function merge(p, remote) {
   p.lastPlayed = Math.max(p.lastPlayed, int(remote.lastPlayed));
   if (remote.cos) {
     const a = cosClean(p.cos), b = cosClean(remote.cos);
-    p.cos = { spent: Math.max(a.spent, b.spent), owned: [...new Set([...a.owned, ...b.owned])], eq: { ...b.eq, ...a.eq } };
+    const d = a.d && b.d ? (b.d.at > a.d.at ? b.d : a.d) : a.d || b.d;
+    p.cos = { spent: Math.max(a.spent, b.spent), owned: [...new Set([...a.owned, ...b.owned])], eq: { ...b.eq, ...a.eq },
+      sv: { b: Math.max(a.sv.b, b.sv.b), u: Math.max(a.sv.u, b.sv.u) }, ...(d ? { d } : {}) };
   }
   save(p);
   return p;
@@ -135,8 +139,11 @@ async function req(method, path, body, ms = 5000) {
 // board: "all" (default), "daily" (today's Daily Run) or "weekly" (since Monday 00:00 Vancouver).
 export const topScores = (board = "all") => req("GET", board === "all" ? "/scores" : `/scores?board=${board}`);
 // run: { mode: "free" | "daily" | "challenge", day, seed } (round 6; older Workers ignore it).
-export const postScore = (p, score, durationMs, run = {}) =>
-  req("POST", "/score", { username: p.username, score, durationMs, ...run, ...auth(p) });
+// Garage (r7): robot name + design code ride along; older Workers ignore them.
+export const postScore = (p, score, durationMs, run = {}) => {
+  const d = cosClean(p.cos).d;
+  return req("POST", "/score", { username: p.username, score, durationMs, ...run, ...(d && (d.name || d.code !== "0000") ? { robot: d.name, design: d.code } : {}), ...auth(p) });
+};
 export const claim = (p) =>
   req("POST", "/profile/claim", { username: p.username, best: p.best, games: p.games, gears: p.gears, lastPlayed: p.lastPlayed });
 export const restore = (username, code) => req("POST", "/profile/restore", { username, code: cleanCode(code) });

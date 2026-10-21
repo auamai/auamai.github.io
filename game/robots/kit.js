@@ -83,6 +83,9 @@ export function makeMaterials(env, lite = false) {
     light: new THREE.MeshBasicMaterial({ color: UL.light }),
     lightDeep: new THREE.MeshBasicMaterial({ color: UL.lightDeep }),
     mark: new THREE.MeshBasicMaterial({ color: 0x8ea2f6 }),
+    // Garage chassis plate (r7): the back pack and its plate share this lit graphite shell and one
+    // CanvasTexture (the game paints it), so the plate costs no extra draw call.
+    plate: shell(0xffffff, 0.36, 0.8),
   };
 }
 

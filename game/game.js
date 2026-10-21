@@ -51,6 +51,14 @@ class Game {
     this.dist = 0;
     this.speed = START_SPEED;
     this.profile = P.load();
+    // Toolbox (r7): stamp old saves once; the balance (gears minus spent) carries over unchanged.
+    if (MT.migrateToolbox(this.profile)) P.save(this.profile);
+    // Another tab spent or earned: pick up its saved profile so this tab never spends stale gears.
+    addEventListener("storage", (e) => {
+      if (e.key !== "au_factory_profile_v1" || !this.profile || this.state === "play") return;
+      const d = P.load();
+      if (d && d.username === this.profile.username) { P.merge(this.profile, d); if (this.view === "shop") this.showShop(); }
+    });
     this.board = { status: P.online() ? "loading" : "soon", rows: [] };
     this.settings = P.settings();
     this.tips = Object.assign({}, this.settings.tips);

@@ -20,7 +20,7 @@ export class Net {
     const p = this.profile;
     if (this.lastRun.post === "posting") {
       const run = this.lastRun;
-      const res = await P.postScore(p, score, durationMs, { mode: this.lastRun.mode, ...(this.lastRun.mode === "daily" ? { day: this.day, seed: this.seed } : {}) });
+      const res = await P.postScore(p, score, durationMs, { mode: this.lastRun.mode, ...(this.lastRun.mode === "daily" ? { day: this.day, seed: this.seed } : {}), ...(this.lastRun.revive ? { revive: true } : {}) });
       run.post = res.ok ? "ok" : res.status === 403 ? "claimed" : res.status === 429 ? "busy" : res.offline && navigator.onLine === false ? "offline" : "error";
       if (res.ok && res.data && res.data.rank) { run.rank = res.data.rank; this.settings.rank = res.data.rank; P.setSetting("rank", this.settings.rank); this.publish(); }
       if (res.ok && res.data && res.data.dailyRank) run.dailyRank = res.data.dailyRank;
@@ -73,7 +73,7 @@ export class Net {
     if (!r) return;
     this.renderer.render(this.scene, this.camera); // a fresh frame to copy (the buffer isn't kept)
     const link = r.mode === "daily" ? new URL("?daily=1", GAME_URL).href : MT.challengeUrl(GAME_URL, r.seed, r.score, this.profile.username);
-    const card = await MT.shareCard({ canvas: this.canvas, score: r.score, rank: r.dailyRank || r.rank, best: r.best, daily: r.mode === "daily", name: this.profile.username, link, wordmark: WORDMARK });
+    const card = await MT.shareCard({ canvas: this.canvas, score: r.score, rank: r.dailyRank || r.rank, best: r.best, daily: r.mode === "daily", name: this.profile.username, link, wordmark: WORDMARK, robot: (MT.cosClean(this.profile.cos).d || {}).name || "", design: (MT.cosClean(this.profile.cos).d || {}).code || "" });
     this.lastCard = card;
     const how = await MT.shareOrDownload(card, `I scored ${fmt(r.score)} in Servo Sprint.`, link);
     if (how === "downloaded") this.toast("Card saved");

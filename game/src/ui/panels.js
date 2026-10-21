@@ -5,6 +5,7 @@ import * as MT from "../../meta.js?v=20261020r6c";
 import { Factory } from "../../factory.js?v=20261020r6c";
 import { FactoryAudio } from "../../audio.js?v=20261020r6c";
 import { OVER_LOCK, ICON, OVER_ICON } from "../core/constants.js?v=20261020r6c";
+import { toolboxHtml } from "../meta/garage.js?v=20261020r6c";
 import { fmt, esc, clock } from "../core/util.js?v=20261020r6c";
 import { WORDMARK } from "./brand.js?v=20261020r6c";
 
@@ -23,7 +24,7 @@ export class Panels {
       <div class="fr__hud" hidden>
         <div class="fr__scorebox"><span class="fr__score">0</span><span class="fr__mult" hidden>×1</span></div>
         <div class="fr__pb" aria-hidden="true"><span class="fr__pb-bar"><i></i></span><span class="fr__pb-label">PB</span></div>
-        <span class="fr__meta"><span class="fr__gears">0</span> gears · best <span class="fr__best">0</span></span>
+        <span class="fr__meta"><span class="fr__gears">0</span> gears · best <span class="fr__best">0</span><span class="fr__servo" hidden title="Spare Servo armed"><span class="fr__sicon">${OVER_ICON.servo}</span><span class="fr__sr">Spare Servo armed</span></span></span>
         <div class="fr__meter" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
         <div class="fr__chips" aria-hidden="true"></div>
         <span class="fr__power" hidden>
@@ -61,6 +62,7 @@ export class Panels {
     this.elScore = root.querySelector(".fr__score");
     this.elGears = root.querySelector(".fr__gears");
     this.elBest = root.querySelector(".fr__best");
+    this.elServo = root.querySelector(".fr__servo");
     this.elPower = root.querySelector(".fr__power");
     this.elRing = root.querySelector(".fr__ring-fg");
     this.btnPause = root.querySelector('[data-act="pause"]');
@@ -150,7 +152,7 @@ export class Panels {
     if (!this.board.rows.length) return `<div class="fr__board"><h3 class="fr__h3">Leaderboard</h3><p class="fr__muted">${this.board.tab === "daily" ? "Nobody's run today's course yet. First place is open." : "No runs yet. First place is open."}</p></div>`;
     const me = this.profile && this.profile.username.toLowerCase();
     return `<div class="fr__board"><h3 class="fr__h3">Leaderboard</h3><ol>${this.board.rows.map((r, i) =>
-      `<li class="${i < 3 ? `is-top is-top${i + 1}` : ""}${me && r.username.toLowerCase() === me ? " is-me" : ""}"${me && r.username.toLowerCase() === me ? ' aria-current="true"' : ""}><span class="fr__pos">${i + 1}</span><span>${esc(r.username)}</span><span class="fr__num">${fmt(r.score)}</span></li>`).join("")}</ol></div>`;
+      `<li class="${i < 3 ? `is-top is-top${i + 1}` : ""}${me && r.username.toLowerCase() === me ? " is-me" : ""}"${me && r.username.toLowerCase() === me ? ' aria-current="true"' : ""}><span class="fr__pos">${i + 1}</span><span>${esc(r.username)}${typeof r.robot === "string" && r.robot && !MT.checkRobotName(r.robot) ? `<span class="fr__brow">${esc(r.robot)}</span>` : ""}</span><span class="fr__num">${fmt(r.score)}</span></li>`).join("")}</ol></div>`;
   }
 
   challengeHtml() {
@@ -203,10 +205,11 @@ export class Panels {
     if (p) this.publish();
     const links = [];
     let body;
+    const rname = p ? (MT.cosClean(p.cos).d || {}).name : "";
     if (p && !this.switching) {
       body = `
-        <p class="fr__lede">Welcome back, <b class="fr__name">${esc(p.username)}</b>.</p>
-        <p class="fr__muted">Best ${fmt(p.best)} · ${fmt(p.games)} ${p.games === 1 ? "run" : "runs"} · ${fmt(p.gears)} gears</p>
+        <p class="fr__lede">Welcome back, <b class="fr__name">${esc(p.username)}</b>.${rname ? ` <span class="fr__robotname">${esc(rname)}</span> is ready.` : ""}</p>
+        <p class="fr__muted fr__tbline">Best ${fmt(p.best)} · ${fmt(p.games)} ${p.games === 1 ? "run" : "runs"} ${toolboxHtml(MT.wallet(p))}${this.settings.servoArm && MT.servoCount(p) ? `<span class="fr__servo" title="Spare Servo armed"><span class="fr__sicon">${OVER_ICON.servo}</span><span class="fr__sr">Spare Servo armed</span></span>` : ""}</p>
         ${this.badgesHtml()}
         ${this.challengeHtml()}
         <div class="fr__actions">
@@ -215,7 +218,7 @@ export class Panels {
         </div>
         ${this.dailyHtml()}
         ${this.missionsHtml()}
-        <div class="fr__links"><button class="fr__link" type="button" data-panel="shop">Garage · ${fmt(MT.wallet(p))} gears</button></div>`;
+        <div class="fr__links"><button class="fr__link" type="button" data-panel="shop">Garage</button></div>`;
       links.push(`<button class="fr__link" type="button" data-panel="switch">Not you?</button>`);
     } else {
       body = `
@@ -317,6 +320,33 @@ export class Panels {
     if (s) s.innerHTML = this.overStatusHtml();
   }
 
+  // Game over: this run's gears (up to 8 tokens) fly from the Gears stat into the Toolbox, then
+  // the balance ticks up. CSS transforms only, under 0.9 s; skipped with reduced motion.
+  toolboxFly() {
+    const r = this.lastRun, tb = this.panel.querySelector(".fr__tbover .fr__toolbox"), n = tb && tb.querySelector(".fr__tbn");
+    if (!tb || this.reduceMotion) return;
+    const add = r.gears + r.reward, end = MT.wallet(this.profile);
+    if (add <= 0) { n.textContent = fmt(end); return; }
+    const from = this.panel.querySelector(".fr__stats li .fr__sicon") || this.panel, a = from.getBoundingClientRect(), b = tb.getBoundingClientRect();
+    const k = Math.min(8, Math.max(1, Math.round(add / 10)));
+    for (let i = 0; i < k; i++) {
+      const el = document.createElement("i");
+      el.className = "fr__tbfly";
+      el.style.left = `${a.left + a.width / 2}px`; el.style.top = `${a.top + a.height / 2}px`;
+      document.body.appendChild(el);
+      setTimeout(() => { el.style.transform = `translate(${b.left + 14 - a.left - a.width / 2}px, ${b.top + b.height / 2 - a.top - a.height / 2}px) scale(.6)`; el.style.opacity = "0.2"; }, 120 + i * 45);
+      setTimeout(() => el.remove(), 720 + i * 45);
+    }
+    const t0 = performance.now() + 380, from0 = r.wallet0;
+    const tick = (now) => {
+      if (!n.isConnected) return;
+      const q = Math.min(1, Math.max(0, (now - t0) / 420));
+      n.textContent = fmt(Math.round(from0 + (end - from0) * q));
+      if (q < 1) requestAnimationFrame(tick); else { tb.classList.add("is-pulse"); this.sfx("gear"); }
+    };
+    requestAnimationFrame(tick);
+  }
+
   showOver() {
     const r = this.lastRun;
     this.saveUi = { open: "", msg: "", busy: false, code: "" };
@@ -330,6 +360,7 @@ export class Panels {
       <h2 class="fr__headline">${esc(r.headline)}</h2>
       <p class="fr__big${r.best ? " is-best" : ""}" data-count="${r.score}">${this.reduceMotion ? fmt(r.score) : "0"}</p>
       <div class="fr__status" data-slot="status">${this.overStatusHtml()}</div>
+      <p class="fr__tbover">${toolboxHtml(this.reduceMotion ? MT.wallet(p) : r.wallet0)}${r.gears + r.reward ? `<span class="fr__muted">+${fmt(r.gears + r.reward)} this run</span>` : ""}${r.revive ? `<span class="fr__muted">Spare Servo used</span>` : ""}</p>
       ${this.statsHtml()}
       ${this.progressHtml()}
       <div class="fr__actions">
@@ -341,6 +372,7 @@ export class Panels {
       ${this.boardHtml()}`, "over");
     this.overAt = performance.now();
     this.countUp();
+    this.toolboxFly();
     this.layer.classList.add("is-arming");
     clearTimeout(this.armT);
     this.armT = setTimeout(() => this.layer.classList.remove("is-arming"), OVER_LOCK);
@@ -599,6 +631,7 @@ export class Panels {
 
   onPanelInput(e) {
     const el = e.target;
+    if (el.dataset.g) return this.garageInput(el);
     if (el.dataset.vol) {
       this.settings[el.dataset.vol] = el.value / 100; P.setSetting(el.dataset.vol, el.value / 100);
       this.audio.applyVolumes();
@@ -629,6 +662,7 @@ export class Panels {
     else if (a === "daily") this.tryStart("daily");
     else if (a === "shop" || a === "garage") this.showShop();
     else if (a === "buy") this.buy(b.dataset.id);
+    else if (a === "g") this.garageAct(b);
     else if (a === "board") { this.boardTab = b.dataset.board; this.refreshBoard(); }
     else if (a === "share") this.share();
     else if (a === "dare") this.dare();
