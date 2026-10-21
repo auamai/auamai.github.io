@@ -44,6 +44,33 @@ Passkeys: RP ID stays `auamai.dev`; servosprint.xyz and www.servosprint.xyz are 
 `https://auamai.dev/.well-known/webauthn` (Related Origin Requests) and in the Worker's passkey origins.
 The game only offers passkeys there once the browser reports related-origin support; the backup code works everywhere.
 
+## Release check r6d, live verification (2026-10-20 night, servosprint.xyz)
+
+Run on `robot-game` 7251e2b, the build the `servosprint` Worker serves (deployed assets match `game/` file for file).
+
+- **Golden replays:** real_run 432 `acd66776`, god_180s 8353 `e970d5ce`, daily_like 3057 `ded68c93`, all match.
+  Browser suite 17/17, r6b suite 9/9, no console errors.
+- **Passkeys (headless Chrome 140, virtual authenticator, real network):** `getClientCapabilities().relatedOrigins`
+  is true. Registered on servosprint.xyz, then a synced copy signed in on servosprint.xyz, www.servosprint.xyz and
+  auamai.dev/game/; registered on www.servosprint.xyz with the same result. Credentials carry RP ID `auamai.dev`;
+  sign counts advance 2 → 3 → 4. Related-origin flow works, so no second RP ID fallback was needed.
+- **Live pages (desk 1440, phone 390 on the apex; desk 1440 on www):** title, a driven run, game over, score
+  submit (POST 200, CORS echoes the page origin), Share (file + `?c=` link), copy fallback, Garage, Daily Run
+  (`?daily=1`), challenge link (`?c=21i3v9` → seed 123456789) all work; 0 console errors. `/brand/og.png` 200
+  (1200×630). www.servosprint.xyz 301s to the apex for plain clients.
+- **Old link:** `auamai.dev/game/?c=…` still opens, but GitHub Pages (`main`) serves the older "Factory run" r5 build
+  there, not Servo Sprint, and it does not redirect to servosprint.xyz.
+- **Soak (10 min, real rAF loop, phone 390 at DPR 1, local copy of the same files):** 0 errors, 6 death/retry
+  cycles, JS heap 19.7 → 22.2 MB, geometries 102 → 121, scene objects 381 → 663, DOM nodes flat (~300–370),
+  listeners flat. Growth comes in steps with flat plateaus, which reads as pools warming, but the box was
+  CPU-starved (other jobs running), so each run only reached ~11 s of game time. Treat as clean of errors and
+  not yet conclusive on memory; the 30-minute soak at full speed is still open.
+- **Clean-up:** the temporary `servosprint.auamai.workers.dev` origin is out of the leaderboard Worker's
+  ALLOWED_ORIGINS (CORS no longer answers it); all `zz_pk_*` and `qa_live` test rows (scores, profiles,
+  passkeys, sessions) deleted.
+- **Share cards** exported through the live Share button: 1080×1350 card, plus LinkedIn 1200×627 and X 1600×900
+  padded with #14161B (aspect kept, no stretch).
+
 ## Review rounds
 
 - **Round 1 (screenshots):** game over read as a form. Rewrote headlines per hazard and bay, score count-up,
@@ -55,5 +82,5 @@ The game only offers passkeys there once the browser reports related-origin supp
 
 The request to restructure the whole codebase into separate core/physics/input/world/render/audio/UI/net modules
 was not done in this pass: r6 keeps `game.js` as the core and adds `tools.js`, `audio.js`, `meta.js` beside it.
-Also open: gamepad input, `/err` error reporting, the 30-minute soak, Lighthouse and an initial-weight audit, a real
+Also open: the 30-minute soak (a 10-minute one is done), Lighthouse and an initial-weight audit, a real
 iPhone audio pass, and the slide's friction skid (the pose blends, but there is no skid offset yet).
