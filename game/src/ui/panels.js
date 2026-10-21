@@ -341,6 +341,7 @@ export class Panels {
       ${this.boardHtml()}`, "over");
     this.overAt = performance.now();
     this.countUp();
+    this.prepareCard();
     this.layer.classList.add("is-arming");
     clearTimeout(this.armT);
     this.armT = setTimeout(() => this.layer.classList.remove("is-arming"), OVER_LOCK);

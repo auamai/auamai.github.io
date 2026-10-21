@@ -28,7 +28,7 @@ export class Net {
       // Not posted: keep it (the best one) for when the board can take it.
       if (!res.ok) P.hold(p, score, durationMs);
       else if (p.held && p.held.score <= score) { p.held = null; P.save(p); }
-      if (run === this.lastRun) { this.updateOverStatus(); this.refreshSave(); }
+      if (run === this.lastRun) { this.updateOverStatus(); this.refreshSave(); if (run.rank || run.dailyRank) this.prepareCard(); }
       if (res.ok && p.held) await this.postHeld();
     }
     if (P.linked(p)) {
@@ -68,15 +68,47 @@ export class Net {
     if (b) b.outerHTML = this.boardHtml();
   }
 
+  // The card for the last run, built once in the background after game over (prepareCard) so a Share tap can hand
+  // it to the share sheet at once, inside the tap's user activation (iOS Safari refuses share() after a long await).
+  cardFor(r) {
+    const key = `${r.rank || ""}|${r.dailyRank || ""}`; // a rank that lands after the card was built rebuilds it
+    if (this.cardRun === r && this.cardKey === key && this.cardJob) return this.cardJob;
+    this.cardKey = key;
+    if (this.lastCard && /^blob:/.test(this.lastCard.url || "")) { try { URL.revokeObjectURL(this.lastCard.url); } catch { /* ignore */ } }
+    this.lastCard = null;
+    this.renderer.render(this.scene, this.camera); // a fresh frame to copy (the buffer isn't kept); shareCard copies it before any await
+    const link = this.shareLink(r), c = r.challenge, passed = c && r.score > c.score ? { name: c.name, by: r.score - c.score } : null;
+    this.cardRun = r;
+    this.cardJob = MT.shareCard({ canvas: this.canvas, score: r.score, rank: r.dailyRank || r.rank, best: r.best, daily: r.mode === "daily", day: this.day, name: this.profile.username, link, wordmark: WORDMARK, passed })
+      .then((card) => { if (this.cardRun === r && this.cardKey === key) this.lastCard = card; return card; });
+    return this.cardJob;
+  }
+
+  // Called from showOver: wait for the count-up to settle, then build the card while the player reads the screen.
+  prepareCard() {
+    const r = this.lastRun;
+    clearTimeout(this.cardT);
+    this.cardT = setTimeout(() => { if (this.view === "over" && this.lastRun === r && !this.closed) this.cardFor(r).catch(() => {}); }, 1200);
+  }
+
+  shareLink(r) {
+    return r.mode === "daily" ? new URL("?daily=1", GAME_URL).href : MT.challengeUrl(GAME_URL, r.seed, r.score, this.profile.username);
+  }
+
+  shareText(r) {
+    const c = r.challenge;
+    if (c && r.score > c.score) return `I beat ${c.name ? `${c.name}'s` : "a"} ${fmt(c.score)} in Servo Sprint with ${fmt(r.score)}.`;
+    if (r.mode === "daily") return `I scored ${fmt(r.score)} on today's Daily Run in Servo Sprint.`;
+    return `I scored ${fmt(r.score)} in Servo Sprint.`;
+  }
+
   async share() {
     const r = this.lastRun;
     if (!r) return;
-    this.renderer.render(this.scene, this.camera); // a fresh frame to copy (the buffer isn't kept)
-    const link = r.mode === "daily" ? new URL("?daily=1", GAME_URL).href : MT.challengeUrl(GAME_URL, r.seed, r.score, this.profile.username);
-    const card = await MT.shareCard({ canvas: this.canvas, score: r.score, rank: r.dailyRank || r.rank, best: r.best, daily: r.mode === "daily", name: this.profile.username, link, wordmark: WORDMARK });
-    this.lastCard = card;
-    const how = await MT.shareOrDownload(card, `I scored ${fmt(r.score)} in Servo Sprint.`, link);
-    if (how === "downloaded") this.toast("Card saved");
+    const card = await this.cardFor(r).catch(() => ({ blob: null, url: "" }));
+    const how = await MT.shareOrDownload(card, this.shareText(r), this.shareLink(r));
+    if (how === "downloaded+copied") this.toast("Card saved · link copied");
+    else if (how === "downloaded") this.toast("Card saved");
   }
 
   async dare() {
@@ -84,8 +116,10 @@ export class Net {
     if (!r) return;
     const link = MT.challengeUrl(GAME_URL, r.seed, r.score, this.profile.username);
     try {
-      if (navigator.share) await navigator.share({ text: `Beat my ${fmt(r.score)} in Servo Sprint`, url: link });
-      else { await navigator.clipboard.writeText(link); this.toast("Challenge link copied"); }
-    } catch (e) { if (!e || e.name !== "AbortError") this.toast(link); }
+      if (navigator.share) { await navigator.share({ text: `Beat my ${fmt(r.score)} in Servo Sprint`, url: link }); return; }
+    } catch (e) { if (e && e.name === "AbortError") return; }
+    // No share sheet, or it refused: copy the link; only if that fails too, show it so it can be copied by hand.
+    if (await MT.copyText(link)) this.toast("Challenge link copied");
+    else this.toast(link);
   }
 }
