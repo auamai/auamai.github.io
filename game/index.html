@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://api.auamai.dev; media-src 'self' data: blob:; manifest-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'self'" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Servo Sprint</title>
   <meta name="description" content="Servo Sprint: a 3D robot runner. Sprint the line, bank the gears, dodge the machines. Daily Run, global board." />
@@ -49,17 +50,6 @@
     <div class="boot__in"><img class="boot__mark" src="brand/wordmark-light.svg?v=20261020r6c" alt="Servo Sprint" width="276" height="24" /><span>Loading the line</span><span class="boot__bar" aria-hidden="true"></span></div>
   </div>
   <noscript><p style="color:#f2f0ea;font-family:system-ui;padding:24px">Servo Sprint needs JavaScript.</p></noscript>
-  <script type="module">
-    const boot = document.getElementById("fr-boot");
-    // Under the portfolio (/game/) the close button goes back to the site; on its own domain there is nothing to close to.
-    const nested = /\/game\/?$/.test(location.pathname.replace(/index\.html$/, ""));
-    import("./game.js?v=20261020r6c")
-      .then(({ openGame }) => openGame({ standalone: true, exitUrl: nested ? "../" : null }))
-      .then(() => boot.remove())
-      .catch((err) => {
-        console.error(err);
-        boot.innerHTML = '<div class="boot__in"><span>Servo Sprint could not load. Check your connection.</span><a href="">Try again</a></div>';
-      });
-  </script>
+  <script type="module" src="boot.js?v=20261020r6c"></script>
 </body>
 </html>

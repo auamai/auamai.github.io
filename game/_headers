@@ -1,0 +1,28 @@
+# Every local JS/CSS/font/icon reference carries ?v=<build>, so these can be cached for a year.
+/*.js
+  Cache-Control: public, max-age=31536000, immutable
+/*.css
+  Cache-Control: public, max-age=31536000, immutable
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+  Access-Control-Allow-Origin: *
+# Brand images are also fetched without ?v (og:image scrapers, manifest icons): one day.
+/brand/*
+  Cache-Control: public, max-age=86400
+# The page and manifest must always revalidate so a new build is picked up at once.
+/
+  Cache-Control: no-cache
+/index.html
+  Cache-Control: no-cache
+/manifest.webmanifest
+  Cache-Control: no-cache
+# Security headers for every path (Cloudflare static assets). index.html also carries the CSP as a <meta>, so
+# auamai.dev/game/ (GitHub Pages, which ignores this file) gets the same policy; frame-ancestors only works here.
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://api.auamai.dev; media-src 'self' data: blob:; manifest-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'self'
+  X-Frame-Options: SAMEORIGIN
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+  Cross-Origin-Opener-Policy: same-origin
