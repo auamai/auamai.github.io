@@ -258,6 +258,11 @@ export class Loop {
     if (st === "play") {
       if (!this.pbPassed && this.pbFrom > 0 && this.score > this.pbFrom) this.passBest();
       this.updateHud(mult, v);
+      // Multiplier climbing (x2 -> x3 -> ... while golden): a short rising chime per step. Not on the first
+      // step (the pickup has its own sound) or the Overdrive onset ("over" plays). Audio only, never the sim.
+      const odOn = fx.over > 0;
+      if (mult > (this.multHeard || 1) && (this.multHeard || 1) >= 2 && !(odOn && !this.odHeard)) this.sfx("mult", 0, mult);
+      this.multHeard = mult; this.odHeard = odOn;
     }
   }
 

@@ -3,5 +3,5 @@
 
 
 export class Sound {
-  sfx(name, x = 0) { this.audio?.sfx(name, x / 4); }
+  sfx(name, x = 0, lvl = 0) { this.audio?.sfx(name, x / 4, lvl); }
 }
