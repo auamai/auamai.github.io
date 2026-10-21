@@ -419,7 +419,7 @@ Options you haven't reached yet show dimmed with their grade (G4); tapping one s
 | Item | Kind | Price |
 | --- | --- | --- |
 | Cyan pinstripe | Robot trim | 200 |
-| Cyan frost | Robot trim | 350 |
+| Ice trim | Robot trim | 350 |
 | Cyan arc | Run trail | 250 |
 | Steel dash | Run trail | 300 |
 | White sparks | Run trail | 400 |
