@@ -1,9 +1,9 @@
 // Meta layer in the game: missions strip, Garage (robot design, cosmetics, Spare Servo, Toolbox),
 // milestone badges. Installed onto Game.prototype by game.js (methods use `this`, the Game).
-import * as P from "../../profile.js?v=20261021r91";
-import * as MT from "../../meta.js?v=20261021r91";
-import { MILESTONES, OVER_ICON } from "../core/constants.js?v=20261021r91";
-import { fmt, esc } from "../core/util.js?v=20261021r91";
+import * as P from "../../profile.js?v=20261021r10";
+import * as MT from "../../meta.js?v=20261021r10";
+import { MILESTONES, OVER_ICON } from "../core/constants.js?v=20261021r10";
+import { fmt, esc } from "../core/util.js?v=20261021r10";
 
 const hex6 = (n) => `#${n.toString(16).padStart(6, "0")}`;
 // Toolbox chip: the wallet, shown on the title, the Garage and game over.

@@ -7,7 +7,7 @@
 // Rails pay a grind bonus by length, no balance meter; hop from one rail onto another within 0.7 s and the
 // line keeps going with ×1.5, ×2 ... Every point goes through addScore, so the score caps hold unchanged.
 // Classic (v1) and v2 courses never call any of this, so their replays are untouched.
-import { M_PER_U } from "../core/constants.js?v=20261021r91";
+import { M_PER_U } from "../core/constants.js?v=20261021r10";
 
 const TRICK_T = 0.5, FLIP_PTS = 120, SPIN_PTS = 90, GRIND_PTS = 3, LINK_T = 0.7;
 

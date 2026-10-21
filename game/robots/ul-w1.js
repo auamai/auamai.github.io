@@ -1,6 +1,6 @@
 // Uamai Labs UL-W1: a two-wheel self-balancing roller. A smooth teardrop pod
 // rides between two big wheels; the visor and light strip match the H1.
-import { THREE, bake, taper, lathe, latheBand, radiusAt, ring, ball, ulMark, mesh, group, damp } from "./kit.js?v=20261021r91";
+import { THREE, bake, taper, lathe, latheBand, radiusAt, ring, ball, ulMark, mesh, group, damp } from "./kit.js?v=20261021r10";
 
 export const info = { id: "ul-w1", name: "UL-W1", lab: "Uamai Labs", kind: "wheeled" };
 

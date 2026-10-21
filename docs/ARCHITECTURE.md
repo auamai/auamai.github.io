@@ -548,7 +548,7 @@ references); bump it on every release, and keep the `modulepreload` list in `ind
 | `src/net/net.js` | Board fetch and tabs, share pipeline |
 | `src/net/errors.js` | Error boundary, `POST /err` (message + build, no PII) |
 | `audio.js`, `src/audio/sound.js` | Web Audio engine: file music (Rhythm Factory loop) with the synth "Line Shift" (106 BPM) as fallback, SFX, ducking, iOS unlock |
-| `music/rhythm-factory.m4a`, `music/CREDITS.txt` | "Rhythm Factory" by Zane Little Music (CC0, courtesy credit): 90 s loop, AAC-LC 128 kbps stereo 44.1 kHz, 1,531,951 bytes, -16 LUFS; credits and edit notes |
+| `music/rhythm-factory.m4a`, `music/rhythm-factory.ogg` (Opus fallback, 1,322,792 bytes), `music/CREDITS.txt` | "Rhythm Factory" by Zane Little Music (CC0, courtesy credit): 90 s loop, AAC-LC 128 kbps stereo 44.1 kHz, 1,531,951 bytes, -16 LUFS; credits and edit notes |
 
 Worker: `leaderboard-worker/src/index.js` (single module), `schema.sql`, `migrate_r6.sql`, `migrate_r7.sql`,
 `test/security.test.mjs`, `wrangler.toml`.
@@ -1026,11 +1026,14 @@ integrated, -4.1 dBFS sample peak). It is a 90.000 s loop (36 bars at 96 BPM) cu
 0.86 at zero lag), with a 20 ms equal-power crossfade baked into the loop end and 0.25 s of wrap-around padding on
 each side. The source node loops `[0.25 s, 90.25 s]`, so whether or not a browser trims the AAC encoder delay, both
 loop points shift together and the seam stays click-free.
-- Fetched once, with `fetch('music/rhythm-factory.m4a?v=<build>')` then `decodeAudioData`, on the first scheduler
+- A second copy, `music/rhythm-factory.ogg` (Ogg Opus 112 kbps, 48 kHz, ~1.3 MB, transcoded from the AAC file and
+  sample-aligned with it, same loop points), serves browsers that can't decode AAC (open-source Chromium builds).
+  `musicUrls()` orders the two by `canPlayType`; a fetch or decode failure on one falls through to the other.
+- Fetched once, with `fetch('music/rhythm-factory.<m4a|ogg>?v=<build>')` then `decodeAudioData`, on the first scheduler
   tick with music on; never while music is off. Not preloaded and not on the page-load path, so it adds nothing to
   first paint; it is a one-time ~1.5 MB download on the first music start (already compressed, so gzip doesn't
   shrink it).
-- One looping `AudioBufferSourceNode` -> gain `FILE_TRIM` (2.0) -> `bus`, so the pause/over duck, `evDuck`, the
+- One looping `AudioBufferSourceNode` -> gain `FILE_TRIM` (1.0; measured in Chromium, 2.0 sat ~10 dB over the synth cue, 1.0 leaves the full mix ~4 dB over it) -> `bus`, so the pause/over duck, `evDuck`, the
   music volume and toggle (`musicOut`) and the mood low-pass all apply as before. It skips the kick pump (`duck`).
 - While it loads (up to 8 s) or plays, `play()` builds no synth voices (that includes the gridded machine stamps,
   which are on the 106 BPM grid and would clash), the motor hum is silent, and the count-in drops its keys chord and

@@ -1,28 +1,28 @@
 // Servo Sprint: a small endless runner. Loaded only when someone presses Play.
 // Entry point: builds the Game from its modules (src/). See README.md for the module map.
-import * as P from "./profile.js?v=20261021r91";
-import * as MT from "./meta.js?v=20261021r91";
-import { START_SPEED } from "./src/core/constants.js?v=20261021r91";
-import { BOX } from "./src/render/geometry.js?v=20261021r91";
-import { Loop } from "./src/core/loop.js?v=20261021r91";
-import { Run } from "./src/core/run.js?v=20261021r91";
-import { Physics } from "./src/sim/physics.js?v=20261021r91";
-import { Input } from "./src/input/input.js?v=20261021r91";
-import { WorldGen } from "./src/world/worldgen.js?v=20261021r91";
-import { Track } from "./src/world/track.js?v=20261021r91";
-import { Render } from "./src/render/render.js?v=20261021r91";
-import { Sound } from "./src/audio/sound.js?v=20261021r91";
-import { Hud } from "./src/ui/hud.js?v=20261021r91";
-import { Panels } from "./src/ui/panels.js?v=20261021r91";
-import { Garage } from "./src/meta/garage.js?v=20261021r91";
-import { Net } from "./src/net/net.js?v=20261021r91";
-import { Ghost } from "./src/render/ghost.js?v=20261021r91";
-import { Hazards } from "./src/world/hazards.js?v=20261021r91";
-import { Tricks } from "./src/sim/tricks.js?v=20261021r91";
-import { Juice } from "./src/render/juice.js?v=20261021r91";
-import { SoundUi } from "./src/ui/sound-ui.js?v=20261021r91";
-import { installErrorReporting } from "./src/net/errors.js?v=20261021r91";
-export { allowedScore } from "./src/core/constants.js?v=20261021r91";
+import * as P from "./profile.js?v=20261021r10";
+import * as MT from "./meta.js?v=20261021r10";
+import { START_SPEED } from "./src/core/constants.js?v=20261021r10";
+import { BOX } from "./src/render/geometry.js?v=20261021r10";
+import { Loop } from "./src/core/loop.js?v=20261021r10";
+import { Run } from "./src/core/run.js?v=20261021r10";
+import { Physics } from "./src/sim/physics.js?v=20261021r10";
+import { Input } from "./src/input/input.js?v=20261021r10";
+import { WorldGen } from "./src/world/worldgen.js?v=20261021r10";
+import { Track } from "./src/world/track.js?v=20261021r10";
+import { Render } from "./src/render/render.js?v=20261021r10";
+import { Sound } from "./src/audio/sound.js?v=20261021r10";
+import { Hud } from "./src/ui/hud.js?v=20261021r10";
+import { Panels } from "./src/ui/panels.js?v=20261021r10";
+import { Garage } from "./src/meta/garage.js?v=20261021r10";
+import { Net } from "./src/net/net.js?v=20261021r10";
+import { Ghost } from "./src/render/ghost.js?v=20261021r10";
+import { Hazards } from "./src/world/hazards.js?v=20261021r10";
+import { Tricks } from "./src/sim/tricks.js?v=20261021r10";
+import { Juice } from "./src/render/juice.js?v=20261021r10";
+import { SoundUi } from "./src/ui/sound-ui.js?v=20261021r10";
+import { installErrorReporting } from "./src/net/errors.js?v=20261021r10";
+export { allowedScore } from "./src/core/constants.js?v=20261021r10";
 
 let current = null;
 let cssLoaded = null;
@@ -32,7 +32,7 @@ function loadCss() {
     cssLoaded = new Promise((resolve) => {
       const link = document.createElement("link");
       link.rel = "stylesheet";
-      link.href = new URL("./game.css?v=20261021r91", import.meta.url).href;
+      link.href = new URL("./game.css?v=20261021r10", import.meta.url).href;
       link.onload = link.onerror = () => resolve();
       document.head.appendChild(link);
     });

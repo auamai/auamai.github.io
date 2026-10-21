@@ -7,8 +7,8 @@
 // are live, so at most +4; 0 when he is away
 // and no sparks are live (everything hides). Palette: #14161B, #F2F0EA, #FFC93C, #3DDCFF only.
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
-import { BEND } from "../world/track.js?v=20261021r91";
-import { LANES } from "../core/constants.js?v=20261021r91";
+import { BEND } from "../world/track.js?v=20261021r10";
+import { LANES } from "../core/constants.js?v=20261021r10";
 // Course v3 set pieces (hazards.js): which ones are a threat, and the lane x the light should sit on.
 // A test fire's flame starts at its wall engine, so that wall's outer lane is always lit.
 const jxLive = (h) => !(h.kind === "door" && !h.a);

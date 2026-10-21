@@ -34,10 +34,16 @@ const SWING = 0.022;             // odd 16ths land 22 ms late: ~58% swing, the A
 const LOOK = 0.12;               // scheduler lookahead (s); the timer runs every 25 ms
 const MAX_VOICES = 56;           // music polyphony cap (a "voice" is one note or phrase with all its nodes)
 const MUSIC_GAIN = 0.8;           // music bus trim at the default slider (tuned for -16 LUFS in a run)
-const MUSIC_URL = "music/rhythm-factory.m4a?v=20261021r91";
+// AAC first (Safari, Chrome, Edge, Firefox); Ogg Opus when the browser can't decode AAC (open-source Chromium builds).
+const MUSIC_URLS = [["music/rhythm-factory.m4a?v=20261021r10", 'audio/mp4; codecs="mp4a.40.2"'], ["music/rhythm-factory.ogg?v=20261021r10", 'audio/ogg; codecs="opus"']];
+function musicUrls() {
+  let el = null; try { el = typeof Audio === "function" ? new Audio() : null; } catch { /* no media element */ }
+  const can = (m) => !el || !el.canPlayType || el.canPlayType(m) !== "";
+  const list = MUSIC_URLS.filter(([, m]) => can(m)).map(([u]) => u);
+  return list.length ? list : MUSIC_URLS.map(([u]) => u);
+}
 const LOOP_PAD = 0.25, LOOP_LEN = 90;   // loop region in the file: [LOOP_PAD, LOOP_PAD + LOOP_LEN] seconds
-const FILE_TRIM = 2.0;           // file music gain into `bus` (+6 dB): the file is mastered at -16 LUFS and the
-                                 // chain after it (MUSIC_GAIN x default slider 0.7 x master 0.8) is about -7 dB
+const FILE_TRIM = 1.0;   // measured in Chromium 2026-10-21: x2.0 sat ~10 dB over the synth cue at the music bus; x1.0 leaves the full mix ~4 dB over it
 const FILE_TIMEOUT = 8000;       // ms: fetch + decode slower than this falls back to the synth cue
 // Music dip per effect, [dB, hold s]: the crash and PB own the moment; power-ups only nudge.
 const DUCK = { crash_wood: [7, 0.5], crash_steel: [7, 0.5], hit: [7, 0.5], fall: [7, 0.6], pb: [5, 0.7], over: [3.5, 0.35], power: [3, 0.3], tool: [2, 0.18], mult: [1.5, 0.12] };
@@ -369,10 +375,13 @@ export class FactoryAudio {
     try { ac = new AbortController(); } catch { /* old browser: no abort, the timeout still falls back */ }
     const fail = () => { if (done) return; done = true; f.state = "failed"; try { ac?.abort(); } catch { /* ignore */ } };
     const timer = setTimeout(fail, FILE_TIMEOUT);
-    fetch(MUSIC_URL, ac ? { signal: ac.signal } : undefined)
+    // Callback form too, for older Safari; the promise (where returned) is caught so it never goes unhandled.
+    const one = (url) => fetch(url, ac ? { signal: ac.signal } : undefined)
       .then((r) => { if (!r.ok) throw new Error("music " + r.status); return r.arrayBuffer(); })
-      // Callback form too, for older Safari; the promise (where returned) is caught so it never goes unhandled.
-      .then((data) => new Promise((ok, no) => { const p = A.decodeAudioData(data, ok, no); if (p && p.catch) p.catch(no); }))
+      .then((data) => new Promise((ok, no) => { const p = A.decodeAudioData(data, ok, no); if (p && p.catch) p.catch(no); }));
+    const urls = musicUrls();
+    // Try each format in turn (a decode failure on the first falls through to the next); all failing = synth.
+    urls.slice(1).reduce((p, u) => p.catch(() => { if (done) throw new Error("music"); return one(u); }), one(urls[0]))
       .then((buf) => { if (done || this.ctx !== A || !this.started) return; done = true; clearTimeout(timer); this.startFile(buf); })
       .catch(() => { clearTimeout(timer); fail(); });
   }

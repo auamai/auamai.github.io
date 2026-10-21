@@ -1,9 +1,9 @@
 // In-run HUD: score, chips, popups, tips, toast, screen-reader line.
 // Installed onto Game.prototype by game.js (methods use `this`, the Game).
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
-import * as P from "../../profile.js?v=20261021r91";
-import { DIST_POINTS, MAGNET_T, DRILL_T, HAMMER_T, GOLD_T, OVER_T, SLOW_T, ICON, TIPS, NO_SLOW, visY } from "../core/constants.js?v=20261021r91";
-import { fmt } from "../core/util.js?v=20261021r91";
+import * as P from "../../profile.js?v=20261021r10";
+import { DIST_POINTS, MAGNET_T, DRILL_T, HAMMER_T, GOLD_T, OVER_T, SLOW_T, ICON, TIPS, NO_SLOW, visY } from "../core/constants.js?v=20261021r10";
+import { fmt } from "../core/util.js?v=20261021r10";
 
 // Tool chips in HUD order: [fx key, full duration, label].
 const CHIPS = [["magnet", MAGNET_T, "Magnet"], ["drill", DRILL_T, "Drill"], ["hammer", HAMMER_T, "Hammer"], ["gold", GOLD_T, "Gold"], ["over", OVER_T, "Overdrive"]];
