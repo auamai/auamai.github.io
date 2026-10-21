@@ -4,9 +4,9 @@
 // To add a runner later: write game/robots/<id>.js exporting `info` and
 // `create`, import it here and push it onto RUNNERS. The game picks the
 // runner by id (see robotId in game.js) and falls back to the first entry.
-import { makeEnvironment, makeMaterials, rim } from "./kit.js?v=20261020r6b";
-import * as H1 from "./ul-h1.js?v=20261020r6b";
-import * as W1 from "./ul-w1.js?v=20261020r6b";
+import { makeEnvironment, makeMaterials, rim } from "./kit.js?v=20261020r6c";
+import * as H1 from "./ul-h1.js?v=20261020r6c";
+import * as W1 from "./ul-w1.js?v=20261020r6c";
 
 export const RUNNERS = [H1];          // humanoids the player can run as
 export const ROLLERS = [W1];          // forms the wheel power-up turns them into
@@ -18,7 +18,7 @@ export function createKit(renderer, { lite = false } = {}) {
   const env = makeEnvironment(renderer);
   const M = makeMaterials(env, lite);
   return {
-    M, rim,
+    M, rim, env,
     build(list, id) { return byId(list, id).create({ M }); },
     dispose() { env.dispose(); Object.values(M).forEach((m) => m.dispose()); },
   };

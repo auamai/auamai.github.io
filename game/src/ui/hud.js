@@ -1,9 +1,9 @@
 // In-run HUD: score, chips, popups, tips, toast, screen-reader line.
 // Installed onto Game.prototype by game.js (methods use `this`, the Game).
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
-import * as P from "../../profile.js?v=20261020r6b";
-import { DIST_POINTS, MAGNET_T, DRILL_T, HAMMER_T, GOLD_T, OVER_T, SLOW_T, ICON, TIPS, NO_SLOW } from "../core/constants.js?v=20261020r6b";
-import { fmt } from "../core/util.js?v=20261020r6b";
+import * as P from "../../profile.js?v=20261020r6c";
+import { DIST_POINTS, MAGNET_T, DRILL_T, HAMMER_T, GOLD_T, OVER_T, SLOW_T, ICON, TIPS, NO_SLOW } from "../core/constants.js?v=20261020r6c";
+import { fmt } from "../core/util.js?v=20261020r6c";
 
 export class Hud {
   // Floating "+25" over the thing that paid it, projected to the screen. Pooled DOM.

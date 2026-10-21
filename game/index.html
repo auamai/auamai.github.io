@@ -11,23 +11,28 @@
   <meta property="og:site_name" content="Servo Sprint" />
   <meta property="og:title" content="Servo Sprint" />
   <meta property="og:description" content="A 3D robot runner. Sprint the line, bank the gears, dodge the machines." />
-  <meta property="og:image" content="brand/og.png" />
+  <meta property="og:url" content="https://servosprint.xyz/" />
+  <link rel="canonical" href="https://servosprint.xyz/" />
+  <meta property="og:image" content="https://servosprint.xyz/brand/og.png" />
+  <meta property="og:image:type" content="image/png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
   <meta property="og:image:alt" content="Servo Sprint wordmark over the factory line" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Servo Sprint" />
-  <meta name="twitter:image" content="brand/og.png" />
-  <link rel="icon" href="brand/icon.svg?v=20261020r6b" type="image/svg+xml" />
-  <link rel="icon" href="brand/icon-32.png?v=20261020r6b" sizes="32x32" type="image/png" />
-  <link rel="apple-touch-icon" href="brand/apple-touch-icon.png?v=20261020r6b" />
-  <link rel="manifest" href="manifest.webmanifest?v=20261020r6b" />
-  <link rel="preload" href="fonts/inter-tight-var.woff2?v=20261020r6b" as="font" type="font/woff2" crossorigin />
-  <link rel="preload" href="fonts/plex-mono-400.woff2?v=20261020r6b" as="font" type="font/woff2" crossorigin />
+  <meta name="twitter:description" content="A 3D robot runner. Sprint the line, bank the gears, dodge the machines." />
+  <meta name="twitter:image" content="https://servosprint.xyz/brand/og.png" />
+  <meta name="twitter:image:alt" content="Servo Sprint wordmark over the factory line" />
+  <link rel="icon" href="brand/icon.svg?v=20261020r6c" type="image/svg+xml" />
+  <link rel="icon" href="brand/icon-32.png?v=20261020r6c" sizes="32x32" type="image/png" />
+  <link rel="apple-touch-icon" href="brand/apple-touch-icon.png?v=20261020r6c" />
+  <link rel="manifest" href="manifest.webmanifest?v=20261020r6c" />
+  <link rel="preload" href="fonts/inter-tight-var.woff2?v=20261020r6c" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="fonts/plex-mono-400.woff2?v=20261020r6c" as="font" type="font/woff2" crossorigin />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-  <link rel="modulepreload" href="game.js?v=20261020r6b" />
+  <link rel="modulepreload" href="game.js?v=20261020r6c" />
   <style>
-    @font-face { font-family: "Inter Tight"; font-weight: 100 900; font-display: swap; src: url("fonts/inter-tight-var.woff2?v=20261020r6b") format("woff2"); }
+    @font-face { font-family: "Inter Tight"; font-weight: 100 900; font-display: swap; src: url("fonts/inter-tight-var.woff2?v=20261020r6c") format("woff2"); }
     html, body { margin: 0; height: 100%; background: #14161b; overscroll-behavior: none; }
     .boot { position: fixed; inset: 0; display: grid; place-items: center; font: 300 16px/1.5 "Inter Tight", system-ui, sans-serif; color: rgba(242, 240, 234, .76); }
     .boot__in { display: grid; gap: 16px; justify-items: center; text-align: center; padding: 24px; }
@@ -41,14 +46,14 @@
 </head>
 <body>
   <div class="boot" id="fr-boot" role="status" aria-live="polite">
-    <div class="boot__in"><img class="boot__mark" src="brand/wordmark-light.svg?v=20261020r6b" alt="Servo Sprint" width="226" height="24" /><span>Loading the line</span><span class="boot__bar" aria-hidden="true"></span></div>
+    <div class="boot__in"><img class="boot__mark" src="brand/wordmark-light.svg?v=20261020r6c" alt="Servo Sprint" width="276" height="24" /><span>Loading the line</span><span class="boot__bar" aria-hidden="true"></span></div>
   </div>
   <noscript><p style="color:#f2f0ea;font-family:system-ui;padding:24px">Servo Sprint needs JavaScript.</p></noscript>
   <script type="module">
     const boot = document.getElementById("fr-boot");
     // Under the portfolio (/game/) the close button goes back to the site; on its own domain there is nothing to close to.
     const nested = /\/game\/?$/.test(location.pathname.replace(/index\.html$/, ""));
-    import("./game.js?v=20261020r6b")
+    import("./game.js?v=20261020r6c")
       .then(({ openGame }) => openGame({ standalone: true, exitUrl: nested ? "../" : null }))
       .then(() => boot.remove())
       .catch((err) => {

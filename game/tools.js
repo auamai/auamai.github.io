@@ -119,6 +119,7 @@ export class Burst {
   // kind: "crate" | "bot" | "arm" | "confetti" | "over"
   emit(kind, x, y, z, n = 10) {
     const M = this.M;
+    n = Math.max(1, Math.round(n * (this.scale ?? 1))); // touch devices: fewer, calmer bits (mobile pass)
     for (let i = 0; i < n && this.free.length; i++) {
       const m = this.free.pop();
       const conf = kind === "confetti" || kind === "over", spark = kind === "spark";

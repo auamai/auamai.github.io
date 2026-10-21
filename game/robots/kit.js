@@ -24,10 +24,10 @@ export function makeEnvironment(renderer) {
   const scene = new THREE.Scene();
   const room = new THREE.Mesh(
     new THREE.SphereGeometry(10, 24, 12),
-    new THREE.MeshBasicMaterial({ color: 0x9aa2b9, side: THREE.BackSide }),
+    new THREE.MeshBasicMaterial({ color: 0x8c8f95, side: THREE.BackSide }) // neutral graphite-grey studio (no periwinkle cast on steel),
   );
   scene.add(room);
-  const floor = new THREE.Mesh(new THREE.CircleGeometry(9.5, 24), new THREE.MeshBasicMaterial({ color: 0x5d6684 }));
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(9.5, 24), new THREE.MeshBasicMaterial({ color: 0x3a3e46 }));
   floor.rotation.x = -Math.PI / 2;
   floor.position.y = -3;
   scene.add(floor);

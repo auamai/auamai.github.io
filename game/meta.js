@@ -113,13 +113,13 @@ export const missionInfo = (m) => ({ ...MISSIONS.find((x) => x.id === m.id), pro
 /* ---------- gear shop ---------- */
 // Cosmetic only. Prices in gears; the wallet is gears earned minus gears spent.
 export const SHOP = [
-  { id: "trim-navy", kind: "trim", name: "Navy line", price: 200, light: 0x4f63c4, deep: 0x262d4d },
-  { id: "trim-ice", kind: "trim", name: "Ice pearl", price: 350, light: 0xdfe6ff, deep: 0xa9bcff },
-  { id: "trail-ribbon", kind: "trail", name: "Periwinkle ribbon", price: 250, color: 0xa9bcff },
-  { id: "trail-navy", kind: "trail", name: "Navy dash", price: 300, color: 0x262d4d },
-  { id: "trail-pearl", kind: "trail", name: "Pearl sparks", price: 400, color: 0xf4f6fb },
-  { id: "hammer-navy", kind: "hammer", name: "Navy hammer", price: 150, color: 0x3a4262 },
-  { id: "hammer-pearl", kind: "hammer", name: "Pearl hammer", price: 300, color: 0xf4f6fb },
+  { id: "trim-navy", kind: "trim", name: "Graphite line", price: 200, light: 0x4f63c4, deep: 0x262d4d },
+  { id: "trim-ice", kind: "trim", name: "Cyan frost", price: 350, light: 0xdfe6ff, deep: 0xa9bcff },
+  { id: "trail-ribbon", kind: "trail", name: "Cyan arc", price: 250, color: 0xa9bcff },
+  { id: "trail-navy", kind: "trail", name: "Steel dash", price: 300, color: 0x262d4d },
+  { id: "trail-pearl", kind: "trail", name: "White sparks", price: 400, color: 0xf4f6fb },
+  { id: "hammer-navy", kind: "hammer", name: "Graphite hammer", price: 150, color: 0x3a4262 },
+  { id: "hammer-pearl", kind: "hammer", name: "Off-white hammer", price: 300, color: 0xf4f6fb },
 ];
 export const cosClean = (c) => {
   c = c && typeof c === "object" ? c : {};
@@ -177,9 +177,12 @@ export async function shareCard({ canvas, score, rank, best, daily, name, link, 
   try { await document.fonts.load('300 200px "Inter Tight"'); await document.fonts.load('400 40px "IBM Plex Mono"'); } catch { /* fallback */ }
   x.fillStyle = "#14161b"; x.fillRect(0, 0, W, H);
   if (canvas) {
-    const s = Math.max(W / canvas.width, 760 / canvas.height);
+    // Cover-fit the frame into its band (y 400-1160) and clip, so a tall phone canvas can't spill behind the type.
+    const BY = 400, BH = 760, s = Math.max(W / canvas.width, BH / canvas.height);
     const w = canvas.width * s, h = canvas.height * s;
-    try { x.globalAlpha = 0.9; x.drawImage(canvas, (W - w) / 2, 400 - (h - 760) / 2, w, h); x.globalAlpha = 1; } catch { /* tainted or lost */ }
+    x.save(); x.beginPath(); x.rect(0, BY, W, BH); x.clip();
+    try { x.globalAlpha = 0.9; x.drawImage(canvas, (W - w) / 2, BY + (BH - h) * 0.62, w, h); x.globalAlpha = 1; } catch { /* tainted or lost */ }
+    x.restore();
     const g = x.createLinearGradient(0, 380, 0, 1170);
     g.addColorStop(0, "rgba(20,22,27,1)"); g.addColorStop(0.22, "rgba(20,22,27,0.15)"); g.addColorStop(0.75, "rgba(20,22,27,0.15)"); g.addColorStop(1, "rgba(20,22,27,1)");
     x.fillStyle = g; x.fillRect(0, 380, W, 790);
@@ -188,18 +191,24 @@ export async function shareCard({ canvas, score, rank, best, daily, name, link, 
   // Wordmark (SVG, currentColor -> off-white), 64 px cap height, top left on the 8 px grid.
   if (wordmark) {
     try {
-      const svg = wordmark.replace("currentColor", "#f2f0ea").replace("<svg ", '<svg width="604" height="64" ');
+      // Size from the mark's own viewBox so a lockup change can never stretch it (64 px cap height).
+      const vb = (wordmark.match(/viewBox="([^"]+)"/) || [])[1]?.split(/\s+/).map(Number) || [0, 0, 1149.4, 100];
+      const wm = Math.round(64 * vb[2] / vb[3]);
+      const svg = wordmark.replaceAll("currentColor", "#f2f0ea").replace("<svg ", `<svg width="${wm * 2}" height="128" `);
       const img = new Image(); img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
-      await img.decode(); x.drawImage(img, 80, 80, 604, 64);
+      await img.decode(); x.drawImage(img, 80, 80, wm, 64);
     } catch { /* skip */ }
   }
   x.textBaseline = "alphabetic"; x.fillStyle = "rgba(242,240,234,.64)";
   x.font = mono(32); x.fillText(daily ? "DAILY RUN" : "SCORE", 80, 232);
   x.fillStyle = "#f2f0ea"; x.font = sans(300, 200); x.fillText(fmtN(score), 68, 408);
-  x.font = sans(400, 40); x.fillStyle = "#3ddcff";
-  x.fillText([best ? "New personal best" : "", rank ? `#${rank} on the board` : "", name || ""].filter(Boolean).join("  ·  "), 80, 1168);
+  // Lines shrink to fit the 920 px column (long names / links never clip).
+  const fit = (t, w, px, max) => { x.font = sans(w, px); const m = x.measureText(t).width; if (m > max) x.font = sans(w, Math.floor(px * max / m)); };
+  const line = [best ? "New personal best" : "", rank ? `#${rank} on the board` : "", name || ""].filter(Boolean).join("  ·  ");
+  fit(line, 400, 40, W - 160); x.fillStyle = "#3ddcff"; x.fillText(line, 80, 1168);
   x.fillStyle = "#f2f0ea"; x.font = sans(300, 36); x.fillText("Beat it:", 80, 1240);
-  x.font = sans(400, 36); x.fillText(link.replace(/^https?:\/\//, ""), 220, 1240);
+  const bw = x.measureText("Beat it:").width + 24, url = link.replace(/^https?:\/\//, "");
+  fit(url, 400, 36, W - 80 - (80 + bw)); x.fillText(url, 80 + bw, 1240);
   // Hazard rule: 45 degree stripes, 16 px bands, pixel-aligned.
   x.save(); x.beginPath(); x.rect(80, 1272, 240, 16); x.clip(); x.fillStyle = "#ffc93c"; x.fillRect(80, 1272, 240, 16); x.fillStyle = "#14161b";
   for (let i = -1; i < 9; i++) { const x0 = 80 + i * 32; x.beginPath(); x.moveTo(x0, 1288); x.lineTo(x0 + 16, 1288); x.lineTo(x0 + 32, 1272); x.lineTo(x0 + 16, 1272); x.closePath(); x.fill(); }

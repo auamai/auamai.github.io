@@ -1,9 +1,9 @@
 // Run lifecycle and rules: start, countdown, pause, scoring with its caps, tools, multipliers, power-ups, death.
 // Installed onto Game.prototype by game.js (methods use `this`, the Game).
-import * as P from "../../profile.js?v=20261020r6b";
-import * as MT from "../../meta.js?v=20261020r6b";
-import { START_SPEED, M_PER_U, MORPH_T, DRIVE_T, GRACE_T, DRIFT_CASH, DRIFT_MULT, RATE_CAP, OVER_LOCK, COUNT_BEAT, SCREW_POINTS, DRILL_POINTS, HAMMER_POINTS, MAGNET_T, DRILL_T, HAMMER_T, GOLD_T, OVER_T, MULT_CAP, GOLD_MIN, GOLD_MAX, METER_N, HIT_STOP, PB_GOLD_DELAY, allowedScore, TOOL_NAME, MILESTONES, CAUSE, HEADLINES, BAY } from "./constants.js?v=20261020r6b";
-import { fmt, RNG, LOOT, clock } from "./util.js?v=20261020r6b";
+import * as P from "../../profile.js?v=20261020r6c";
+import * as MT from "../../meta.js?v=20261020r6c";
+import { START_SPEED, M_PER_U, MORPH_T, DRIVE_T, GRACE_T, DRIFT_CASH, DRIFT_MULT, RATE_CAP, OVER_LOCK, COUNT_BEAT, SCREW_POINTS, DRILL_POINTS, HAMMER_POINTS, MAGNET_T, DRILL_T, HAMMER_T, GOLD_T, OVER_T, MULT_CAP, GOLD_MIN, GOLD_MAX, METER_N, HIT_STOP, PB_GOLD_DELAY, allowedScore, TOOL_NAME, MILESTONES, CAUSE, HEADLINES, BAY } from "./constants.js?v=20261020r6c";
+import { fmt, RNG, LOOT, clock } from "./util.js?v=20261020r6c";
 
 export class Run {
   freshFx() {

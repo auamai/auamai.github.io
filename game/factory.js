@@ -372,6 +372,7 @@ function dotTexture() {
   x.fillStyle = g; x.fillRect(0, 0, 32, 32);
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
+  t.generateMipmaps = true; t.minFilter = THREE.LinearMipmapLinearFilter;
   return t;
 }
 
@@ -574,7 +575,7 @@ export class Factory {
     slot.inst = this.instance(type);
     slot.inst.group.scale.x = slot.side;
     slot.inst.group.position.z = slot.z;
-    slot.inst.edges.visible = this.quality < 2;
+    slot.inst.edges.visible = this.quality < 2 && !this.noEdges;
     this.last[slot.side > 0 ? 0 : 1] = type;
   }
 
@@ -599,8 +600,9 @@ export class Factory {
 
   setQuality(q) {
     this.quality = q;
-    for (const s of this.slots) s.inst.edges.visible = q < 2;
-    for (const pool of Object.values(this.pools)) for (const i of pool) i.edges.visible = q < 2;
+    const on = q < 2 && !this.noEdges;
+    for (const s of this.slots) s.inst.edges.visible = on;
+    for (const pool of Object.values(this.pools)) for (const i of pool) i.edges.visible = on;
   }
 
   dispose() {

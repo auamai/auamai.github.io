@@ -520,8 +520,8 @@ html.fr-open, html.fr-open body { overscroll-behavior: none; }
    Type: Inter Tight (UI, numerals) + IBM Plex Mono (labels). Bundled, no CDN.
    Spacing: 4 px grid. Radii: 4 (controls), 8 (cards), 12 (panels). No pills.
    ========================================================================== */
-@font-face { font-family: "Inter Tight"; font-style: normal; font-weight: 100 900; font-display: swap; src: url("./fonts/inter-tight-var.woff2?v=20261020r6b") format("woff2"); }
-@font-face { font-family: "IBM Plex Mono"; font-style: normal; font-weight: 400; font-display: swap; src: url("./fonts/plex-mono-400.woff2?v=20261020r6b") format("woff2"); }
+@font-face { font-family: "Inter Tight"; font-style: normal; font-weight: 100 900; font-display: swap; src: url("./fonts/inter-tight-var.woff2?v=20261020r6c") format("woff2"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: normal; font-weight: 400; font-display: swap; src: url("./fonts/plex-mono-400.woff2?v=20261020r6c") format("woff2"); }
 .fr {
   --ss-graphite: #14161b; --ss-graphite-2: #1c1f26; --ss-graphite-3: #262a33; --ss-steel: #3a3f4b;
   --ss-ink: #f2f0ea; --ss-ink-2: rgba(242, 240, 234, .76); --ss-ink-3: rgba(242, 240, 234, .6);
@@ -635,3 +635,49 @@ html.fr-open, html.fr-open body { overscroll-behavior: none; }
 }
 @media (max-width: 359px) { .fr__panel { padding: 28px 20px 20px; } .fr__panel::before { top: -28px; margin: -28px -20px 12px; } }
 @media (prefers-reduced-motion: reduce) { .fr__btn:active, .fr__icon:active { transform: none; } }
+/* Over the graphite hall (lighting pass): DOM text drawn on the scene is off-white with a dark halo. */
+.fr__popup { color: var(--ss-ink); text-shadow: 0 0 2px rgba(11, 12, 15, .95), 0 0 8px rgba(11, 12, 15, .8); }
+.fr__popup.is-big { color: var(--ss-yellow); text-shadow: 0 0 2px rgba(11, 12, 15, .95), 0 0 10px rgba(11, 12, 15, .8); }
+.fr__tip-text { color: var(--ss-ink) !important; text-shadow: 0 1px 2px rgba(11, 12, 15, .9) !important; background: rgba(20, 22, 27, .72) !important; border-color: rgba(242, 240, 234, .12) !important; }
+.fr__pb { color: var(--ss-ink); }
+.fr__layer { background: linear-gradient(180deg, rgba(11, 12, 15, .2), rgba(11, 12, 15, .5)); }
+.fr__tip-text { border-radius: var(--ss-r1) !important; padding: 4px 12px !important; font-size: 12px !important; }
+/* Flat fallback (lowest quality tier): off-white face, graphite extrusion, yellow ring. */
+.fr__tip-title, .fr__count-num { color: var(--ss-ink) !important;
+  text-shadow: 0 1px 0 #2c3037, 0 2px 0 #23262d, 0 3px 0 #1b1e24, 0 4px 0 #14161b, 0 8px 16px rgba(0, 0, 0, .5) !important; }
+.fr__tip-icon { color: var(--ss-ink) !important; filter: drop-shadow(0 2px 0 #14161b) drop-shadow(0 6px 10px rgba(0, 0, 0, .4)) !important; }
+.fr__count-ring { border-color: var(--ss-yellow) !important; }
+/* Portrait phones: the centred score ran under the corner buttons at 390 px (lighting QA #10).
+   HUD moves to the top-left, sized to the space left of the three corner buttons; meta never wraps. */
+@media (max-width: 600px) and (orientation: portrait) {
+  .fr__hud { left: calc(var(--fr-safe-l) + 12px); transform: none; align-items: flex-start;
+    max-width: calc(100% - var(--fr-safe-l) - var(--fr-safe-r) - 196px); min-width: 0; }
+  .fr__scorebox { padding: 6px 12px; }
+  .fr__score { font-size: clamp(28px, 8.2vw, 36px); text-align: left; }
+  .fr__meta { white-space: nowrap; font-size: 11px; letter-spacing: .04em; }
+  .fr__chips { justify-content: flex-start; }
+}
+@media (max-width: 359px) and (orientation: portrait) {
+  .fr__corner { gap: 6px; right: calc(var(--fr-safe-r) + 10px); }
+  .fr__icon { width: 44px; height: 44px; }
+  .fr__hud { left: calc(var(--fr-safe-l) + 10px); max-width: calc(100% - var(--fr-safe-l) - var(--fr-safe-r) - 172px); }
+  .fr__score { font-size: 26px; }
+  .fr__meta { font-size: 10px; letter-spacing: .02em; padding: 4px 6px; }
+}
+/* Mobile visual pass: no hard on/off strobes (2.5 Hz step blinks read as flicker on phones), calmer overdrive flash. */
+.fr__meter.is-over i, .fr__chip.is-ending, .fr__power.is-ending { animation-timing-function: ease-in-out; animation-duration: .9s; animation-direction: alternate; }
+@keyframes fr-blink { 50% { opacity: .55; } }
+@media (pointer: coarse) {
+  .fr__fxflash { background: radial-gradient(circle at 50% 70%, rgba(61, 220, 255, .28), rgba(61, 220, 255, 0) 60%); }
+}
+.fr__score, .fr__meta, .fr__chip { -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision; }
+/* Game-over stats on phones up to 439 px: icon sits above the value so labels ("Multiplier", "Smashed")
+   and "1.79 km" fit their tiles instead of truncating / overflowing (release QA at 390 px). */
+@media (max-width: 439px) {
+  .fr__stats li { grid-template-columns: 1fr; grid-template-rows: auto auto auto; row-gap: 2px; padding: 8px 10px; }
+  .fr__stats .fr__sicon { grid-row: auto; display: block; height: 18px; }
+  .fr__stats .fr__sicon svg { width: 18px; height: 18px; }
+  .fr__stats b { font-size: 19px; }
+  .fr__stats li > span:last-child { font-size: 12px; }
+}
+@media (max-width: 359px) { .fr__stats .fr__sicon { display: none; } .fr__stats b { font-size: 17px; } .fr__stats li > span:last-child { font-size: 11px; } }

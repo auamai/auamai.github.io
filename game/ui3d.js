@@ -5,9 +5,11 @@
 // stays crisp when the hall drops resolution to hold frame rate. Only renders while something is on
 // screen; at the lowest quality the game uses the 2D fallback.
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
-import { GLYPHS } from "./glyphs.js?v=20261020r6b";
+import { GLYPHS } from "./glyphs.js?v=20261020r6c";
 
-const PAL = { face: 0x151c44, side: 0x4a5aa8, navy: 0x10162f, pearl: 0xf4f6fb, accent: 0x5a6dcd, soft: 0xa9bcff };
+// r6b release: on the graphite hall the 3D text is off-white with a graphite extrusion and a dark halo
+// (the navy-on-pearl set was for the old white hall; the grade had turned it dark-on-dark).
+const PAL = { face: 0xf2f0ea, side: 0x2c3037, navy: 0x0b0c0f, pearl: 0x14161b, accent: 0x5a6dcd, soft: 0xa9bcff };
 const DPR_CAP = 2;
 const CAP = 0.73;          // Inter Tight cap height, in em
 const FOV = 30, CAM_Z = 10;

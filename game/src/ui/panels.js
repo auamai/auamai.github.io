@@ -1,12 +1,12 @@
 // DOM shell and every panel: menu, game over, board, settings, save/claim/restore.
 // Installed onto Game.prototype by game.js (methods use `this`, the Game).
-import * as P from "../../profile.js?v=20261020r6b";
-import * as MT from "../../meta.js?v=20261020r6b";
-import { Factory } from "../../factory.js?v=20261020r6b";
-import { FactoryAudio } from "../../audio.js?v=20261020r6b";
-import { OVER_LOCK, ICON, OVER_ICON } from "../core/constants.js?v=20261020r6b";
-import { fmt, esc, clock } from "../core/util.js?v=20261020r6b";
-import { WORDMARK } from "./brand.js?v=20261020r6b";
+import * as P from "../../profile.js?v=20261020r6c";
+import * as MT from "../../meta.js?v=20261020r6c";
+import { Factory } from "../../factory.js?v=20261020r6c";
+import { FactoryAudio } from "../../audio.js?v=20261020r6c";
+import { OVER_LOCK, ICON, OVER_ICON } from "../core/constants.js?v=20261020r6c";
+import { fmt, esc, clock } from "../core/util.js?v=20261020r6c";
+import { WORDMARK } from "./brand.js?v=20261020r6c";
 
 export class Panels {
   /* ---------- DOM ---------- */

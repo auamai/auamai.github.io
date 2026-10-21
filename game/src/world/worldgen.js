@@ -1,10 +1,10 @@
 // Course generation from the seeded COURSE stream, pickups from LOOT, pooling.
 // Installed onto Game.prototype by game.js (methods use `this`, the Game).
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
-import { buildTool } from "../../tools.js?v=20261020r6b";
-import { LANES, SPAWN_Z, START_SPEED, MAX_SPEED, GRAVITY, WHEEL_FROM, WHEEL_GAP, WHEEL_CHANCE, DRIVE_T, ROLL_SPEED, RAIL_H, RAIL_GEAR_GAP, RAMP_DEG, RAMP_H, RAMP_L, TOOL_FROM, TOOL_GAP, TOOL_KIND_GAP, TOOL_CHANCE, BOT_SPEED, BOT_FROM, BOT_TURN_T, BOT_TURN_MIN_Z } from "../core/constants.js?v=20261020r6b";
-import { COURSE, LOOT, pick, shuffle } from "../core/util.js?v=20261020r6b";
-import { BOX } from "../render/geometry.js?v=20261020r6b";
+import { buildTool } from "../../tools.js?v=20261020r6c";
+import { LANES, SPAWN_Z, START_SPEED, MAX_SPEED, GRAVITY, WHEEL_FROM, WHEEL_GAP, WHEEL_CHANCE, DRIVE_T, ROLL_SPEED, RAIL_H, RAIL_GEAR_GAP, RAMP_DEG, RAMP_H, RAMP_L, TOOL_FROM, TOOL_GAP, TOOL_KIND_GAP, TOOL_CHANCE, BOT_SPEED, BOT_FROM, BOT_TURN_T, BOT_TURN_MIN_Z } from "../core/constants.js?v=20261020r6c";
+import { COURSE, LOOT, pick, shuffle } from "../core/util.js?v=20261020r6c";
+import { BOX } from "../render/geometry.js?v=20261020r6c";
 
 export class WorldGen {
   spawnItem(kind, lane, z, y = 1.05) {
@@ -132,23 +132,11 @@ export class WorldGen {
       }
     } else if (type === "arm") {
       h = 0.3;
-      for (const s of [-1, 1]) g.add(this.mesh(M.armDark, 0.2, 3.1, 0.24, 1.05 * s, 1.55, 0));
-      g.add(this.mesh(M.armDark, 2.34, 0.22, 0.32, 0, 3.05, 0));
+      // Rigid machined gantry (render/arm.js); the laser line is the part you slide under.
+      const j = this.armKit.build(g);
       g.add(this.mesh(M.laser, 2.1, 0.035, 0.035, 0, 1.22, 0, false)); // duck under this
-      const pivot = new THREE.Group();
-      pivot.position.set(0, 2.92, 0);
-      pivot.add(this.mesh(M.robotDark, 0.32, 0.3, 0.38, 0, 0, 0));
-      pivot.add(this.mesh(M.arm, 0.2, 0.84, 0.22, 0, -0.42, 0));
-      const elbow = new THREE.Group();
-      elbow.position.y = -0.84;
-      elbow.add(this.mesh(M.accent, 0.26, 0.26, 0.3, 0, 0, 0, false));
-      elbow.add(this.mesh(M.arm, 0.18, 0.56, 0.2, 0, -0.3, 0));
-      elbow.add(this.mesh(M.armDark, 0.52, 0.1, 0.26, 0, -0.62, 0));
-      for (const s of [-1, 1]) elbow.add(this.mesh(M.arm, 0.07, 0.22, 0.22, 0.22 * s, -0.76, 0));
-      pivot.add(elbow);
-      g.add(pivot);
-      parts.pivot = pivot;
-      parts.elbow = elbow;
+      parts.pivot = j.pivot;
+      parts.elbow = j.elbow;
     } else if (type === "bot") {
       // Low wheeled AMR: flat chassis, four wheels, a small sensor mast.
       h = 0.7;

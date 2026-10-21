@@ -8,7 +8,7 @@
 // instanced draw, each crane two. Nothing here comes lower than y = 6.3, above
 // the camera, so it can never hide a gear or read as something on the floor.
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
-import { Builder, C, BOXG, HALF, ROOF } from "./factory.js?v=20261020r6b";
+import { Builder, C, BOXG, HALF, ROOF } from "./factory.js?v=20261020r6c";
 
 const P = 48;                 // roof pattern period; a multiple of the hall's 24-unit column bays
 const Z_HI = 20, Z_LO = -226; // strip extent, so any offset in [0, P) still covers the view (far plane 175)
@@ -158,9 +158,9 @@ function signAtlas() {
   const x = c.getContext("2d");
   SIGN_LABELS.forEach((t, i) => {
     const y = i * 128;
-    x.fillStyle = "#10162f"; x.fillRect(0, y, 1024, 128);
-    x.fillStyle = "#a9bcff"; x.fillRect(44, y + 50, 28, 28);
-    x.fillStyle = "#f4f6fb";
+    x.fillStyle = "#1b1e24"; x.fillRect(0, y, 1024, 128); // graphite sign (grade.js palette)
+    x.fillStyle = "#3ddcff"; x.fillRect(44, y + 50, 28, 28);
+    x.fillStyle = "#f2f0ea";
     x.font = "400 66px 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
     x.textBaseline = "middle";
     // Spread the letters a little, like the site's mono labels, and fit the row.
@@ -170,7 +170,7 @@ function signAtlas() {
   });
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 4;
+  tex.anisotropy = 8; tex.generateMipmaps = true; tex.minFilter = THREE.LinearMipmapLinearFilter; // clamped to the GPU max by three
   return tex;
 }
 function signGeometry(list) {
@@ -227,7 +227,15 @@ export class Ceiling {
     this.M = {
       solid,
       glow: new THREE.MeshBasicMaterial({ vertexColors: true }),
-      sign: new THREE.MeshBasicMaterial({ map: signAtlas() }),
+      sign: (() => {
+        // Signs fade out as they pass overhead (view depth 6-10 m): on portrait phones the nearest sign
+        // otherwise sat half-cropped behind the HUD at the top of the screen.
+        const m = new THREE.MeshBasicMaterial({ map: signAtlas(), transparent: true });
+        m.onBeforeCompile = (sh) => { sh.fragmentShader = sh.fragmentShader.replace("#include <fog_fragment>",
+          "#ifdef USE_FOG\n  gl_FragColor.a *= smoothstep(6.0, 10.0, vFogDepth);\n#endif\n#include <fog_fragment>"); };
+        m.customProgramCacheKey = () => "ssSignFade";
+        return m;
+      })(),
       body: new THREE.MeshLambertMaterial({ vertexColors: true }),
     };
     const core = new Builder(), detail = new Builder(), glow = new Builder();

@@ -1,14 +1,16 @@
 // three.js scene, meshes, quality ladder, robot animation, camera, trails.
 // Installed onto Game.prototype by game.js (methods use `this`, the Game).
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
-import * as MT from "../../meta.js?v=20261020r6b";
-import { Factory } from "../../factory.js?v=20261020r6b";
-import { Ceiling } from "../../ceiling.js?v=20261020r6b";
-import { UI3D } from "../../ui3d.js?v=20261020r6b";
-import { createKit, RUNNERS, ROLLERS } from "../../robots/index.js?v=20261020r6b";
-import { toolMaterials, toolGeometries, buildTool, Burst } from "../../tools.js?v=20261020r6b";
-import { LANES, MORPH_T, COL, MILESTONES } from "../core/constants.js?v=20261020r6b";
-import { BOX, BOX_EDGES, CYL, CYL_EDGES, gearGeometry } from "./geometry.js?v=20261020r6b";
+import * as MT from "../../meta.js?v=20261020r6c";
+import { Factory } from "../../factory.js?v=20261020r6c";
+import { Ceiling } from "../../ceiling.js?v=20261020r6c";
+import { UI3D } from "../../ui3d.js?v=20261020r6c";
+import { createKit, RUNNERS, ROLLERS } from "../../robots/index.js?v=20261020r6c";
+import { toolMaterials, toolGeometries, buildTool, Burst } from "../../tools.js?v=20261020r6c";
+import { LANES, MORPH_T, COL, MILESTONES } from "../core/constants.js?v=20261020r6c";
+import { BOX, BOX_EDGES, CYL, CYL_EDGES, gearGeometry } from "./geometry.js?v=20261020r6c";
+import { applyGrade, regrade } from "./grade.js?v=20261020r6c";
+import { makeArmKit } from "./arm.js?v=20261020r6c";
 
 export class Render {
   /* ---------- scene ---------- */
@@ -17,14 +19,14 @@ export class Render {
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer = renderer;
-    this.dprCap = this.coarse ? 2 : 2.5;
+    this.dprCap = 2; // min(dpr, 2) everywhere: 3x phones drew 2.25x the pixels for no visible gain (mobile pass)
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(COL.bg);
     scene.fog = new THREE.Fog(COL.fog, 46, 150); // fades into the page white, far enough to stay crisp
     this.scene = scene;
 
-    this.camera = new THREE.PerspectiveCamera(58, 1, 0.1, 175);
+    this.camera = new THREE.PerspectiveCamera(58, 1, 0.3, 175); // near 0.3 (was 0.1): 3x the depth precision, no far-floor z-fight on 24-bit mobile depth
     this.camBase = new THREE.Vector3(0, 4.4, 8);
 
     scene.add(new THREE.HemisphereLight(0xffffff, 0xdde2ec, 1.9));
@@ -47,7 +49,7 @@ export class Render {
     const lam = (color, emissive = 0x000000, ei = 1) =>
       new THREE.MeshLambertMaterial({ color, emissive, emissiveIntensity: ei, flatShading: true });
     this.M = {
-      floor: lam(COL.floor), lane: lam(COL.lane), dash: lam(COL.dash, COL.accent, 0.35),
+      floor: Object.assign(lam(COL.floor), { polygonOffset: true, polygonOffsetFactor: 0, polygonOffsetUnits: -1 }), lane: Object.assign(lam(COL.lane), { polygonOffset: true, polygonOffsetFactor: 0, polygonOffsetUnits: -2 }), dash: lam(COL.dash, COL.accent, 0.35),
       // A little self-light keeps the white hall white instead of grey in its shaded faces.
       wall: lam(COL.wall, COL.wall, 0.4), ceiling: lam(COL.ceiling, COL.ceiling, 0.42),
       pillar: lam(COL.pillar, COL.pillar, 0.25), beam: lam(COL.beam, COL.beam, 0.3), light: lam(COL.light, COL.light, 0.9),
@@ -65,6 +67,7 @@ export class Render {
     };
     this.gearGeo = gearGeometry();
     this.kit = createKit(renderer, { lite: this.lite });
+    this.armKit = makeArmKit(renderer, this.kit.env, this.lite);
     // 3D hints and countdown (an overlay scene drawn after the hall); 2D fallback at the lowest quality.
     this.ui = new UI3D(renderer, { still: this.reduceMotion, container: this.canvas.parentNode });
 
@@ -76,6 +79,7 @@ export class Render {
     this.applyTrim();
     this.applyCos();
     this.applyQuality();
+    applyGrade(this); // lighting + colour grade (grade.js)
   }
 
   mesh(mat, sx, sy, sz, x = 0, y = 0, z = 0, shadow = true, edge = this.edgeMat) {
@@ -101,17 +105,20 @@ export class Render {
     const { scene, M } = this;
     // The hall itself (floor, roof, walls, the shop-floor zones either side) lives in factory.js.
     this.factory = new Factory(scene);
+    this.factory.noEdges = this.coarse; // hairline edges crawl (shimmer) at phone sizes; the grade's rim light carries the shapes
     for (const x of LANES) {
       const lane = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 190), M.lane);
       lane.rotation.x = -Math.PI / 2;
       lane.position.set(x, 0.003, -78);
       lane.receiveShadow = true;
+      lane.renderOrder = -1;
       scene.add(lane);
     }
     const bed = new THREE.Mesh(new THREE.PlaneGeometry(7.6, 190), M.floor);
     bed.rotation.x = -Math.PI / 2;
     bed.position.set(0, 0.002, -78);
     bed.receiveShadow = true;
+    bed.renderOrder = -2;
     scene.add(bed);
     // Roof trusses, cranes and the body conveyors overhead (ceiling.js). They replace round 3's flat light strips.
     this.ceiling = new Ceiling(scene);
@@ -200,6 +207,7 @@ export class Render {
     for (const k of ["screw", "wrench", "drill", "hammer", "gold", "rail", "ramp"]) this.pools[k] = [];
     this.rails = []; this.ramps = [];
     this.burst = new Burst(this.scene, this.TM, this.TG, this.gearGeo, 56);
+    this.burst.scale = this.coarse ? 0.6 : 1;
     // Held props: the hammer and the drill ride in the runner's right hand while active.
     const grip = this.robot.runner.joints?.armR?.grip;
     this.props = {};
@@ -234,6 +242,7 @@ export class Render {
     const KM = this.kit.M;
     KM.light.color.setHex(m ? m.light : 0xa9bcff);
     KM.lightDeep.color.setHex(m ? m.deep : 0x7f95f0);
+    if (this.rig) { KM.light.userData.graded = KM.lightDeep.userData.graded = false; regrade(this); }
   }
 
   /* ---------- quality & sizing ---------- */
@@ -305,6 +314,7 @@ export class Render {
     this.trailOn = !!tr;
     if (tr && this.trail) this.trail.mat.color.setHex(tr.color);
     if (this.hammerMat) this.hammerMat.color.setHex(hm ? hm.color : 0xc9cfde);
+    if (this.rig) { if (this.hammerMat) this.hammerMat.userData.graded = false; this.trail.mat.userData.graded = false; regrade(this); }
   }
 
   // Run trail: a short ribbon of fading quads left behind the feet.
@@ -412,8 +422,10 @@ export class Render {
     c.position.z = b.z;
     if (this.shake > 0) {
       this.shake = Math.max(0, this.shake - dt);
-      c.position.x += (Math.random() - 0.5) * this.shake * 0.6;
-      c.position.y += (Math.random() - 0.5) * this.shake * 0.6;
+      // Smooth low-frequency shake (was per-frame random jitter, which read as strobing on phones); gentler on touch.
+      const k = this.shake * (this.coarse ? 0.32 : 0.5), t = performance.now() / 1000;
+      c.position.x += Math.sin(t * 38) * k;
+      c.position.y += Math.sin(t * 45 + 1.3) * k * 0.8;
     }
     c.lookAt(this.r.x * 0.3, this.lookY ?? 0.9, -10);
   }
