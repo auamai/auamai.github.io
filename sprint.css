@@ -8,7 +8,7 @@
   margin-top: 28px; aspect-ratio: 32 / 11; max-height: 400px;
   border-radius: 22px; overflow: hidden;
   border: 1px solid var(--line-2, rgba(255,255,255,.12));
-  background: #c9d1e8;
+  background: #2b2f3a;
   color: var(--ink, #f4f6fb); text-decoration: none;
   -webkit-tap-highlight-color: transparent;
 }
@@ -87,7 +87,7 @@
 @media (max-width: 640px) {
   /* Phones: the picture on top, the copy below it on the card (no text over a busy scene) */
   .sprint { aspect-ratio: auto; display: flex; flex-direction: column; border-radius: 18px; background: var(--card, rgba(16,20,38,.62)); }
-  .sprint__media { position: relative; inset: auto; z-index: 0; aspect-ratio: 16 / 9; background: #c9d1e8; }
+  .sprint__media { position: relative; inset: auto; z-index: 0; aspect-ratio: 16 / 9; background: #2b2f3a; }
   .sprint__media::after { background: linear-gradient(0deg, rgba(9, 12, 34, .28), rgba(9, 12, 34, 0) 40%); }
   .sprint__video { object-position: 50% 60%; }
   .sprint__info { position: static; flex-wrap: wrap; align-items: flex-end; gap: 18px 20px; padding: 20px 20px 20px; }
