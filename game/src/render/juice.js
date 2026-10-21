@@ -8,6 +8,11 @@
 // and no sparks are live (everything hides). Palette: #14161B, #F2F0EA, #FFC93C, #3DDCFF only.
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
 import { BEND } from "../world/track.js?v=20261021r8";
+import { LANES } from "../core/constants.js?v=20261021r8";
+// Course v3 set pieces (hazards.js): which ones are a threat, and the lane x the light should sit on.
+// A test fire's flame starts at its wall engine, so that wall's outer lane is always lit.
+const jxLive = (h) => !(h.kind === "door" && !h.a);
+const jxX = (h) => h.kind === "fire" ? (h.a < 0 ? LANES[0] : LANES[2]) : h.x;
 
 const INK = 0xf2f0ea, GOLD = 0xffc93c, CYAN = 0x3ddcff, GRAPH = 0x14161b;
 const LIGHT = 0xfad779; // the searchlight: #FFC93C tinted 35% toward #F2F0EA, so dim light on grey never reads orange
@@ -309,6 +314,11 @@ export class Juice {
         const o = this.obstacles[i], e = o.z - o.h;
         if (e > 0.5 && e - step <= 0.5 && Math.abs(r.x - o.x) < 0.95) J.p = Math.max(0, J.p - 0.07); // you cleared it in its lane
       }
+      // Course v3 machines count too: a door that shuts, a press, belt, crane or test fire passed in its lane.
+      if (this.hz) for (let i = 0; i < this.hz.length; i++) {
+        const h = this.hz[i];
+        if (h.z > 0.5 && h.z - step <= 0.5 && jxLive(h) && Math.abs(r.x - jxX(h)) < 0.95) J.p = Math.max(0, J.p - 0.07);
+      }
       if (J.p > 0.62 && !J.closeSaid) { J.closeSaid = true; this.bark(J.barks ? "run" : "close"); }
       if (J.p < 0.25 && J.closeSaid) { J.closeSaid = false; this.bark("back"); }
       // scripted meets
@@ -317,7 +327,10 @@ export class Juice {
         J.met++;
         let best = null;
         for (let i = 0; i < this.obstacles.length; i++) { const o = this.obstacles[i]; if (o.z < -12 && o.z > -46 && (!best || o.z > best.z)) best = o; }
-        if (best) { J.meet = 0; J.meetT = 0; J.meetX = best.x; J.meetO = best; this.bark("check"); }
+        let bx = best ? best.x : 0;
+        // Course v3: the nearest real machine wins if it is closer (an oven door that stays open is not a hazard).
+        if (this.hz) for (let i = 0; i < this.hz.length; i++) { const h = this.hz[i]; if (jxLive(h) && h.z < -12 && h.z > -46 && (!best || h.z > best.z)) { best = h; bx = jxX(h); } }
+        if (best) { J.meet = 0; J.meetT = 0; J.meetX = bx; J.meetO = best; this.bark("check"); }
       }
     }
     const still = this.reduceMotion;

@@ -822,11 +822,11 @@ Everything is pooled (obstacles, gears, tools, rails, ramps, debris, popups); 3D
 
 `src/render/juice.js` keeps a pressure `p` in [0, 1] per run, stepped once per drawn frame from what the run already
 did. It starts at 0.15 and rises 0.012/s; +0.035 for every gear that passes z = 1 untaken, +0.45 on a Spare Servo
-reboot; −0.07 for every hazard that passes in the robot's lane (cleared by jump, slide or roll), −0.025 per gear,
+reboot; −0.07 for every hazard that passes in the robot's lane (cleared by jump, slide or roll; v3 set pieces count the same way), −0.025 per gear,
 −0.03 per screw, −0.08 per tool, −0.1 at the end of a lane check. His drone eases between z ≈ 8.6 (behind the
 camera, hidden, 0 draw calls) and z ≈ 4.2 at the top of the frame, with the beam and pool on the floor just ahead
 of the robot. Lane checks at 24 / 68 / 125 s of run time (+16 s on the first-ever run) pick the nearest hazard
-12-46 u ahead and hold the light on its lane for up to 2.4 s. Bark lines (≤ 7 a run, ≥ 6 s apart except lane
+12-46 u ahead (obstacles, and on course v3 the set pieces in `this.hz` too: a shutting oven door, press, belt, crane or test fire; an oven door that stays open is skipped, and a test fire is lit on its engine's wall lane) and hold the light on its lane for up to 2.4 s. Bark lines (≤ 7 a run, ≥ 6 s apart except lane
 checks; the crash line always lands) go to `.fr__fm` and the screen-reader line. None of it is read by the fixed step, so goldens, the Daily
 Run and challenge courses are unchanged.
 
