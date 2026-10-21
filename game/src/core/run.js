@@ -26,8 +26,10 @@ export class Run {
     if (k === "wrench") f.magnet = MAGNET_T;
     else if (k === "drill") { f.drill = DRILL_T; f.smashCredit = 1; }
     else if (k === "hammer") { f.hammer = HAMMER_T; f.smashCredit = 1; }
-    if (k !== "screw") this.lastToolKind = k;
-    else if (k === "gold") {
+    this.lastToolKind = k;
+    // The golden torque wrench (r6 to r6b: this branch sat behind `else` and never ran, so the wrench
+    // gave no multiplier and the next one never spawned).
+    if (k === "gold") {
       f.gold = GOLD_T; f.goldAge = 0; this.goldOut = false;
       if (this.pbGoldAt != null && this.runTime >= this.pbGoldAt) this.pbGoldAt = null;
       this.nextGold = this.runTime + GOLD_MIN + LOOT() * (GOLD_MAX - GOLD_MIN);
