@@ -113,13 +113,13 @@ export const missionInfo = (m) => ({ ...MISSIONS.find((x) => x.id === m.id), pro
 /* ---------- gear shop ---------- */
 // Cosmetic only. Prices in gears; the wallet is gears earned minus gears spent.
 export const SHOP = [
-  { id: "trim-navy", kind: "trim", name: "Cyan pinstripe", price: 200, light: 0x4f63c4, deep: 0x262d4d },
-  { id: "trim-ice", kind: "trim", name: "Cyan frost", price: 350, light: 0xdfe6ff, deep: 0xa9bcff },
-  { id: "trail-ribbon", kind: "trail", name: "Cyan arc", price: 250, color: 0xa9bcff },
-  { id: "trail-navy", kind: "trail", name: "Steel dash", price: 300, color: 0x262d4d },
-  { id: "trail-pearl", kind: "trail", name: "White sparks", price: 400, color: 0xf4f6fb },
-  { id: "hammer-navy", kind: "hammer", name: "Graphite hammer", price: 150, color: 0x3a4262 },
-  { id: "hammer-pearl", kind: "hammer", name: "Off-white hammer", price: 300, color: 0xf4f6fb },
+  { id: "trim-navy", kind: "trim", name: "Cyan pinstripe", price: 200, light: 0x1fa9cc, deep: 0x2c3037 },
+  { id: "trim-ice", kind: "trim", name: "Cyan frost", price: 350, light: 0xe9fbff, deep: 0x9beaff },
+  { id: "trail-ribbon", kind: "trail", name: "Cyan arc", price: 250, color: 0x3ddcff },
+  { id: "trail-navy", kind: "trail", name: "Steel dash", price: 300, color: 0x6b707a },
+  { id: "trail-pearl", kind: "trail", name: "White sparks", price: 400, color: 0xf2f0ea },
+  { id: "hammer-navy", kind: "hammer", name: "Graphite hammer", price: 150, color: 0x3a3e46 },
+  { id: "hammer-pearl", kind: "hammer", name: "Off-white hammer", price: 300, color: 0xf2f0ea },
 ];
 export const cosClean = (c) => {
   c = c && typeof c === "object" ? c : {};

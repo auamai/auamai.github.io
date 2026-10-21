@@ -241,8 +241,8 @@ export class Render {
     const cos = MT.cosClean(this.profile && this.profile.cos);
     const m = MILESTONES.find((x) => x.id === this.settings.trim && best >= x.at) || MT.SHOP.find((x) => x.kind === "trim" && x.id === this.settings.trim && cos.owned.includes(x.id));
     const KM = this.kit.M;
-    KM.light.color.setHex(m ? m.light : 0xa9bcff);
-    KM.lightDeep.color.setHex(m ? m.deep : 0x7f95f0);
+    KM.light.color.setHex(m ? m.light : 0x3ddcff);
+    KM.lightDeep.color.setHex(m ? m.deep : 0x1fa9cc);
     if (this.rig) { KM.light.userData.graded = KM.lightDeep.userData.graded = false; regrade(this); }
   }
 

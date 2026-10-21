@@ -128,9 +128,9 @@ export const TIPS = {
 export const NO_SLOW = new Set(["lanes", "rolling", "over", "pb", "screw", "ms"]);
 export const TOOL_NAME = { wrench: "Magnet", drill: "Drill", hammer: "Hammer", gold: "Golden" };
 export const MILESTONES = [
-  { at: 1000, id: "pearl", name: "Cyan halo", light: 0xe9edff, deep: 0xc3cdff },
-  { at: 2500, id: "deep", name: "Deep cyan", light: 0x6f84e0, deep: 0x4f63c4 },
-  { at: 5000, id: "star", name: "Starlight", light: 0xf4f6fb, deep: 0x8fa2f0 },
+  { at: 1000, id: "pearl", name: "Cyan halo", light: 0xe9fbff, deep: 0x9beaff },
+  { at: 2500, id: "deep", name: "Deep cyan", light: 0x1fa9cc, deep: 0x137a94 },
+  { at: 5000, id: "star", name: "Starlight", light: 0xf2f0ea, deep: 0x3ddcff },
 ];
 export const OVER_ICON = {
   toolbox: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 9.5h17v9.5h-17z"/><path d="M8.5 9.5V7a1.2 1.2 0 0 1 1.2-1.2h4.6A1.2 1.2 0 0 1 15.5 7v2.5"/><path d="M3.5 13h17M10.5 13v2h3v-2"/></svg>',

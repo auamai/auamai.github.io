@@ -64,7 +64,8 @@ Object.assign(C, {
 Object.assign(UL, { pearl: 0xe9e6df, pearlShade: G.W1, navy: G.G2, graphite: 0x2a2e36, slate: 0x454a54, visor: G.G0, light: G.CY, lightDeep: G.CY2 });
 rim.color.value.setHex(G.CY); rim.strength.value = 0.38; rim.power.value = 2.6;
 Object.assign(TOOL_COL, { navy: G.G2, ink: G.G0, steel: G.W1, pearl: G.W3, peri: G.CY, deep: G.CY2, glow: G.CY });
-// Trims / shop: hue-safe equivalents; ids and prices unchanged (names are copy, owned by the game).
+// Trims / shop: hue-safe equivalents; ids and prices unchanged (names are copy, owned by the game). Since r7 the
+// data in constants.js MILESTONES and meta.js SHOP already carries these brand values; this stays as a guard.
 const TRIM = { pearl: [0xe9fbff, G.CY3], deep: [G.CY2, 0x137a94], star: [G.W3, G.CY] };
 for (const m of MILESTONES) if (TRIM[m.id]) [m.light, m.deep] = TRIM[m.id];
 const SHOPC = { "trim-navy": { light: G.CY2, deep: G.G4 }, "trim-ice": { light: 0xe9fbff, deep: G.CY3 },
