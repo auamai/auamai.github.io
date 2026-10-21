@@ -19,6 +19,7 @@ import { Net } from "./src/net/net.js?v=20261021r8";
 import { Ghost } from "./src/render/ghost.js?v=20261021r8";
 import { Hazards } from "./src/world/hazards.js?v=20261021r8";
 import { Tricks } from "./src/sim/tricks.js?v=20261021r8";
+import { Juice } from "./src/render/juice.js?v=20261021r8";
 import { SoundUi } from "./src/ui/sound-ui.js?v=20261021r8";
 import { installErrorReporting } from "./src/net/errors.js?v=20261021r8";
 export { allowedScore } from "./src/core/constants.js?v=20261021r8";
@@ -142,6 +143,7 @@ class Game {
     Object.values(this.M).forEach((m) => m.dispose());
     this.gearGeo.dispose();
     this.ui.dispose();
+    this.juiceDispose();
     this.audio?.dispose();
     this.robot.runner.dispose(); this.robot.roller.dispose();
     this.kit.dispose();
@@ -173,5 +175,5 @@ function install(target, ...sources) {
     }
   }
 }
-install(Game, Loop, Run, Physics, Input, WorldGen, Track, Render, Sound, Hud, Panels, Garage, Net, SoundUi, Ghost, Hazards, Tricks);
+install(Game, Loop, Run, Physics, Input, WorldGen, Track, Render, Sound, Hud, Panels, Garage, Net, SoundUi, Ghost, Hazards, Tricks, Juice);
 installErrorReporting(() => current ? { state: current.state, q: current.quality, touch: !!current.coarse } : {});

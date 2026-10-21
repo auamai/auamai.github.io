@@ -532,6 +532,7 @@ references); bump it on every release, and keep the `modulepreload` list in `ind
 | `src/render/render.js` | Scene, quality tiers, camera, trail, `applyDesign()`, Garage close-up |
 | `src/render/grade.js` | Brand colour grade and light rig (AgX), UI-overlay lights |
 | `src/render/ghost.js` | Ghost racing: records the run's track (10 Hz), plays back the stored best on the same seed as a baked translucent robot, ahead/behind chip, overtake moment, `au_factory_ghost_v1` |
+| `src/render/juice.js` | Game feel and the Foreman, render only: crash hit-stop (holds the impact frame), camera kicks on jump/land/ramp, robot squash-stretch, pooled pickup sparks (one `Points`), the Foreman's drone + searchlight (pressure from the run's state, three scripted lane checks), his bark line. Reads the run, never writes sim state |
 | `src/render/arm.js`, `geometry.js` | Machined arm gantry (merged per material), shared geometries |
 | `factory.js`, `ceiling.js` | The hall: floor, walls, zones, roof, signs (LINE 3, NO RUNNING, FOREMAN'S OFFICE) |
 | `robots/` | `ul-h1.js` runner, `ul-w1.js` roller, `kit.js` shared materials and `bake()` (keeps UVs for `userData.keepUv`) |
@@ -571,8 +572,12 @@ and you must recompute the sha256 and update **both** places, or the browser ref
 
 1. `loop()` on rAF: clamp dt, run fixed steps ([§7](#7-fixed-step-simulation-120-hz)), poll the gamepad.
 2. Update presentation: robot animation, camera, trail, particles, HUD (only on change).
-3. `renderer.render(scene, camera)` once, shadow pass included when the tier has shadows.
-4. `ui3d` renders hints and the countdown on its own canvas.
+3. `juiceHold(dt)`: after a crash the impact frame is held (no render) for 85 ms. Then `juicePre(dt)` reads the
+   frame's events from state transitions (takeoff, landing, ramp, pickups, crash, revive), steps its springs, sparks
+   and the Foreman, and offsets the camera (y, pitch, FOV) and the robot root scale for this draw only.
+4. `renderer.render(scene, camera)` once, shadow pass included when the tier has shadows; `juicePost()` undoes the
+   offsets, so nothing the fixed step eases (camera x, robot) ever sees them. Reduce motion skips 3's hold and offsets.
+5. `ui3d` renders hints and the countdown on its own canvas.
 
 Colour: AgX tone mapping and the brand grade in `grade.js`. Palette is graphite `#14161B`, off-white `#F2F0EA`,
 signal yellow `#FFC93C`, cyan `#3DDCFF` and their tints. No orange. Crushed blacks are lifted with a small
@@ -813,6 +818,18 @@ Everything is pooled (obstacles, gears, tools, rails, ramps, debris, popups); 3D
 - **Render:** each part is a unit-box instance in one of two `InstancedMesh`es: a Lambert body (casts shadow) and a Basic glow, with per-instance palette colours (#14161B, #F2F0EA, #FFC93C, #3DDCFF and two graphite/off-white steels). Matrices and colours are written straight into the instance arrays every frame, with no allocation. The bend comes through the patched materials (`USE_INSTANCING` path): `track.js` re-traverses the scene when its child count changes, and `buildHazards` runs lazily on the first set-piece row, so both meshes are patched before they first draw. Hazards don't touch `scene.onBeforeRender` (instances are written in `drawHazards` from the sim step), so perf pass 2's chain (track bend → factory/arm-kit/pickup instance sync) is unchanged. Shadows: only the body casts (lamps, chevrons and flames are light, so the glow mesh neither casts nor receives); like every other world caster, the shadow pass uses unbent positions, which inside the shadow box (≤ 16 u ahead) is off by under a unit at the tightest bend. Both meshes are hidden while empty, so between set pieces they cost 0 draws, main or shadow (since integration/r9). Lamps blink at 2.5 Hz, under the 3-flashes-a-second rule. Measured: +2 draw calls with a set piece on screen (desktop 159→161, phone 162→164 to 180→182), at most 24 body and 76 glow instances. Payload: +7.9 KB gz.
 - **Goldens (v3,** `review/val_h/out_ob/golden_v3.json`**):** real_run 472/421f6f04, god_180s 11571/ce3ca41b, daily_like 4012/b93c2004. v2 and v1 replay unchanged.
 
+### The Foreman (presentation only, r8 juice)
+
+`src/render/juice.js` keeps a pressure `p` in [0, 1] per run, stepped once per drawn frame from what the run already
+did. It starts at 0.15 and rises 0.012/s; +0.035 for every gear that passes z = 1 untaken, +0.45 on a Spare Servo
+reboot; −0.07 for every hazard that passes in the robot's lane (cleared by jump, slide or roll), −0.025 per gear,
+−0.03 per screw, −0.08 per tool, −0.1 at the end of a lane check. His drone eases between z ≈ 8.6 (behind the
+camera, hidden, 0 draw calls) and z ≈ 4.2 at the top of the frame, with the beam and pool on the floor just ahead
+of the robot. Lane checks at 24 / 68 / 125 s of run time (+16 s on the first-ever run) pick the nearest hazard
+12-46 u ahead and hold the light on its lane for up to 2.4 s. Bark lines (≤ 7 a run, ≥ 6 s apart except lane
+checks; the crash line always lands) go to `.fr__fm` and the screen-reader line. None of it is read by the fixed step, so goldens, the Daily
+Run and challenge courses are unchanged.
+
 ## 11. Scoring, caps and anti-cheat
 
 ### Points
@@ -1043,6 +1060,7 @@ skips the bus ducks.
 | Hot loop allocations | 0 per sub-step | HUD chips keyed by bitmask; revive and spend allocate once per event |
 | Robot meshes | 58 | 58 |
 | Ghost racer | ≤ +3 draw calls | **+2** while it shows (depth pre-pass + rim-lit colour pass on one baked geometry per form; runner and roller baked at load, only one visible), 0 when hidden |
+| Juice + Foreman (r8 juice) | ≤ +4 draw calls | Measured (same frame, juice objects on vs off): **+1** while sparks are live, **+2** while he follows (drone, floor pool), **+3** with sparks, **+4** in a lane check or the crash (beam added; one pass, `forceSinglePass`); 0 when he is behind the camera and no sparks live. Shaders warmed 1.2 s after the title draws. No per-frame allocation (typed arrays, preallocated vectors, one pooled DOM line). Payload **+7.6 KB gz** (`juice.js` 7.5, CSS 0.2, hooks 0.1) |
 | Draw calls, in a run | see below | see below |
 
 ### Draw calls: the honest numbers
