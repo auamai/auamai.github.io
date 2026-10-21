@@ -2,7 +2,7 @@
 // Installed onto Game.prototype by game.js (methods use `this`, the Game).
 import * as P from "../../profile.js?v=20261020r6c";
 import * as MT from "../../meta.js?v=20261020r6c";
-import { START_SPEED, M_PER_U, MORPH_T, DRIVE_T, GRACE_T, DRIFT_CASH, DRIFT_MULT, RATE_CAP, OVER_LOCK, COUNT_BEAT, SCREW_POINTS, DRILL_POINTS, HAMMER_POINTS, MAGNET_T, DRILL_T, HAMMER_T, GOLD_T, OVER_T, MULT_CAP, GOLD_MIN, GOLD_MAX, METER_N, HIT_STOP, PB_GOLD_DELAY, allowedScore, TOOL_NAME, MILESTONES, CAUSE, HEADLINES, BAY } from "./constants.js?v=20261020r6c";
+import { START_SPEED, M_PER_U, MORPH_T, DRIVE_T, GRACE_T, DRIFT_CASH, DRIFT_MULT, RATE_CAP, OVER_LOCK, COUNT_BEAT, SCREW_POINTS, DRILL_POINTS, HAMMER_POINTS, MAGNET_T, DRILL_T, HAMMER_T, GOLD_T, OVER_T, MULT_CAP, GOLD_MIN, GOLD_MAX, METER_N, HIT_STOP, PB_GOLD_DELAY, allowedScore, TOOL_NAME, MILESTONES, CAUSE, HEADLINES, BAY, TIPS } from "./constants.js?v=20261020r6c";
 import { fmt, RNG, LOOT, clock } from "./util.js?v=20261020r6c";
 
 export class Run {
@@ -101,6 +101,20 @@ export class Run {
     if (this.pbGoldAt == null && !this.tutorial) this.pbGoldAt = this.runTime + PB_GOLD_DELAY;
   }
 
+  // Reaching a milestone badge for the first time: say so in the run, not only on the game-over screen.
+  // UI only (tip, chime, buzz): nothing here touches the sim, so replays and the Daily Run are unchanged.
+  passMilestone() {
+    const m = this.msNext;
+    if (this.tipNow && !this.tips[this.tipNow] && this.tipNow !== "pb") return; // a teaching tip is up: wait for it
+    if (this.tipNow === "pb" && this.tipLeft > 0.8) return;                    // let "New best" land first
+    this.msNext = MILESTONES.find((x) => x.at > m.at && this.score < x.at) || null;
+    TIPS.ms = { icon: "star", all: [fmt(m.at), `${m.name} trim unlocked`] };
+    this.buzz(25);
+    this.sfx("tool");
+    this.showTip("ms", 2, true);
+    this.sr(`${fmt(m.at)} points. ${m.name} trim unlocked in the Garage.`);
+  }
+
   /* ---------- run lifecycle ---------- */
   // Keys and taps on the game-over screen wait a beat, so a last frantic swipe can't restart by accident.
   // Run modes: "free" (a fresh seed), "daily" (today's shared course), "challenge" (a friend's seed).
@@ -141,6 +155,7 @@ export class Run {
     this.pbGoldAt = null;
     this.pbFrom = this.profile.best;
     this.pbPassed = false;
+    this.msNext = MILESTONES.find((m) => m.at > this.pbFrom) || null; // the next Garage badge this player hasn't reached
     this.rawScore = 0;
     this.toNext = 10;
     this.slowT = 0;
