@@ -134,7 +134,7 @@
       <p class="eyebrow">Research project · Build log</p>
       <h1 class="hero__title">Poundo Robot</h1>
       <p class="hero__lede">A robot arm that learns to turn poundo yam from videos of people making it.</p>
-      <p class="cs__status"><i aria-hidden="true"></i>Started 19 Oct 2026 · Setup done · Next: understanding the task</p>
+      <p class="cs__status"><i aria-hidden="true"></i>Started 19 Oct 2026 · Base arm: FR3 · Next: understanding the task</p>
       <nav class="toc" aria-label="On this page">
         <a href="#problem">Problem</a><a href="#goal">Goal</a><a href="#approach">Approach</a><a href="#roadmap">Roadmap</a><a href="#decisions">Decisions</a><a href="#log">Build log</a><a href="#questions">Questions</a><a href="#credits">Credits</a>
       </nav>
@@ -167,17 +167,17 @@
 
     <section class="cs__rq" id="research-q" tabindex="-1" aria-labelledby="rq-label">
       <h2 class="eyebrow" id="rq-label">Research question</h2>
-      <p class="research__q">Can a robot learn to make food from human video, and adapt to uncertain food properties like poundo&rsquo;s consistency, without a force sensor?</p>
+      <p class="research__q">Can I teach a robot to make food from video while incorporating uncertainties like poundo&rsquo;s properties, all without a force sensor, for a simpler product?</p>
       <ol class="research__parts">
         <li><span class="research__n">01</span><h3>Learn from video</h3><p>The motion comes from clips of people turning poundo. The stick-tip path is tracked and retargeted to a robot arm.</p></li>
         <li><span class="research__n">02</span><h3>Handle uncertainty</h3><p>The dough goes from loose flour and water to a thick, sticky mass, and no two pots behave the same. The robot has to adapt as the resistance changes.</p></li>
-        <li><span class="research__n">03</span><h3>No force sensor</h3><p>The robot that runs has none. A load-cell stick is used only in training, to measure what a real turn takes.</p></li>
+        <li><span class="research__n">03</span><h3>No force sensor</h3><p>The policy never reads force. A load-cell stick measures what a real turn takes, and the FR3&rsquo;s joint torque sensors are used only to check the policy&rsquo;s work, never as its input.</p></li>
       </ol>
     </section>
 
     <figure class="card cs__shot">
-      <img src="../Images/so101-mujoco-control.webp" width="1400" height="825" alt="SO-101 robot arm in the MuJoCo simulator with its joint control panel" decoding="async" fetchpriority="high" />
-      <figcaption>The SO-101 arm running in MuJoCo on my own machine, with its joint control panel.</figcaption>
+      <img src="../Images/fr3-mujoco.webp?v=20261021fr3" width="1104" height="650" alt="Franka Research 3 robot arm, bent in a posed configuration, standing on a checkered floor in the MuJoCo simulator" decoding="async" fetchpriority="high" />
+      <figcaption>The Franka Research 3 (FR3 v2 model) posed in MuJoCo on my own machine.</figcaption>
     </figure>
 
     <!-- 01 Poundo and the problem -->
@@ -212,7 +212,7 @@
       </header>
       <div class="card flow">
         <svg class="flow__wide" viewBox="0 0 1000 250" role="img" aria-labelledby="flow-title">
-          <title id="flow-title">System overview: videos of people turning poundo go through pose and motion extraction, then a policy and inverse kinematics, which drive the SO-101 arm, gripper and stick. A load-cell stick provides force data to the policy.</title>
+          <title id="flow-title">System overview: videos of people turning poundo go through pose and motion extraction, then a policy and inverse kinematics, which drive the FR3 arm, gripper and stick. A load-cell stick provides force data to the policy.</title>
           <defs>
             <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#a9bcff" /></marker>
           </defs>
@@ -229,7 +229,7 @@
           <text class="sub" x="630" y="106" text-anchor="middle">retarget to the arm</text>
 
           <rect class="box box--hw" x="790" y="40" width="200" height="96" rx="18" />
-          <text x="890" y="76" text-anchor="middle" font-size="17">SO-101 arm</text>
+          <text x="890" y="76" text-anchor="middle" font-size="17">FR3 arm</text>
           <text class="sub" x="890" y="100" text-anchor="middle">+ gripper</text>
           <text class="sub" x="890" y="118" text-anchor="middle">+ wooden stick</text>
 
@@ -244,7 +244,7 @@
         </svg>
 
         <svg class="flow__mobile" viewBox="0 0 320 560" role="img" aria-labelledby="flow-title-m">
-          <title id="flow-title-m">System overview: videos, then pose and motion extraction, then policy and inverse kinematics, then the SO-101 arm with gripper and stick. A load-cell stick feeds force data into the policy.</title>
+          <title id="flow-title-m">System overview: videos, then pose and motion extraction, then policy and inverse kinematics, then the FR3 arm with gripper and stick. A load-cell stick feeds force data into the policy.</title>
           <defs>
             <marker id="ahm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#a9bcff" /></marker>
           </defs>
@@ -261,7 +261,7 @@
           <text class="sub" x="120" y="311" text-anchor="middle">retarget to the arm</text>
           <path class="wire" d="M120 336 V372" marker-end="url(#ahm)" />
           <rect class="box box--hw" x="20" y="376" width="200" height="96" rx="16" />
-          <text x="120" y="410" text-anchor="middle" font-size="16">SO-101 arm</text>
+          <text x="120" y="410" text-anchor="middle" font-size="16">FR3 arm</text>
           <text class="sub" x="120" y="432" text-anchor="middle">+ gripper</text>
           <text class="sub" x="120" y="450" text-anchor="middle">+ wooden stick</text>
           <rect class="box box--hw" x="200" y="494" width="110" height="56" rx="14" />
@@ -273,7 +273,7 @@
       <div class="prose" style="margin-top: 24px;">
         <p><strong>Motion from video.</strong> Clips of people turning poundo are tracked for the stick-tip path, then retargeted to the arm with IK.</p>
         <p><strong>Force from a sensor.</strong> Video can't show force, so a load-cell stick logs what a real turn takes.</p>
-        <p><strong>SO-101 as the base,</strong> redesigned for dough loads, with a gripper holding a plain wooden stick.</p>
+        <p><strong>Franka Research 3 as the base,</strong> with a gripper on its <span style="white-space: nowrap;">ISO 9409-1-50-4-M6</span> flange holding a plain wooden stick.</p>
         <p><strong>Simulation first,</strong> in MuJoCo, before anything touches a real pot.</p>
       </div>
     </section>
@@ -285,11 +285,11 @@
         <h2>Roadmap</h2>
       </header>
       <ol class="rows">
-        <li class="row row--done"><span class="row__k">P0</span><div><h3>Setup</h3><p>Tools installed on Windows; SO-101 sim runs locally.</p></div><span class="row__s">Done</span></li>
+        <li class="row row--done"><span class="row__k">P0</span><div><h3>Setup</h3><p>Tools installed on Windows; arm sim runs locally (SO-101 first, now FR3).</p></div><span class="row__s">Done</span></li>
         <li class="row row--next"><span class="row__k">P1</span><div><h3>Understand the task</h3><p>Stages of turning broken down; 30+ clips collected and curated.</p></div><span class="row__s">Up next</span></li>
         <li class="row"><span class="row__k">P2</span><div><h3>Measure the dough</h3><p>Instrumented stick built; peak force and torque logged across stages.</p></div><span class="row__s">Not started</span></li>
         <li class="row"><span class="row__k">P3</span><div><h3>Requirements</h3><p>Requirements table set from measured loads.</p></div><span class="row__s">Not started</span></li>
-        <li class="row"><span class="row__k">P4</span><div><h3>Mechanical design</h3><p>Arm redesigned from the SO-101 base; v1 stick gripper; pot fixture; torque sheet.</p></div><span class="row__s">Not started</span></li>
+        <li class="row"><span class="row__k">P4</span><div><h3>Mechanical design</h3><p>v1 stick gripper on the FR3 flange; pot fixture; torque sheet.</p></div><span class="row__s">Not started</span></li>
         <li class="row"><span class="row__k">P5</span><div><h3>Motion from video</h3><p>Stick-tip trajectories extracted and retargeted to the arm in sim.</p></div><span class="row__s">Not started</span></li>
         <li class="row"><span class="row__k">P6</span><div><h3>Learning and control</h3><p>A policy or scripted mapping replays turning strokes in MuJoCo.</p></div><span class="row__s">Not started</span></li>
         <li class="row"><span class="row__k">P7</span><div><h3>Validation</h3><p>Sim beside the original clip; optional real pot test.</p></div><span class="row__s">Not started</span></li>
@@ -319,9 +319,18 @@
           </dl>
         </article>
         <article class="card decision">
+          <h3>Base arm: Franka Research 3 (FR3), replacing SO-101</h3>
+          <dl>
+            <dt>Decided</dt><dd>21 Oct 2026</dd>
+            <dt>Why</dt><dd>Its 3 kg payload suits dough loads. It has the largest MuJoCo and robot-learning ecosystem, including the franka_fr3_v2 model in MuJoCo Menagerie. Its seven joint torque sensors give ground truth to validate a policy that runs without a force sensor.</dd>
+            <dt>Also considered</dt><dd>UR5e.</dd>
+          </dl>
+        </article>
+        <article class="card decision">
           <h3>Start from SO-101 (Apache-2.0), credited, then redesign for dough loads</h3>
           <dl>
-            <dt>Why</dt><dd>Open STEP, URDF and MuJoCo files, and it works natively with LeRobot. Its servos are too weak, and that redesign is the design story.</dd>
+            <dt>Status</dt><dd>Superseded on 21 Oct 2026 by the FR3 decision above.</dd>
+            <dt>Why</dt><dd>Open STEP, URDF and MuJoCo files, and it works natively with LeRobot.</dd>
             <dt>Also considered</dt><dd>AR4 (SolidWorks files, but non-commercial with no redistribution); PAROL6 (STEP files paid, not open).</dd>
           </dl>
         </article>
@@ -349,6 +358,13 @@
         <h2>Build log</h2>
       </header>
       <ol class="log" reversed>
+        <li>
+          <time datetime="2026-10-21">21 Oct 2026</time>
+          <div>
+            <h3>Base arm switched to the Franka Research 3</h3>
+            <p>Replaced SO-101 with the FR3: 3 kg payload, the biggest MuJoCo and robot-learning ecosystem, and seven joint torque sensors to check a policy that never reads force. UR5e was the backup. Opened the FR3 v2 model from MuJoCo Menagerie in the MuJoCo viewer on my own machine. The tool flange is <span style="white-space: nowrap;">ISO 9409-1-50-4-M6</span>: four M6 bolts on a 50 mm circle, with a &Oslash;6 H7 dowel. <b>Next:</b> break turning into stages and start collecting clips.</p>
+          </div>
+        </li>
         <li>
           <time datetime="2026-10-19">19 Oct 2026</time>
           <div>
@@ -395,9 +411,11 @@
         <h2>Credits</h2>
       </header>
       <div class="credits">
-        <p><a href="https://github.com/TheRobotStudio/SO-ARM100" target="_blank" rel="noopener">SO-ARM100 / SO-101</a> by The Robot Studio, released under the Apache-2.0 licence. The base arm and its MuJoCo model come from here; my redesign builds on it.</p>
+        <p><a href="https://franka.de/research" target="_blank" rel="noopener">Franka Research 3</a> by Franka Robotics, the base arm. The FR3 model is derived from Franka&rsquo;s <a href="https://github.com/frankaemika/franka_description" target="_blank" rel="noopener">franka_description</a>.</p>
+        <p><a href="https://github.com/google-deepmind/mujoco_menagerie/tree/main/franka_fr3_v2" target="_blank" rel="noopener">MuJoCo Menagerie franka_fr3_v2</a> by Google DeepMind, released under the Apache-2.0 licence. The FR3 MuJoCo model comes from here.</p>
+        <p><a href="https://github.com/TheRobotStudio/SO-ARM100" target="_blank" rel="noopener">SO-ARM100 / SO-101</a> by The Robot Studio, released under the Apache-2.0 licence. The first base arm and its MuJoCo model, used until 21 Oct 2026.</p>
         <p><a href="https://github.com/google-deepmind/mujoco" target="_blank" rel="noopener">MuJoCo</a>, the physics simulator the arm runs in.</p>
-        <p><a href="https://github.com/huggingface/lerobot" target="_blank" rel="noopener">LeRobot</a> by Hugging Face, for robot learning and the SO-101 integration.</p>
+        <p><a href="https://github.com/huggingface/lerobot" target="_blank" rel="noopener">LeRobot</a> by Hugging Face, for robot learning.</p>
         <p><a href="https://voxel51.com" target="_blank" rel="noopener">FiftyOne</a> by Voxel51, for curating the video clips.</p>
         <p>Poundo photos from Wikimedia Commons, all under <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>, cropped: <a href="https://commons.wikimedia.org/wiki/File:Pounding_of_boiled_yam_into_pounded_yam_food.jpg" target="_blank" rel="noopener">pounding boiled yam</a> by HarunaSylvester; <a href="https://commons.wikimedia.org/wiki/File:A_woman_selling_elubo_(yam_flour)_in_Ipata_market,_Ilorin.jpg" target="_blank" rel="noopener">a woman selling elubo (yam flour) in Ipata market, Ilorin</a> by Blackcoffeegirl; <a href="https://commons.wikimedia.org/wiki/File:Making_of_Amala_in_Badagry,_Lagos._Nigeria.jpg" target="_blank" rel="noopener">making of amala in Badagry, Lagos</a> by Koutchika Lihouenou Gaspard.</p>
       </div>
