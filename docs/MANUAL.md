@@ -711,7 +711,7 @@ their ghost runs beside you. Links made before factory zones existed (no `v=2` i
 course your friend ran: the classic straight hall, and the challenge screen says so. Beat the score and you'll see
 "Challenge beaten". Daily links read **Start the Daily Run**.
 
-Old links on auamai.dev/game/ forward to servosprint.xyz with the challenge intact. Challenge links made before
+Links to the game's old address forward to servosprint.xyz with the challenge intact. Challenge links made before
 crews work exactly as before.
 
 ---
@@ -729,12 +729,33 @@ Open **Settings** from the menu.
 | Sound effects + volume | Pickups, crashes, chimes |
 | **Reduce motion** | Turns off screen shake, hit-stop (smash and crash), camera kicks, the robot's squash and stretch, hint slow-motion, the score count-up and menu animations; the Foreman's drone still shows but drifts gently instead of swooping. It starts from your system's reduced-motion setting until you change it here |
 | Ghost racer | Shows the ghost of your best run on the Daily Run and challenge courses (on by default) |
-| Player manual | Opens this manual in a new tab |
+| **Language** | English or Português (Brasil). See [Language](#language) below. On the title screen only |
+| Player manual | Opens this manual in a new tab (the manual itself is in English) |
 | Music credit | "Music: Rhythm Factory by Zane Little Music (CC0)" |
 
 Your mute and volume choices are remembered. The music dips briefly under crashes and new bests so the
 moment comes through. With music off, the track isn't downloaded at all; it loads (about 1.5 MB, once) the
 first time music plays, and keeps playing across retries rather than restarting each run.
+
+### Language
+
+The game speaks **English** and **Português (Brasil)**. Spanish is next.
+
+- **First visit:** the game follows your device's language. A phone or browser set to any Portuguese (Brazil or
+  Portugal) opens in Português (Brasil); everything else opens in English.
+- **Change it any time** on the title screen: Settings, **Language** (each language is written in its own words,
+  so you can find yours even in a language you don't read). The screen switches at once, your save and runs stay as
+  they are, and the choice is remembered on this device. The signs on the factory walls switch the next time the
+  game loads.
+- **Links:** `?lang=pt-BR` (or `?lang=en`) at the end of a game link opens it in that language, for example
+  `https://servosprint.xyz/?lang=pt-BR`. A choice you make in Settings wins over the link after that.
+- **What changes:** every menu, hint, the countdown (**VAI!**), the HUD, game over, the leaderboard and Daily Run,
+  Crews, the Garage, sign-in and backup codes, share cards and the messages you send with a challenge, and number
+  formats (1,234 in English, 1.234 in Portuguese). Your friend sees the challenge message in the language you
+  played in; the game they open follows their own device.
+- **What stays:** the name **Servo Sprint**, robot model names (Unit 07, Strider, Pup-4, Rover, Mag-Bot, Hauler,
+  Titan), player names, and the Pacific-time resets (midnight and Monday 00:00 Pacific in every language). Link
+  previews made by the server (the picture a chat app shows for a challenge or crew link) are still in English.
 
 ### Credits
 
@@ -797,7 +818,7 @@ there. The limits on how many points a run can score are the same either way. Yo
 **Do I lose my gears if I clear my browser?** Your save lives in the browser. Save your name with a passkey or
 backup code first and you can bring it back.
 
-**Does my old auamai.dev/game save carry over?** Not automatically yet. Old auamai.dev/game links now open servosprint.xyz,
+**Does my save from the game's old address carry over?** Not automatically yet. Old links now open servosprint.xyz,
 which keeps its own save, so you start fresh there. A one-time import of the old save is planned. If your name was
 saved with a passkey or backup code, sign in with it and your synced stats come back.
 
@@ -822,7 +843,7 @@ best. You may see it link to the game rather than the course, when this phone ca
 
 The full privacy policy is at **[servosprint.xyz/privacy](https://servosprint.xyz/privacy)** (also linked in game:
 Settings > Privacy). It covers who runs the game, IP addresses, how long things are kept and how to ask for deletion
-(alex@auamai.dev). In short:
+(support@servosprint.xyz). In short:
 
 - **No email, password or tracking pixels, and no cookies from the game.** The game has no analytics of its own;
   the host, Cloudflare, counts page views without cookies (below).
@@ -836,9 +857,7 @@ Settings > Privacy). It covers who runs the game, IP addresses, how long things 
   robot you picked). Badges you earn are stored against your name with the date (no age, no other details).
 - **Page views:** the game doesn't send a page-view ping of its own. Cloudflare Web Analytics is on for
   servosprint.xyz: it counts page views and page speed without cookies, and isn't loaded for visitors who reach
-  Cloudflare through its data centres in the EU, the EEA, the UK or Switzerland. (The separate auamai.dev portfolio
-  counts unique visitors with a one-way hash of IP address and browser, mixed with a secret that changes daily and
-  deleted after 30 days.)
+  Cloudflare through its data centres in the EU, the EEA, the UK or Switzerland.
 - **Error reports:** if the game hits an error it sends the error message and build number, with no personal
   details and with web addresses trimmed of their query strings.
 - **Ads:** servosprint.xyz may show ads through Google AdSense and Google's H5 Games Ads. When it does, Google
