@@ -729,7 +729,7 @@ Open **Settings** from the menu.
 | Sound effects + volume | Pickups, crashes, chimes |
 | **Reduce motion** | Turns off screen shake, hit-stop (smash and crash), camera kicks, the robot's squash and stretch, hint slow-motion, the score count-up and menu animations; the Foreman's drone still shows but drifts gently instead of swooping. It starts from your system's reduced-motion setting until you change it here |
 | Ghost racer | Shows the ghost of your best run on the Daily Run and challenge courses (on by default) |
-| **Language** | English or Português (Brasil). See [Language](#language) below. On the title screen only |
+| **Language** | English, Português (Brasil) or Español. See [Language](#language) below. On the title screen only |
 | Player manual | Opens this manual in a new tab (the manual itself is in English) |
 | Music credit | "Music: Rhythm Factory by Zane Little Music (CC0)" |
 
@@ -739,19 +739,20 @@ first time music plays, and keeps playing across retries rather than restarting 
 
 ### Language
 
-The game speaks **English** and **Português (Brasil)**. Spanish is next.
+The game speaks **English**, **Português (Brasil)** and **Español** (neutral Latin American Spanish).
 
 - **First visit:** the game follows your device's language. A phone or browser set to any Portuguese (Brazil or
-  Portugal) opens in Português (Brasil); everything else opens in English.
+  Portugal) opens in Português (Brasil); any Spanish (Mexico, Spain, Argentina and so on) opens in Español;
+  everything else opens in English.
 - **Change it any time** on the title screen: Settings, **Language** (each language is written in its own words,
   so you can find yours even in a language you don't read). The screen switches at once, your save and runs stay as
   they are, and the choice is remembered on this device. The signs on the factory walls switch the next time the
   game loads.
-- **Links:** `?lang=pt-BR` (or `?lang=en`) at the end of a game link opens it in that language, for example
+- **Links:** `?lang=pt-BR`, `?lang=es` (or `?lang=en`) at the end of a game link opens it in that language, for example
   `https://servosprint.xyz/?lang=pt-BR`. A choice you make in Settings wins over the link after that.
-- **What changes:** every menu, hint, the countdown (**VAI!**), the HUD, game over, the leaderboard and Daily Run,
+- **What changes:** every menu, hint, the countdown (**VAI!** / **¡YA!**), the HUD, game over, the leaderboard and Daily Run,
   Crews, the Garage, sign-in and backup codes, share cards and the messages you send with a challenge, and number
-  formats (1,234 in English, 1.234 in Portuguese). Your friend sees the challenge message in the language you
+  formats (12,345 in English, 12.345 in Portuguese and Spanish). Your friend sees the challenge message in the language you
   played in; the game they open follows their own device.
 - **What stays:** the name **Servo Sprint**, robot model names (Unit 07, Strider, Pup-4, Rover, Mag-Bot, Hauler,
   Titan), player names, and the Pacific-time resets (midnight and Monday 00:00 Pacific in every language). Link
