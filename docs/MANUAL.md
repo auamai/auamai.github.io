@@ -820,17 +820,23 @@ best. You may see it link to the game rather than the course, when this phone ca
 
 *Last updated: 2026-10-22.*
 
-- **No email, password, tracking pixels or third-party analytics.** Apart from ads (below), the page is only
-  allowed to talk to the game's own server.
+The full privacy policy is at **[servosprint.xyz/privacy](https://servosprint.xyz/privacy)** (also linked in game:
+Settings > Privacy). It covers who runs the game, IP addresses, how long things are kept and how to ask for deletion
+(alex@auamai.dev). In short:
+
+- **No email, password or tracking pixels, and no cookies from the game.** The game has no analytics of its own;
+  the host, Cloudflare, counts page views without cookies (below).
 - **On your device:** your name, scores, settings, Toolbox, Garage design, and your save code or sign-in
   token are kept in your browser's local storage.
 - **On the server (if you play online):** your name, your scores with their run length, mode and date, your
-  robot's name and design, and whether a run used a Spare Servo. When you send a challenge link: that run's
-  ghost (where your robot was each tenth of a second, and its score), with no name attached, deleted after 60 days. If you save your name: a scrambled (hashed)
+  robot's name and design, and whether a run used a Spare Servo. When you share a challenge, set a new Crew best or a
+  new personal best (with Ghost racer on): that run's ghost (where your robot was each tenth of a second, and its score), with no name attached, deleted after 60 days. If you save your name: a scrambled (hashed)
   copy of your backup code, your passkey's public key (never your face or fingerprint, which stay on your
   device), and your synced stats, Garage items and robots (which robots and finishes you own, their paint and the
   robot you picked). Badges you earn are stored against your name with the date (no age, no other details).
-- **No visit tracking in the game.** The game doesn't send a page-view ping. (The separate auamai.dev portfolio
+- **Page views:** the game doesn't send a page-view ping of its own. Cloudflare Web Analytics is on for
+  servosprint.xyz: it counts page views and page speed without cookies, and isn't loaded for visitors who reach
+  Cloudflare through its data centres in the EU, the EEA, the UK or Switzerland. (The separate auamai.dev portfolio
   counts unique visitors with a one-way hash of IP address and browser, mixed with a secret that changes daily and
   deleted after 30 days.)
 - **Error reports:** if the game hits an error it sends the error message and build number, with no personal
