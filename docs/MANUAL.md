@@ -11,8 +11,11 @@ robot arms and rovers, grab gears and tools, and see how far you get before the 
 is new, except the **Daily Run**, which is the same course for everyone that day.
 
 It's free to play. It runs in your browser at **https://servosprint.xyz** on a phone, tablet or computer, and
-you can install it like an app. There's nothing to buy with real money. The website may show ads from Google; any
-ad that gives you a reward is always optional (see [Privacy](#privacy)).
+you can install it like an app. In the **Workshop** you can also rebuild a robot from real parts, test it and run it on
+the Line (see [Workshop](#workshop-build-your-own-robot) and the separate [Workshop manual](WORKSHOP_MANUAL.md)). A short overview with an FAQ is at **https://servosprint.xyz/about**; the game opens
+straight in Portuguese at **servosprint.xyz/?lang=pt-BR** and in Spanish at **servosprint.xyz/?lang=es**. An optional store in the Garage sells looks and shortcuts only; nothing you buy changes a run, a score or the boards
+(see [Store and purchases](#store-and-purchases-optional)). The website may show ads from Google; any ad that gives you
+a reward is always optional (see [Privacy](#privacy)).
 
 > This manual describes the current build. Whenever the game changes, this file changes in the same update.
 
@@ -37,7 +40,9 @@ ad that gives you a reward is always optional (see [Privacy](#privacy)).
 13. [Settings and accessibility](#settings-and-accessibility)
 14. [Install it as an app](#install-it-as-an-app)
 15. [FAQ and troubleshooting](#faq-and-troubleshooting)
-16. [Privacy](#privacy)
+16. [Store and purchases (optional)](#store-and-purchases-optional)
+17. [Privacy](#privacy)
+18. [Workshop: build your own robot](#workshop-build-your-own-robot) (full guide: [Workshop manual](WORKSHOP_MANUAL.md))
 
 ---
 
@@ -161,6 +166,10 @@ how long the run lasted). A perfect run never gets near it. It's there so the le
 - The **Toolbox** shows your balance on the title screen, in the Garage and at game over. At game over you'll
   see your gears fly into it and the total tick up, with "+N this run" (mission rewards included).
 - You spend Toolbox gears in the [Garage](#garage-robots-paint-and-design). Spending never touches your score.
+- **Double your gears** (not switched on yet; it arrives once Google approves ads for the site): some game-over
+  screens may offer "Double your gears: +N". Watch a short ad to the end and that run's gears (the ones you picked up
+  on the line, not mission rewards) are added once more. It's always optional, at most 5 a day, never during a run,
+  never on your very first visit, and it never changes your score, your ghost or the leaderboard.
 
 Your balance is simply gears earned minus gears spent, so older saves carried over exactly.
 
@@ -381,7 +390,8 @@ and a new mission takes its place. Progress carries across runs unless the missi
 
 ### Grade
 
-Your **grade** goes up with every gear you bank (run gears, mission and goal rewards). Grade 2 takes 100 gears,
+Your **grade** goes up with every gear you earn in play (run gears, mission and goal rewards). Gears bought in the store
+can be spent like any gears but never count toward your grade. Grade 2 takes 100 gears,
 grade 3 300, grade 4 600, grade 5 1,000, and each step after is a little longer (grade 10 at 4,500). Each new
 grade pays **10 × the grade** in gears (grade 2: +20, grade 5: +50) and is called out on the game-over screen.
 Some grades open new Garage options:
@@ -400,14 +410,14 @@ Players from before grades existed start at the grade their gears already reache
 ## Garage: robots, paint and design
 
 Open the **Garage** with its button on the title screen, next to Daily Run under Start (or from game over). Your robot stands in a close-up and turns slowly so you can see
-its back plate. The Garage has three tabs: **Robots**, **Paint** and **Workshop**. Every change shows on the
+its back plate. The Garage has three tabs: **Robots**, **Paint** and **Customize**. Every change shows on the
 live robot straight away.
 
 ### Robots (the showroom)
 
 Use the arrows or the robot list to walk through the showroom. Robots you own show in full colour; locked ones
 stand as a dark silhouette with the grade they need and their price. Buying asks first, then the new robot is
-selected straight away. **Select** switches between robots you own. Your robot's name (Workshop) stays the
+selected straight away. **Select** switches between robots you own. Your robot's name (Customize) stays the
 same whichever robot you run as.
 
 | Robot | What it is | Perk | Unlock |
@@ -444,9 +454,9 @@ them. Tap anything you don't own to **try it on**: the turntable shows it, and t
 (or tap **Back to mine**). Metallics and finishes are bought once and work on every robot you own. Paint you
 already had (and its gloss, satin or matte) carries over to Unit 07.
 
-### Workshop
+### Customize (Garage tab)
 
-Name and plate, plate pattern and ink, the Spare Servo, trims, trails and hammer skins.
+Called Workshop before the Workshop mode arrived; renamed so it isn't confused with the [Workshop mode](#workshop-build-your-own-robot) on the title screen. This Garage tab holds name and plate, plate pattern and ink, the Spare Servo, trims, trails and hammer skins.
 
 ### Name and plate
 
@@ -500,7 +510,7 @@ out on screen.
 ### Badges (from the boards)
 
 Badges are earned on the boards and checked by the game's server, so they can't be bought or unlocked on your device.
-They sit on a shelf at the top of the Garage's **Workshop** tab, with the date you earned each one and a count for the
+They sit on a shelf at the top of the Garage's **Customize** tab, with the date you earned each one and a count for the
 ones you can earn again. When a run earns one, the game-over screen says **New badge**, and your run's share card shows
 up to three of them.
 
@@ -549,6 +559,16 @@ brings a welcome-back gift of 50 gears. Game over tells you what tomorrow's run 
 **Bring a friend:** when a new player opens your challenge link or Crew, plays their first run and saves their name, you both
 get 100 gears, and you get a Recruiter level. If they come back another day that week, you get 50 more. Up to 5 recruits a day
 count, and friends on your own device or network don't count.
+
+**Early player reward (r23):** the first 1,000 saved names that claim it get **2,500 gears** and the **Early Player**
+badge, once per name. After a finished run, the game-over screen shows "Early player reward: +2,500 gears" with how many of
+the 1,000 are left. Save your name (or sign in) and tap **Claim**; the gears land in your Toolbox and follow your save to your
+other devices. When all 1,000 are gone the card says so. It is gears only: your score, ghosts and the boards don't change.
+To keep it fair, each name can claim it once, you need a finished run first, and only a few claims a day count from one
+network.
+
+**Gifts from the team:** now and then the team sends a player a gift of gears with a short note. It shows up as a card at
+the top of the screen the next time you open the game, and the gears go straight into your Toolbox.
 
 ### Show my robot
 
@@ -786,7 +806,19 @@ Servo Sprint installs to your home screen and opens full screen.
 - **Computer (Chrome / Edge):** the install icon in the address bar.
 
 Long-press the installed icon for a **Daily Run** shortcut (Android and desktop). You still need a connection
-for the leaderboard; runs played offline post when you're back.
+to play; if you open the app with no connection you get a short "offline" page with a **Try again** button.
+
+On a phone, the game-over card may show one small line to help (never during a run, never on the title):
+
+- **iPhone / iPad Safari:** "Add Servo Sprint to your Home Screen: tap **Share**, then **Add to Home Screen**".
+- **Android Chrome / Edge:** an **Install** button that opens your browser's own install sheet.
+
+Tap **×** (Not now) and it stays away for 30 days on that device. It never shows on a computer, inside apps like
+Instagram or TikTok, inside the itch.io page, or once the game is already installed.
+
+Servo Sprint is also being prepared for the **Microsoft Store** (Windows) and the **Samsung Galaxy Store** (Android).
+Those apps open the same game and share your saved name, gears and progress. Optional purchases are not offered inside
+the Microsoft Store app.
 
 ---
 
@@ -838,9 +870,47 @@ best. You may see it link to the game rather than the course, when this phone ca
 
 ---
 
+## Store and purchases (optional)
+
+*Added in r24, open since r24.4 (25 October 2026). It is only on servosprint.xyz itself (not inside itch.io or other
+portals, and not inside the Microsoft Store app).*
+
+Servo Sprint is free, and everything that changes how a run plays can be earned by playing. The store sells looks and
+shortcuts only: **nothing you buy changes your score, your ghosts, the leaderboards or how a run plays.** It lives in
+the Garage, as the **Store** tab:
+
+| Item | Price (CAD) | What you get |
+| --- | --- | --- |
+| Supporter Pack | C$4.99 | Founder Gold body finish, a small Supporter badge next to your name on the boards, +20% gears from what you pick up on the course (up to 200 extra a day), and no ads |
+| Halloween paints | C$1.99 | Witch Violet, Bone and Ecto Glow (any robot you own) |
+| Neon paints | C$1.99 | Neon Magenta, Neon Lime and Neon Ice: they glow a little (any robot you own) |
+| Strider, Pup-4 or Rover now | C$1.99 each | That robot right away, without the grade or the gears. Every robot can still be earned with gears; Mag-Bot, Hauler and Titan (robots with run perks) are never sold |
+| Gear bundles | C$0.99 / C$2.99 / C$5.99 | 1,000 / 3,500 / 8,000 gears to spend (bigger bundles give more gears per dollar). Bought gears never count toward your Line grade: only gears earned in play do |
+
+- **Try before you buy.** Tap a finish's swatch in the Store (or in the Paint tab) and your robot wears it on the
+  turntable. Tap again, or "Back to mine", to take it off.
+- **Buying.** Tap the price: the game saves where you are and opens Stripe's secure checkout page (cards, and Apple Pay,
+  Google Pay or Link where your device offers them). Taxes, if any, are shown there before you pay. When you pay you come
+  straight back to the Garage, and the item is unlocked and put on your robot with a short "Thank you" note. If the
+  payment takes a moment to confirm, the Garage says "Confirming your purchase…" and unlocks it on its own as soon as it
+  lands. Cancel, or a declined card, brings you back with "Nothing was charged."
+- **Your name is your receipt.** Purchases belong to your saved name, so you need to save it first (passkey or backup
+  code). If you haven't, tapping an item opens the save step right there and keeps the item ready to buy.
+- **Every device.** Sign in with your passkey or backup code on another phone or computer and your purchases come
+  back by themselves. "Restore purchases" at the bottom of the Store checks again.
+- **Where you'll see it.** The Store tab and small price tags next to robots and finishes the store sells, a quiet
+  "Get more gears" link under your gear count in the Garage, a "Support Servo Sprint" link in Settings, and once (after
+  your third run, never in your first session) a small "New: upgrades in the Garage" note on the title screen that you
+  can dismiss. Never during a run, never on the game-over screen, no pop-ups, no timers.
+- **Seller and refunds.** Sold by Servo Sprint. Purchases are digital, cosmetic items and gears. For help or a refund,
+  email **support@servosprint.xyz** with your player name. A refunded item (and the Supporter badge) is removed from your
+  name; gears already spent stay spent.
+
+How the store works under the hood (payments, restore, switches): [ARCHITECTURE.md, Store (r24)](ARCHITECTURE.md#21-store-r24).
+
 ## Privacy
 
-*Last updated: 2026-10-22.*
+*Last updated: 2026-10-24.*
 
 The full privacy policy is at **[servosprint.xyz/privacy](https://servosprint.xyz/privacy)** (also linked in game:
 Settings > Privacy). It covers who runs the game, IP addresses, how long things are kept and how to ask for deletion
@@ -867,6 +937,113 @@ Settings > Privacy). It covers who runs the game, IP addresses, how long things 
   Players in the EEA, the UK and Switzerland are asked for consent through a Google-certified consent management
   platform (CMP) before personalized ads are shown. Rewarded ads (watch an ad for a bonus, such as extra gears) are
   always optional: you choose whether to watch one, and you never need to watch an ad to play.
+- **Purchases (when the store is open):** your name, the item, its price and date, and Stripe's reference numbers for
+  the payment are stored so the item follows your name and a refund can be matched. Payments are handled by Stripe on its
+  own checkout page; the game never sees or stores your card. See the privacy policy's Purchases section.
 - **Third parties:** the 3D engine (three.js) loads from the jsDelivr CDN. Fonts, music and art are all served
   from the game itself (the music track is CC0, by Zane Little Music; see Credits). Ads, if shown, come from
   Google (see above).
+
+---
+
+## Workshop: build your own robot
+
+The Workshop is a learn-by-building mode: pick real parts, shape the links, test on a bench, run missions, read the
+debrief, improve. Everything your robot can do comes from its parts and its shape, the way it would for a real robot:
+there are no upgrade levels. Added in r25 (October 2026). Nothing you do in the Workshop touches your scores, best,
+boards, gears or saved name. Best on a computer; it works on phones and tablets too.
+
+This section is the short version. The [Workshop manual](WORKSHOP_MANUAL.md) covers every screen, the bench, missions,
+sharing, phone controls, tips and known limitations.
+
+Open it from the **Workshop** button on the title screen.
+
+### The screen
+
+- **Frames** (top): Rover, Pup-4 (four legs) and Unit 07 (two legs). Each starts as a stock build you can strip down
+  and rebuild. Keys **1 2 3**.
+- **Build** (left): one card per joint group (wheel motors and suspension; hips and knees), then battery, sensors,
+  controller (PID) and links. **Hover** (or focus) any option to preview what it changes before you commit:
+  stats show ▲ green for better and ▼ red for worse. Click to fit it.
+- **Stats** (right): top speed, steepest slope, jump, runtime, tip limit, wobble, motor load, mass, cost.
+  **Builder** shows bars; **Engineer** shows the real numbers with units, plus power to weight, currents, CoM
+  height, settling time and the weakest link's safety factor. Warnings below say what will go wrong, in plain words.
+- **3D view** (middle): drag to turn, scroll or pinch to zoom, click a part to edit it. **E** explodes the robot,
+  **H** colours links by stress.
+- **Dock** (bottom): **Test bench** (B), **Missions** (M), **Run on the Line** (R).
+
+On phones the 3D view is on top, Build and Stats share the panel below (tabs), and the dock stays at the bottom.
+
+### Parts
+
+| Part | Choices | What it changes |
+| --- | --- | --- |
+| Actuator | micro, standard and high-torque servos, DC gearmotor, stepper, BLDC with driver | Stall torque, speed, current, heat, mass, cost |
+| Gearbox | direct, spur, planetary, cycloidal, strain-wave, with their ratios | Torque × ratio × efficiency, speed ÷ ratio, backlash, mass |
+| Battery | 4×AA NiMH, 2S/3S/6S LiPo, 3S Li-ion | Voltage (must suit the motors), runtime, peak current, mass |
+| Sensors | encoder, IMU, distance sensor | Finer feedback (less wobble), active balance, auto-dodge on the Line |
+| Controller | PID: Stiffness (Kp), Hold (Ki), Damping (Kd) | How fast and cleanly the balance joint settles |
+| Links | length, width, depth, profile (solid, tube, I-beam), lightening holes, material (PLA, aluminium, carbon) | Mass, centre of mass, strength (safety factor), stiffness, cost |
+
+Servos run from the controller's own 6 V (or 7.4 V for high-voltage servos) rail. Other motors see the battery
+voltage: a 12 V gearmotor on a 6S pack goes up in smoke.
+
+### Editing a link (CAD-lite)
+
+Click a link (or pick it in the Links list). The part view shows the real part with its holes, coloured by stress
+under a 2.5 g landing (dark purple low, yellow at yield; colour-blind safe), with its dimensions on it. Type a size or
+use the − / + steppers (length in 5 mm steps, the rest in 1 mm; sizes snap to 0.5 mm), switch profile, add holes,
+change material. The panel shows mass, centre of mass, inertia about its joint (kg·cm²), the load case, peak stress, tip
+deflection, cost and the **safety factor** (under 1 breaks, under 1.5 is thin). **Export STL** saves a printable
+binary STL of that link in millimetres.
+
+### Test bench
+
+- **Torque–speed:** the joint's whole range as a line, with dots for the jobs your robot needs (cruise, ramp, stand).
+  A dot under the line runs; a red one stalls. The dashed line is the continuous rating; the faint curve is power.
+- **PID step:** the balance joint is told to move 10°; see overshoot, settling time, wobble, and tune the sliders live.
+- **Tip test:** tilts the table until the robot tips; compares its tip limit with the 0.35 g a lane change needs.
+- **Thermal:** winding temperature over time on the ramp, with the limit and when it gets there.
+
+### Missions
+
+Four per frame, opened in order: **Sprint** (10 m against the clock), **Climb the ramp**, **Haul a crate** (a heavy
+payload up a slope) and **Last a shift** (an hour of walking with climbs, on one battery). The run plays on a test
+track with a start line, a tick every metre and a finish line (Space or **Skip** to jump to the end); your last build of that mission runs beside it as a ghost.
+
+After every run the **debrief** gives one line with the numbers ("Hips stalled on the 10° slope: it needed 0.97 N·m,
+and hot windings left only 0.83") and, when one swap fixes it, a **suggested fix** with its stat changes. **Apply and
+rerun** fits it and runs the mission again. The ⓘ buttons open short **Lab Notes** on the idea behind it (gearing,
+the speed–torque line, heat, batteries, power to weight, centre of mass, PID, beams).
+
+### Run on the Line
+
+Runs your build in the factory on a fixed Workshop course: the build's top speed caps the line, its jump decides what
+it can clear, a tippy build without an IMU falls over on lane changes, the battery drains (the Line runs 20 times
+faster than real time) and motors heat up. A distance sensor side-steps once every 6 s. The report explains how the
+run ended. Workshop runs post no score and don't change your best, missions, gears or ghost. You need a name on the
+title screen to run (the Workshop itself works without one).
+
+### Progress
+
+All on this device: your current build autosaves; **Blueprints** keeps up to 12; **Share** makes a link that opens
+your exact build for anyone (and pastes one to remix). Parts unlock in tiers as you pass missions (2, 5 and 8 passes);
+they are never sold. **Mastery** has four tracks (Actuators I, Gearing I, Balance I, Structures I). The **daily
+challenge** sets one constraint per Vancouver day (its mission is open even if you haven't reached it yet); doing it builds a streak, and one missed day a week is forgiven.
+
+### Keys
+
+| Key | Action |
+| --- | --- |
+| Ctrl/⌘ Z, Ctrl/⌘ Shift Z (or Ctrl Y) | Undo, redo |
+| 1, 2, 3 | Rover, Pup-4, Unit 07 |
+| B, M, R | Test bench, Missions, Run on the Line |
+| E, H | Exploded view, stress map |
+| Space | Skip to the end of a mission run |
+| Esc | Close a sheet, leave the part view, then leave the Workshop |
+
+Reduce motion (Settings) turns off the turntable spin, the extrude animation, puffs and panel motion.
+
+Known limitations: the Workshop's own text is English only (the rest of the game keeps EN / PT-BR / ES); the numbers
+are a teaching model, so stock legged builds only jump a few millimetres to a few centimetres; progress is per device
+and browser. Details in the [Workshop manual](WORKSHOP_MANUAL.md#known-limitations).
