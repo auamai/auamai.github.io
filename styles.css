@@ -279,6 +279,7 @@ main { width: min(var(--wrap), calc(100% - 40px)); margin: 0 auto; }
 
 /* Skills */
 .skills { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.skillset--wide { grid-column: 1 / -1; }
 .skillset { padding: 22px 24px; display: flex; flex-direction: column; gap: 14px; }
 .skillset h3 { display: flex; align-items: center; gap: 10px; }
 .skillset__tag { font: 400 11px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); padding: 5px 8px; border-radius: 999px; border: 1px solid rgba(169, 188, 255,.3); }
